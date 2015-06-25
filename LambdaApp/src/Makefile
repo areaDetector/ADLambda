@@ -9,7 +9,7 @@ endif
 
 LIBRARY_IOC = ADLambda
 LIB_SRCS += ADLambda.cpp
-LIB_LIBS += Lambda
+#LIB_LIBS += ADLambda
 
 DBD += LambdaSupport.dbd
 
