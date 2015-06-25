@@ -1,1 +1,1 @@
-register("LambdaRegister")
+registrar("LambdaRegister")
