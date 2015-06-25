@@ -3,9 +3,9 @@ TOP = .
 include $(TOP)/configure/CONFIG
 DIRS := $(DIRS) configure
 DIRS := $(DIRS) LambdaApp
-DIRS := $(DIRS) LambdaSupport
+#DIRS := $(DIRS) LambdaSupport
 
-LambdaApp_DEPEND_DIRS += LambdaSupport
+#LambdaApp_DEPEND_DIRS += LambdaSupport
 ifeq ($(BUILD_IOCS), YES)
 DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard iocs))
 iocs_DEPEND_DIRS += LambdaApp
