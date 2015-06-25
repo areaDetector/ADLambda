@@ -7,9 +7,9 @@ ifeq (windows-x64, $(findstring windows-x64, $(T_A)))
 USR_CPPFLAGS += -D__X64
 endif
 
-LIBRARY_IOC_LINUX = ADLambda
-LIB_SRCS_LINUX += ADLamda.cpp
-LIB_LIBS += Lamda
+LIBRARY_IOC = ADLambda
+LIB_SRCS += ADLambda.cpp
+LIB_LIBS += Lambda
 
 DBD += LambdaSupport.dbd
 
