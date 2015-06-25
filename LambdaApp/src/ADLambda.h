@@ -17,7 +17,7 @@ class epicsShareClass ADLambda: public ADDriver {
 public:
 	static const char *driverName;
 
-	ADLambda(const char *portName, int maxBuffers, size_t, maxMemory,
+	ADLambda(const char *portName, int maxBuffers, size_t maxMemory,
 			int priority, int stackSize);
 	~ADLambda();
     void report(FILE *fp, int details);
@@ -26,8 +26,8 @@ public:
 protected:
     // int reference to parameters
     int LAMBDA_VersionNumber;
-#define LAMBDA_FIRST_PARAM PICAM_VersionNumber
-#define LAMBDA_LAST_PARAM PICAM_SensorTemperatureStatusRelevant
+#define LAMBDA_FIRST_PARAM LAMBDA_VersionNumber
+#define LAMBDA_LAST_PARAM LAMBDA_VersionNumber
 
 private:
     asynStatus initializeDetector();
