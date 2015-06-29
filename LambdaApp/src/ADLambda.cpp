@@ -1,7 +1,7 @@
 /**
  Copyright (c) 2015, UChicago Argonne, LLC
  See LICENSE file.
-*/
+ */
 /* ADLambda.cpp */
 #include <iocsh.h>
 
@@ -9,7 +9,6 @@
 #include <epicsExport.h>
 
 #include "ADLambda.h"
-
 
 extern "C" {
 /** Configuration command for PICAM driver; creates a new PICam object.
@@ -26,19 +25,19 @@ extern "C" {
  * \param[in] stackSize The stack size for the asyn port driver thread if
  *            ASYN_CANBLOCK is set in asynFlags.
  */
-	int LambdaConfig(const char *portName, int maxBuffers,
-			size_t maxMemory, int priority, int stackSize) {
-		new ADLambda(portName, maxBuffers, maxMemory, priority, stackSize);
-		return (asynSuccess);
-	}
+int LambdaConfig(const char *portName, const char* configPath, int maxBuffers,
+        size_t maxMemory, int priority, int stackSize) {
+    new ADLambda(portName, maxBuffers, maxMemory, priority, stackSize);
+    return (asynSuccess);
+}
 
-	/**
-	 * Callback function for exit hook
-	 */
-	static void exitCallbackC(void *pPvt){
-		ADLambda *pADLambda = (ADLambda*)pPvt;
-		delete pADLambda;
-	}
+/**
+ * Callback function for exit hook
+ */
+static void exitCallbackC(void *pPvt) {
+    ADLambda *pADLambda = (ADLambda*) pPvt;
+    delete pADLambda;
+}
 
 }
 
@@ -60,53 +59,52 @@ const char *ADLambda::driverName = "Lambda";
  *            ASYN_CANBLOCK is set in asynFlags.
  *
  */
-ADLambda::ADLambda(const char *portName, int maxBuffers, size_t maxMemory,
-		int priority, int stackSize) :
-		ADDriver(portName, 1, int(NUM_LAMBDA_PARAMS), maxBuffers, maxMemory,
-		asynEnumMask, asynEnumMask, ASYN_CANBLOCK, 1, priority, stackSize)
-{
+ADLambda::ADLambda(const char *portName, const char* configPath, int maxBuffers,
+        size_t maxMemory, int priority, int stackSize) :
+        ADDriver(portName, 1, int(NUM_LAMBDA_PARAMS), maxBuffers, maxMemory,
+                asynEnumMask, asynEnumMask, ASYN_CANBLOCK, 1, priority,
+                stackSize) {
 
 }
 
 /**
  * Destructor
  */
-ADLambda::~ADLambda()
-{
+ADLambda::~ADLambda() {
 
 }
 
-void ADLambda::report(FILE *fp, int details)
-{
+void ADLambda::report(FILE *fp, int details) {
 
 }
 
-asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
-{
-	int status = asynSuccess;
+asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
+    int status = asynSuccess;
 
-	return (asynStatus)status;
+    return (asynStatus) status;
 }
 
 /* Code for iocsh registration */
 
 /* PICamConfig */
 static const iocshArg LambdaConfigArg0 = { "Port name", iocshArgString };
-static const iocshArg LambdaConfigArg1 = { "maxBuffers", iocshArgInt };
-static const iocshArg LambdaConfigArg2 = { "maxMemory", iocshArgInt };
-static const iocshArg LambdaConfigArg3 = { "priority", iocshArgInt };
-static const iocshArg LambdaConfigArg4 = { "stackSize", iocshArgInt };
+static const iocshArg LambdaConfigArg1 = { "Config file path", iocshArgString };
+static const iocshArg LambdaConfigArg2 = { "maxBuffers", iocshArgInt };
+static const iocshArg LambdaConfigArg3 = { "maxMemory", iocshArgInt };
+static const iocshArg LambdaConfigArg4 = { "priority", iocshArgInt };
+static const iocshArg LambdaConfigArg5 = { "stackSize", iocshArgInt };
 static const iocshArg * const LambdaConfigArgs[] = { &LambdaConfigArg0,
-        &LambdaConfigArg1, &LambdaConfigArg2, &LambdaConfigArg3, &LambdaConfigArg4 };
+        &LambdaConfigArg1, &LambdaConfigArg2, &LambdaConfigArg3,
+        &LambdaConfigArg4, &LambdaConfigArg5 };
 
-static void configLambdaCallFunc(const iocshArgBuf *args){
-	LambdaConfig(args[0].sval, args[1].ival, args[2].ival, args[3].ival,
-			args[4].ival);
+static void configLambdaCallFunc(const iocshArgBuf *args) {
+    LambdaConfig(args[0].sval, args[1].sval, args[2].ival, args[3].ival,
+            args[4].ival, args[5].ival);
 }
-static const iocshFuncDef configLambda = { "LambdaConfig", 5, LambdaConfigArgs };
+static const iocshFuncDef configLambda = { "LambdaConfig", 6, LambdaConfigArgs };
 
 static void LambdaRegister(void) {
-	iocshRegister(&configLambda, configLambdaCallFunc);
+    iocshRegister(&configLambda, configLambdaCallFunc);
 }
 
 extern "C" {

@@ -1,7 +1,7 @@
 /**
  Copyright (c) 2015, UChicago Argonne, LLC
  See LICENSE file.
-*/
+ */
 /* PICam.h
  *
  * This is an areaDetector driver for cameras that communicate
@@ -15,11 +15,11 @@
 
 class epicsShareClass ADLambda: public ADDriver {
 public:
-	static const char *driverName;
+    static const char *driverName;
 
-	ADLambda(const char *portName, int maxBuffers, size_t maxMemory,
-			int priority, int stackSize);
-	~ADLambda();
+    ADLambda(const char *portName, const char* configPath, int maxBuffers,
+            size_t maxMemory, int priority, int stackSize);
+    ~ADLambda();
     void report(FILE *fp, int details);
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
 
