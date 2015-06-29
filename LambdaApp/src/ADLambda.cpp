@@ -68,6 +68,26 @@ ADLambda::ADLambda(const char *portName, int maxBuffers, size_t maxMemory,
 
 }
 
+/**
+ * Destructor
+ */
+ADLambda::~ADLambda()
+{
+
+}
+
+void ADLambda::report(FILE *fp, int details)
+{
+
+}
+
+asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
+{
+	int status = asynSuccess;
+
+	return (asynStatus)status;
+}
+
 /* Code for iocsh registration */
 
 /* PICamConfig */
