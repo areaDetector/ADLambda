@@ -15,8 +15,9 @@ $(PROD_NAME)_SRCS += $(PROD_NAME)_registerRecordDeviceDriver.cpp $(PROD_NAME)Mai
 
 # Add locally compiled object code
 $(PROD_NAME)_LIBS += ADLambda
-#$(PROD_NAME)_LIBS += Lambda
+$(PROD_NAME)_LIBS += lambda
 
+LIB_LIBS_Linux += boost_system-mt
 include $(ADCORE)/ADApp/commonDriverMakefile
 
 #=============================
