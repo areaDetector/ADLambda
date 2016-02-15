@@ -190,6 +190,7 @@ void ADLambda::handleNewImageTask() {
     acquiredImages = 0;
     lossFrames = 0;
     currentFrameNo = 0;
+    currentFrameNumber = -1;
 
     while (true) {
         //epicsThreadSleep(0.000025);
@@ -204,13 +205,25 @@ void ADLambda::handleNewImageTask() {
                     driverName, __FUNCTION__,
                     (int) numBufferedImages);
             if (getImageDepth() == 12){
-                shDecodedData = getDecodedImageShort(currentFrameNumber, frameErrorCode);
-                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                        "%s:%s shDecodedData %p, Current Frame Number %d, frameErrorCode %d\n",
+                long newFrameNumber;
+                shDecodedData = getDecodedImageShort(newFrameNumber, frameErrorCode);
+                if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                        "%s:%s shDecodedData %p, Current Frame Number %d, frameErrorCode %d equals last image\n",
                         driverName, __FUNCTION__,
                         shDecodedData,
-                        currentFrameNo,
+                        currentFrameNumber,
                         frameErrorCode);
+                }
+                if ((newFrameNumber !=-1) && (currentFrameNumber != -1)
+                        && (newFrameNumber - currentFrameNumber) != 1) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                        "%s:%s  missing %d Frames starting at  Frame Number %d\n",
+                        driverName, __FUNCTION__,
+                        currentFrameNumber + 1,
+                        newFrameNumber - currentFrameNumber);
+                }
+                currentFrameNumber = newFrameNumber;
                 if ((shDecodedData == NULL) &&
                         (currentFrameNumber == -1) &&
                         (frameErrorCode == -1)) {
@@ -334,7 +347,7 @@ void ADLambda::handleNewImageTaskMulti() {
 
 asynStatus ADLambda::initializeDetector(){
     int status = asynSuccess;
-    lambdaInstance->GetImageFormat(imageHeight, imageWidth, imageDepth);
+    lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s imageHeight %d, imageWidth%d\n",
             driverName, __FUNCTION__,
@@ -359,14 +372,12 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
 
     setDoubleParam(function, value);
     asynPrint(pasynUser, ASYN_TRACE_ERROR,
-            "Entering %s:%s",
+            "Entering %s:%s\n",
             driverName,
             __func__ );
     if (function == ADAcquireTime) {
-        printf("Setting Acquire Time\n");
-        shutterTime = value;
+        shutterTime = value * 1000.0;
         lambdaInstance->SetShutterTime(shutterTime);
-        setDoubleParam(function, shutterTime);
     }
     else if (function == ADAcquirePeriod){
         printf("Setting Acquire Period\n");
