@@ -266,7 +266,7 @@ void ADLambda::handleNewImageTask() {
                             getIntegerParam(NDArrayCounter, &arrayCounter);
                             arrayCounter++;
                             setIntegerParam(NDArrayCounter, arrayCounter);
-
+                            setIntegerParam(NDArraySize, arrayInfo.totalBytes);
                             /* Timestamps */
                             epicsTimeGetCurrent(&currentTime);
                             pImage->timeStamp = currentTime.secPastEpoch +
@@ -354,6 +354,14 @@ asynStatus ADLambda::initializeDetector(){
             imageHeight, imageWidth);
     setIntegerParam(ADMaxSizeX, imageWidth);
     setIntegerParam(ADMaxSizeY, imageHeight);
+    setIntegerParam(ADMinX, 0);
+    setIntegerParam(ADMinY, 0);
+    setIntegerParam(ADSizeX, imageWidth);
+    setIntegerParam(ADSizeY, imageHeight);
+    setIntegerParam(NDArraySizeX, imageWidth);
+    setIntegerParam(NDArraySizeY, imageHeight);
+    setIntegerParam(NDArraySize, 0);
+
     callParamCallbacks();
 
 
