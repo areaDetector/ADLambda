@@ -45,6 +45,7 @@ dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=I
 #Note mpi control pipe out & in reversed.  Names are from the view of the MPI program.
 NDPipeWriterConfigure("PipeWriter1", 4000, 0, "$(PORT)", "/local/xpcscmdout", "/local/xpcscmdin", 0, 0, 0, 0,0)
 dbLoadRecords("$(ADCORE)/db/NDPluginPipeWriter.template", "P=$(PREFIX),R=PW1:,  PORT=PipeWriter1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),CMD_IN_PORT=PW_CMD_IN,CMD_OUT_PORT=PW_CMD_OUT")
+
 set_requestfile_path("$(ADLAMBDA)/LambdaApp/Db")
 set_requestfile_path("$(NDPLUGINPIPEWRITER)/PipeWriterApp/Db")
 
