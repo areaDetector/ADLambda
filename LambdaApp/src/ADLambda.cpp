@@ -52,7 +52,8 @@ const char *ADLambda::driverName = "Lambda";
 
 /**
  * Constructor
- *  * \param[in] portName The name of the asyn port driver to be created.
+ * \param[in] portName The name of the asyn port driver to be created.
+ * \param[in] directory containing configuration file location
  * \param[in] maxBuffers The maximum number of NDArray buffers that the
  *            NDArrayPool for this driver is
  *            allowed to allocate. Set this to -1 to allow an unlimited number
@@ -77,6 +78,7 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
     frameNumbersRead = 0;
     totalLossFramesRead = 0;
     latestImageNumberRead = 0;
+    imageThreadKeepAlive = false;
 
     lambdaInstance = new DetCommonNS::LambdaSysImpl(configPath);
     printf("Done making instance");
@@ -104,9 +106,13 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
  * Destructor
  */
 ADLambda::~ADLambda() {
-
+    imageThreadKeepAlive = false;
 }
 
+/**
+ * Method called by WriteInt32 intecepts message to start
+ * acquisition.
+ */
 asynStatus ADLambda::acquireStart(){
     int sizeX, sizeY, imageDepth;
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
@@ -129,6 +135,11 @@ asynStatus ADLambda::acquireStart(){
     return (asynStatus)status;
 }
 
+/**
+ * Method called when WriteInt32 intercepts a message to stop
+ * acquisition or if handleNewImageTask finds the requested
+ * number of images have been captured.
+ */
 asynStatus ADLambda::acquireStop(){
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s Enter\n", driverName, __FUNCTION__);
@@ -146,10 +157,24 @@ asynStatus ADLambda::acquireStop(){
     return (asynStatus)status;
 }
 
+/**
+ * Pass through method to the vendor object requesting an image.
+ * Returned image will be returned as a pointer to int.
+ *  \param[in] The requested frame number in the queue.
+ *  \param[out] Error code for returned image.
+ *  \return A pointer to integer array representing the requested image.
+ */
 int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
     return lambdaInstance->GetDecodedImageInt(lFrameNo, shErrCode);
 }
 
+/**
+ * Pass through method to the vendor object requesting an image.
+ * Returned image will be returned as a pointer to short.
+ *  \param[in] The requested frame number in the queue.
+ *  \param[out] Error code for returned image.
+ *  \return A pointer to short array representing the requested image.
+ */
 short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
     return lambdaInstance->GetDecodedImageShort(lFrameNo, shErrCode);
 }
@@ -158,14 +183,32 @@ int ADLambda::getImageDepth(){
     return 12;
 }
 
+/**
+ * Pass through method to get the depth of the raw Image
+ * queue.
+ *  \return Image queue depth
+ */
 int ADLambda::getQueueDepth(){
     return lambdaInstance->GetQueueDepth();
 }
 
+/**
+ * Pass through method to the vendor object to get format information
+ * for images
+ *  \param[out] nX number of pixels in X dimension
+ *  \param[out] nY number of pixels in Y dimension
+ *  \param[out] number of bits of image Depth
+ */
 void ADLambda::getImageFormat(int& nX, int& nY, int& nImgDepth) {
     lambdaInstance->GetImageFormat( (int &)nX, (int &)nY, (int &)nImgDepth);
 }
 
+/**
+ * This method is called by handleNewImageTaskC as the image handling thread
+ * is created.  This method runs a continuous loop which constantly checks
+ * for images in the buffer queue.  When new images are seen they are pulled
+ * off the queue and placed into an NDArray for use by areaDetector
+ */
 void ADLambda::handleNewImageTask() {
     long numBufferedImages;
     short *shDecodedData;
@@ -185,6 +228,7 @@ void ADLambda::handleNewImageTask() {
     NDArrayInfo arrayInfo;
     epicsTimeStamp currentTime;
 
+    imageThreadKeepAlive = true;
     startFrame = 0;
     bRead = false;
     acquiredImages = 0;
@@ -192,7 +236,7 @@ void ADLambda::handleNewImageTask() {
     currentFrameNo = 0;
     currentFrameNumber = -1;
 
-    while (true) {
+    while (true && imageThreadKeepAlive) {
         //epicsThreadSleep(0.000025);
         numBufferedImages = lambdaInstance->GetQueueDepth();
         getIntegerParam(ADNumImages, &frameNumbersRead);
@@ -341,10 +385,10 @@ void ADLambda::handleNewImageTask() {
 }
 
 
-void ADLambda::handleNewImageTaskMulti() {
-
-}
-
+/**
+ * This method is called by the constructor to initialize areaDetector
+ * parameters.
+ */
 asynStatus ADLambda::initializeDetector(){
     int status = asynSuccess;
     lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
@@ -368,10 +412,20 @@ asynStatus ADLambda::initializeDetector(){
     return (asynStatus)status;
 }
 
+/**
+ * Override super class's report method to provide detector specific info.
+ * When done, call ADDriver (direct super class) method to provide info from
+ * the upper classes.
+ */
 void ADLambda::report(FILE *fp, int details) {
-
+    ADDriver::report(fp, details);
 }
 
+/**
+ * Override from super class to handle detector specific parameters.
+ * If the parameter is from one of the super classes and is not handled
+ * here, then pass along to ADDriver (direct super class)
+ */
 asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
     int status = asynSuccess;
     int function = pasynUser->reason;
@@ -405,6 +459,11 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
     return (asynStatus) status;
 }
 
+/**
+ * Override from super class to handle detector specific parameters.
+ * If the parameter is from one of the super classes and is not handled
+ * here, then pass along to ADDriver (direct super class)
+ */
 asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     int status = asynSuccess;
     int function = pasynUser->reason;
@@ -442,6 +501,11 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     return (asynStatus) status;
 }
 
+/**
+ * Override from super class to handle detector specific parameters.
+ * If the parameter is from one of the super classes and is not handled
+ * here, then pass along to ADDriver (direct super class)
+ */
 asynStatus ADLambda::writeOctet(asynUser* pasynUser, const char *value, size_t nChars, size_t *nActual){
     int status = asynSuccess;
     int function = pasynUser->reason;
@@ -461,12 +525,6 @@ static void lambdaHandleNewImageTaskC(void *drvPvt)
     pPvt->handleNewImageTask();
 }
 
-/*
-static void lambdaHandleNewImageTaskMultiC(void *drvPvt){
-    ADLambda *pPvt = (ADLambda *)drvPvt;
-    pPvt->handleNewImageTaskMulti();
-}
-*/
 
 /* Code for iocsh registration */
 

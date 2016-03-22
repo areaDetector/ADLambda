@@ -2,10 +2,10 @@
  Copyright (c) 2015, UChicago Argonne, LLC
  See LICENSE file.
  */
-/* PICam.h
+/* ADLambda.h
  *
  * This is an areaDetector driver for cameras that communicate
- * with the Priceton Instruments PICAM driver library
+ * with the X-Spectrum Lambda driver library
  *
  */
 #ifndef ADLAMBDA_H
@@ -22,6 +22,9 @@ using namespace DetCommonNS;
 
 #include "ADDriver.h"
 
+/**
+ * Class to wrap Lambda detector library provided by X-Spectrum
+ */
 class epicsShareClass ADLambda: public ADDriver {
 public:
     static const char *driverName;
@@ -35,7 +38,6 @@ public:
     int* getDecodedImageInt(long& lFrameNo, short& shErrCode);
     void getImageFormat(int& nX, int& nY, int& nImgDepth);
     void handleNewImageTask(void);
-    void handleNewImageTaskMulti(void);
     void report(FILE *fp, int details);
     virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
@@ -55,6 +57,7 @@ protected:
 #define LAMBDA_LAST_PARAM LAMBDA_OperatingMode
 
 private:
+    bool imageThreadKeepAlive;
     asynStatus acquireStart();
     asynStatus acquireStop();
     asynStatus initializeDetector();
