@@ -1,0 +1,21 @@
+senseDAC none
+extDAC none
+preamp 100
+ikrum 5
+shaper 125
+disc 150
+disc_LS 25
+DAC_discL 96
+DAC_discH 109
+delay 30
+TP_BufferIn 128
+TP_BufferOut 1
+RPZ 255
+GND 129
+TP_REF 120
+FBK 177
+CAS 174 
+TP_REFA 50
+TP_REFB 255
+keVtoThrSlopes 5.0 1 1 1 1 1 1 1
+thrBaselines 14 0 0 0 0 0 0 0
