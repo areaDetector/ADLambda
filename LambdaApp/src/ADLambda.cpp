@@ -90,14 +90,26 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
             asynParamInt32, &LAMBDA_BadFrameCounter);
     status |= ADDriver::createParam(LAMBDA_BadImageString,
             asynParamInt32, &LAMBDA_BadImage);
-    initializeDetector();
+    status |= initializeDetector();
 
+    if (status != asynSuccess) {
+        printf("%s:%s: Trouble initializing Lambda detector\n",
+                driverName,
+                __FUNCTION__);
+        return;
+    }
     /* create the thread that updates new images */
     status = (epicsThreadCreate("lambdaHandleNewImageTaskC",
             epicsThreadPriorityMedium,
             epicsThreadGetStackSize(epicsThreadStackMedium),
             (EPICSTHREADFUNC)lambdaHandleNewImageTaskC,
             this) == NULL);
+    if (status) {
+        printf("%s:%s Trouble creating handle new Image task\n",
+                driverName,
+                __FUNCTION__);
+        return;
+    }
 
     epicsAtExit(exitCallbackC, this);
 }
@@ -106,7 +118,14 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
  * Destructor
  */
 ADLambda::~ADLambda() {
+    printf("%s:%s Entering ~ADLambda\n",
+            driverName,
+            __FUNCTION__);
     imageThreadKeepAlive = false;
+    printf("%s:%s Exiting ~ADLambda\n",
+            driverName,
+            __FUNCTION__);
+
 }
 
 /**
