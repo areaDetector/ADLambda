@@ -272,7 +272,8 @@ void ADLambda::handleNewImageTask() {
                 shDecodedData = getDecodedImageShort(newFrameNumber, frameErrorCode);
                 if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                        "%s:%s shDecodedData %p, Current Frame Number %d, frameErrorCode %d equals last image\n",
+                        "%s:%s shDecodedData %p, Current Frame Number %ld,"
+                            " frameErrorCode %d equals last image\n",
                         driverName, __FUNCTION__,
                         shDecodedData,
                         currentFrameNumber,
@@ -281,7 +282,7 @@ void ADLambda::handleNewImageTask() {
                 if ((newFrameNumber !=-1) && (currentFrameNumber != -1)
                         && (newFrameNumber - currentFrameNumber) != 1) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                        "%s:%s  missing %d Frames starting at  Frame Number %d\n",
+                        "%s:%s  missing %ld Frames starting at  Frame Number %ld\n",
                         driverName, __FUNCTION__,
                         currentFrameNumber + 1,
                         newFrameNumber - currentFrameNumber);
