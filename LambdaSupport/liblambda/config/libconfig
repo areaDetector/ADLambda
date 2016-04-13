@@ -1,6 +1,0 @@
-#total thread numbers
-5
-#raw buffer length,unit is number of images
-100000
-#decode buffer length
-100
