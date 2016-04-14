@@ -1,0 +1,27 @@
+record(ao, "$(P)$(R)EnergyThreshold")
+{
+   field(DTYP, "asynFloat64")
+   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_ENERGY_THRESHOLD")
+   field(PREC, "4")
+}
+
+record(longin, "$(P)$(R)DecodedQueueDepth")
+{
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DECODED_QUEUE_DEPTH")
+   field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)BadFrameCount")
+{
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
+   field(SCAN, "I/O Intr")
+}
+
+record(mbbo, "$(P)$(R)ImageMode")
+{
+   field(TWST, "")
+   field(TWVL, "")
+   field(VAL,  "1")
+}

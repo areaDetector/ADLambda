@@ -1,0 +1,196 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>areaDetector Lambda driver</title>
+<meta content="text/html; charset=ISO-8859-1" http-equiv="Content-Type" />
+</head>
+<body>
+   <div style="text-align: center"
+      <h1>areaDetector Lambda driver</h1>
+      <h2>March 1, 2016</h2>
+      <h2>John Hammonds</h2>
+      <h2>Scientific Software & Data Management Group</h2>
+      <h2>
+         Advanced Photon Source</h2>
+
+         <h2>Argonne National Laboratory</h2>
+   </div>
+   <h2>Table Of Contents</h2>
+   <ul>
+      <li><a href="#Introduction">Introduction</a></li>
+      <li><a href="#StandardNotes">Implementation of standard
+            driver parameters</a></li>
+      <li><a href="#Driver_parameters">Lambda Driver Parameters</a></li>
+      <li><a href="#Configuration">Configuration</a></li>
+      <li><a href="#MEDM_screens">MEDM screens</a></li>
+      <li><a href="#Performance_Measurements">Performance
+            Measurements</a></li>
+      <li><a href="#Hardware Notes">Hardware Notes</a></li>
+      <li><a href="#Restrictions">Restrictions</a></li>
+   </ul>
+
+   <h2 id="Introduction" style="text-align: left">Introduction</h2>
+   <p>
+      This is an <a href="https://www.aps.anl.gov/epics">EPICS</a> <a
+         href="http://cars.uchicago.edu/software/epics/areaDetector.html">
+         areaDetector</a> driver for the Lambda detector from <a
+         href="www.x-spectrum.de">X-spectum</a>
+   </p>
+   <p>The interface to the detector is provided by a TCP/UDP/IP
+      socket interface to the detector.  X-Spectrum provides a library to handle 
+      communications and aquisition in the camera.  This driver provides an
+      interface layer between the vendor library and EPICS areaDetector.</p>
+      
+   <p>The hardware interface between the camera and the controlling computer 
+   consists of </p>
+   <ul>
+      <li>A single 1GB copper network link used for command/control</li>
+      <li>A pair of 10GB Fiber network links for sending image data</li>
+   </ul>
+
+   <p>This detector is capable of acquiring up to 2000 images/sec.  It
+   may be necessary, therefore, to adapt standard areaDetector plugins for 
+   faster collection to ensure processing of all images. 
+   </p>
+   <h2 id="StandardNotes" style="text-align: left">Implementation
+      of standard driver parameters</h2>
+    <p>The following table describes how the Lambda driver implements some of the
+    standard driver parameters.</p>
+
+
+   <table border="1" cellpadding="2" cellspacing="2"
+      style="text-align: left">
+      <tbody>
+         <tr>
+            <th>Parameter index variable</th>
+            <th>EPICS record name</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>ADAcquireTime</td>
+            <td>$(P)$(R)AcquireTime</td>
+            <td>Controls the exposure time of the camera in seconds.  </td>
+         <tr>
+            <td>ADAcquirePeriod</td>
+            <td>$(P$(R)AcquirePeriod</td>
+            <td>NOT YET IMPLEMENTED IN FIRMWARE.  Controls the period 
+            between exposures in internal trigger mode.  Currently this 
+            feature is not supported by the camera firmaware but this 
+            is a planned feature.  Once the firmware supports this feature, 
+            the software should support this.</td>
+         </tr>
+         <tr>
+            <td>ADTriggerMode</td>
+            <td>$(P)$(R)TriggerMode</td>
+            <td>NOT YET IMPLEMENTED IN FIRMWARE:  Allows selection between 
+            external and internal hardware trigger.  This is a planned feature,
+            Once supported in firmware, this should enable switching.</td>
+         </tr>
+         <tr>
+            <td>ADAcquire</td>
+            <td>$(P)$(R)Acquire</td>
+            <td>Controls starting and stopping camera images.</td>
+         </tr>
+         <tr>
+            <td>ADNumImages
+            <td>$(P)$(R)NumImages</td>
+            <td>In Multiple Image mode, this controls the number of images 
+            to be collected.</td>
+         </tr>
+         <tr>
+            <td>ADImageMode</td>
+            <td>$(P)$(R)ImageMode</td>
+            <td>Sets selection of Single or multiple Images when acquire 
+            button is pressed.  Acquisition on the Lambda is controlled
+            by setting a defined number of images.  "Continuous" has been
+            removed from the options.</td>
+         </tr>
+      </tbody>
+   </table>
+
+   <h2 id="Driver_parameters" style="text-align: left">Lambda
+      specific parameters</h2>
+   <table border="1" cellpadding="2" cellspacing="2"
+      style="text-align: left">
+      <tbody>
+         <tr>
+            <td align="center" colspan="3">Parameter Definition in
+               ADLambda.cpp and record definitions in ADLambda.template
+            </td>
+         </tr>
+         <tr>
+            <th>Parameter index variable</th>
+            <th>asyn interface</th>
+            <th>Access</th>
+            <th>Description</th>
+            <th>drvInfo string</th>
+            <th>EPICS record name</th>
+            <th>EPICS record type</th>
+         </tr>
+         <tr>
+            <td>LAMBDA_EnergyThreshold</td>
+            <td>asynFloat64</td>
+            <td>r/w</td>
+            <td>Sets the minumum energy that should register a valid event.</td>
+            <td>LAMBDA_ENERGY_THRESHOLD</td>
+            <td></td>
+            <td></td>
+         </tr>
+         <tr>
+            <td>LAMBDA_DecodedQueueDepth</td>
+            <td>asynInt32</td>
+            <td>r</td>
+            <td>Displays how far into the decoded queue we have reached.  </td>
+            <td>LAMBDA_DECODED_QUEUE_DEPTH</td>
+            <td></td>
+            <td></td>
+         </tr>
+         <tr>
+            <td>LAMBDA_BadFrameCounter</td>
+            <td>asynInt32</td>
+            <td>r</td>
+            <td>Counts the number of bad frames detected during decodeing. 
+            images are sent as a number of packets, rotating over 4 network ports. 
+            If the packets for the next image are received on all 4 ports, before
+            the finish of an image, then the frame is counted as a bad frame.</td>
+            <td>LAMNBDA_BAD_FRAME_COUNTER</td>
+            <td></td>
+            <td></td>
+         </tr>
+      </tbody>
+   </table>
+
+
+   <h2 id="Configuration">Configuration</h2>
+   <p>
+   The Lambda detector instance is created using the LambdaConfig command, either from C/C++ 
+   or from the EPICS IOC shell.
+   </p> 
+   <pre> int LambdaConfig(const char *portName, const char* configPath, 
+         int maxBuffers, size_t maxMemory, 
+         int priority, int stackSize)</pre>
+         
+   <p>
+   For Details on the meaning of the paramenters to this function refer to the documentation
+   on the LambdaConfig function in the <a href="areaDetectorDoxygenHTML/ADLambda_8cpp.html">Lambda.cpp documentation</a></p> and in 
+   the documentation for the constructor in the <a href="areaDetectorDoxygenHTML/class_ADLambda.html">ADLambda class</a>)
+
+   <h2 id="MEDM_screens" style="text-align: left">MEDM screens</h2>
+   
+
+   <h2 id="Performance_measurements">Performance measurements</h2>
+    <p>The Lambda detector itself is rated at 2000 frames/sec.  This rate has been achieved simply processing the 
+    detector images into NDArrays.  We have been able to save up to 1000 images/sec for a period of time using 
+    a PipeWriterPlugin that writes to a Unix Pipe which feeds an external MPI program which compresses the
+    image data and writes to a binary file. 
+    </p>
+
+   <h2 id="Hardware_notes">Hardware notes</h2>
+   <p>This detector is capable of supporting a number of features which are not currently available in the detector 
+   driver & firmware.  These features will be added as they are made available by the vendor.</p>
+
+
+   <h2 id="Restrictions">Restrictions</h2>
+</body>
+</html>

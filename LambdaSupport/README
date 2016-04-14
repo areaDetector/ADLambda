@@ -1,0 +1,21 @@
+The files included in the directories libcommon and liblambda provide the source code for the low level driver 
+provided with this detector.  These files are provided by 
+  * X-Spectrum  http://www.x-spectrum.de/
+  * DESY http://www.desy.de/
+The developers of this camera.
+
+The version of the drivers provided here are the working copy used to develop this driver for use with
+EPICS areaDetector.  Up to date versions of the driver can be located here:
+  * libcommon  https://stash.desy.de/projects/FSDSDET/repos/libcommon/browse
+  * liblambda  https://stash.desy.de/projects/FSDSDET/repos/liblambda/browse
+  
+The development of this driver was aided by examination of the driver written by DESY for the Tango control
+system (http://www.tango-controls.org/) 
+  http://svn.code.sf.net/p/tango-ds/code/DeviceClasses/Acquisition/2D/Lambda/trunk/
+
+  
+The driver code provided here is uncompiled.  Instructions for compiling 
+this driver are located in the INSTALL file located in the liblambda
+directory.  Integration of this build with the EPICS build will be easiest 
+if the CMAKE_INSTALL_PREFIX described there is liblambda-$(EPICS_HOST_ARCH). 
+  

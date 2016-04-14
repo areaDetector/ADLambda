@@ -1,0 +1,45 @@
+Installation instruction
+
+1. Prerequists
+-----------------
+1.1) Library dependencies
+-> libcommon
+   This is part of the liblambda, compiling libcommon independently is unnecessary.
+   source(git): https://stash.desy.de/scm/fsdsdet/libcommon.git
+
+-> boost >= 1.41
+
+1.2) Required build tool
+-> gcc   >= 4.4.7
+-> cmake >= 2.8.4
+
+2. Build
+-----------------
+2.1) Create build directory
+Once the source code is retrived, create a seperate build directy OUT OF souce directory.
+
+$ mkdir liblamda-build
+$ cd liblambda-build
+
+2.2) Run cmake in build directory
+Run cmake in build directory with the path of source directory as the input argument.
+
+$ cmake /path/of/source/directory
+
+The default value of the build type of the library is RELEASE. 
+The build type can be changed by using CMAKE_BUILD_TYPE. 
+The build type of this library can be either RELEASE or DEBUG. 
+
+$ cmake -DCMAKE_BUILD_TYPE=DEBUG /path/of/source/directory
+
+The default value of CMAKE_INSTALL_PREFIX is /usr/local
+The install prefix could also be changed by using CMAKE_INSTALL_PREFIX. 
+
+$ cmake -DCMAKE_INSTALL_PREFIX=/user-defined/install/path /path/of/source/directory
+
+2.3) Run make
+Once everything is configured successfully by cmake, run make and make install. 
+The install path depends on the variable CMAKE_INSTALL_PREFIX metioned before.
+
+$ make
+$ make install
