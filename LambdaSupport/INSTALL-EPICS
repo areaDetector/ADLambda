@@ -6,7 +6,7 @@ mkdir liblambda-build
 mkdir liblambda-linux-x86_64
 #change directory to the build directory
 cd liblambda-build
-cmake --DMAKE_INSTALL_PREFIX=../liblambda-linux-x86_64 ../liblambda
+cmake -DCMAKE_INSTALL_PREFIX=../liblambda-linux-x86_64 ../liblambda
 #Build the code
 make
 #Install into liblambda-<EpicsHostArch> 
