@@ -15,6 +15,8 @@ $(PROD_NAME)_SRCS += $(PROD_NAME)_registerRecordDeviceDriver.cpp $(PROD_NAME)Mai
 
 # Add locally compiled object code
 $(PROD_NAME)_LIBS += ADLambda
+# We use SYS_LIBS here because liblambda is only built dynamically but we want to be able to build
+# either statically or dynamically
 $(PROD_NAME)_SYS_LIBS += lambda
 
 LIB_LIBS_Linux += boost_system-mt
