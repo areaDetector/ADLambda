@@ -17,7 +17,7 @@ static void lambdaHandleNewImageTaskC(void *drvPvt);
 //static void lambdaHandleNewImageTaskMultiC(void *drvPvt);
 
 extern "C" {
-/** Configuration command for PICAM driver; creates a new PICam object.
+/** Configuration command for Lambda driver; creates a new ADLambda object.
  * \param[in] portName The name of the asyn port driver to be created.
  * \param[in] path to the config files.
  * \param[in] maxBuffers The maximum number of NDArray buffers that the
@@ -553,7 +553,7 @@ static void lambdaHandleNewImageTaskC(void *drvPvt)
 
 /* Code for iocsh registration */
 
-/* PICamConfig */
+/* LambdaConfig */
 static const iocshArg LambdaConfigArg0 = { "Port name", iocshArgString };
 static const iocshArg LambdaConfigArg1 = { "Config file path", iocshArgString };
 static const iocshArg LambdaConfigArg2 = { "maxBuffers", iocshArgInt };
