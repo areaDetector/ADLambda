@@ -54,7 +54,7 @@ protected:
     int LAMBDA_OperatingMode;
     int LAMBDA_BadFrameCounter;
     int LAMBDA_BadImage;
-#define LAMBDA_LAST_PARAM LAMBDA_OperatingMode
+#define LAMBDA_LAST_PARAM LAMBDA_BadImage
 
 private:
     bool imageThreadKeepAlive;
