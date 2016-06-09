@@ -6,7 +6,7 @@
 <meta content="text/html; charset=ISO-8859-1" http-equiv="Content-Type" />
 </head>
 <body>
-   <div style="text-align: center"
+   <div style="text-align: center">
       <h1>areaDetector Lambda driver</h1>
       <h2>March 1, 2016</h2>
       <h2>John Hammonds</h2>
@@ -26,7 +26,7 @@
       <li><a href="#MEDM_screens">MEDM screens</a></li>
       <li><a href="#Performance_Measurements">Performance
             Measurements</a></li>
-      <li><a href="#Hardware Notes">Hardware Notes</a></li>
+      <li><a href="#Hardware_Notes">Hardware Notes</a></li>
       <li><a href="#Restrictions">Restrictions</a></li>
    </ul>
 
@@ -35,11 +35,11 @@
       This is an <a href="https://www.aps.anl.gov/epics">EPICS</a> <a
          href="http://cars.uchicago.edu/software/epics/areaDetector.html">
          areaDetector</a> driver for the Lambda detector from <a
-         href="www.x-spectrum.de">X-spectum</a>
+         href="http://www.x-spectrum.de">X-spectrum</a>
    </p>
    <p>The interface to the detector is provided by a TCP/UDP/IP
       socket interface to the detector.  X-Spectrum provides a library to handle 
-      communications and aquisition in the camera.  This driver provides an
+      communications and acquisition in the camera.  This driver provides an
       interface layer between the vendor library and EPICS areaDetector.</p>
       
    <p>The hardware interface between the camera and the controlling computer 
@@ -76,7 +76,7 @@
             <td>$(P$(R)AcquirePeriod</td>
             <td>NOT YET IMPLEMENTED IN FIRMWARE.  Controls the period 
             between exposures in internal trigger mode.  Currently this 
-            feature is not supported by the camera firmaware but this 
+            feature is not supported by the camera firmware but this 
             is a planned feature.  Once the firmware supports this feature, 
             the software should support this.</td>
          </tr>
@@ -115,8 +115,8 @@
       style="text-align: left">
       <tbody>
          <tr>
-            <td align="center" colspan="3">Parameter Definition in
-               ADLambda.cpp and record definitions in ADLambda.template
+            <td colspan="7" align="center"><b>Parameter Definition in
+               ADLambda.cpp and record definitions in ADLambda.template</b>
             </td>
          </tr>
          <tr>
@@ -132,10 +132,10 @@
             <td>LAMBDA_EnergyThreshold</td>
             <td>asynFloat64</td>
             <td>r/w</td>
-            <td>Sets the minumum energy that should register a valid event.</td>
+            <td>Sets the minimum energy that should register a valid event.</td>
             <td>LAMBDA_ENERGY_THRESHOLD</td>
-            <td></td>
-            <td></td>
+            <td>EnergyThreshold</td>
+            <td>ao</td>
          </tr>
          <tr>
             <td>LAMBDA_DecodedQueueDepth</td>
@@ -143,20 +143,20 @@
             <td>r</td>
             <td>Displays how far into the decoded queue we have reached.  </td>
             <td>LAMBDA_DECODED_QUEUE_DEPTH</td>
-            <td></td>
-            <td></td>
+            <td>DecodedQueueDepth</td>
+            <td>longin</td>
          </tr>
          <tr>
             <td>LAMBDA_BadFrameCounter</td>
             <td>asynInt32</td>
             <td>r</td>
-            <td>Counts the number of bad frames detected during decodeing. 
+            <td>Counts the number of bad frames detected during decoding. 
             images are sent as a number of packets, rotating over 4 network ports. 
             If the packets for the next image are received on all 4 ports, before
             the finish of an image, then the frame is counted as a bad frame.</td>
             <td>LAMNBDA_BAD_FRAME_COUNTER</td>
-            <td></td>
-            <td></td>
+            <td>BadFrameCounter</td>
+            <td>longin</td>
          </tr>
       </tbody>
    </table>
@@ -172,25 +172,26 @@
          int priority, int stackSize)</pre>
          
    <p>
-   For Details on the meaning of the paramenters to this function refer to the documentation
+   For details on the meaning of the parameters to this function refer to the documentation
    on the LambdaConfig function in the <a href="areaDetectorDoxygenHTML/ADLambda_8cpp.html">Lambda.cpp documentation</a></p> and in 
    the documentation for the constructor in the <a href="areaDetectorDoxygenHTML/class_ADLambda.html">ADLambda class</a>)
 
    <h2 id="MEDM_screens" style="text-align: left">MEDM screens</h2>
    
 
-   <h2 id="Performance_measurements">Performance measurements</h2>
+   <h2 id="Performance_Measurements">Performance measurements</h2>
     <p>The Lambda detector itself is rated at 2000 frames/sec.  This rate has been achieved simply processing the 
     detector images into NDArrays.  We have been able to save up to 1000 images/sec for a period of time using 
     a PipeWriterPlugin that writes to a Unix Pipe which feeds an external MPI program which compresses the
     image data and writes to a binary file. 
     </p>
 
-   <h2 id="Hardware_notes">Hardware notes</h2>
+   <h2 id="Hardware_Notes">Hardware Notes</h2>
    <p>This detector is capable of supporting a number of features which are not currently available in the detector 
    driver & firmware.  These features will be added as they are made available by the vendor.</p>
 
 
    <h2 id="Restrictions">Restrictions</h2>
+   <p>To be added later...</p>
 </body>
 </html>
