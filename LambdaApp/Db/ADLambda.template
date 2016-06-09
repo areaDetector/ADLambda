@@ -12,7 +12,7 @@ record(longin, "$(P)$(R)DecodedQueueDepth")
    field(SCAN, "I/O Intr")
 }
 
-record(longin, "$(P)$(R)BadFrameCount")
+record(longin, "$(P)$(R)BadFrameCounter")
 {
    field(DTYP, "asynInt32")
    field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
