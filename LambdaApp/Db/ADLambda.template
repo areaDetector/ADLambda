@@ -25,3 +25,19 @@ record(mbbo, "$(P)$(R)ImageMode")
    field(TWVL, "")
    field(VAL,  "1")
 }
+
+# Override values from ADBase
+record(mbbo, "$(P)$(R)TriggerMode")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))TRIGGER_MODE")
+   field(ZRST, "Internal")
+   field(ZRVL, "0")
+   field(ONST, "External_SequencePer")
+   field(ONVL, "1")
+   field(TWST, "External_ImagePer")
+   field(TWVL, "2")
+   field(VAL,  "0")
+   info(autosaveFields, "VAL")
+}
