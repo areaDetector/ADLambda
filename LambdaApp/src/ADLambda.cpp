@@ -511,7 +511,12 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
         lambdaInstance->SetNImages(value);
     }
     else if (function == ADTriggerMode){
-        lambdaInstance->SetTriggerMode(value);
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                "%s:%s Setting TriggerMode %d\n",
+                driverName,
+                __FUNCTION__,
+                value);
+        lambdaInstance->SetTriggerMode((short)value);
     }
     else if (function < LAMBDA_FIRST_PARAM) {
         status = ADDriver::writeInt32(pasynUser, value);
