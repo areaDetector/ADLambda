@@ -307,7 +307,7 @@ text {
 	"basic attribute" {
 		clr=14
 	}
-	textix="Bad Frame Count"
+	textix="Bad Frame Counter"
 	align="horiz. right"
 }
 "text update" {
@@ -318,7 +318,7 @@ text {
 		height=18
 	}
 	monitor {
-		chan="$(P)$(R)BadFrameCount"
+		chan="$(P)$(R)BadFrameCounter"
 		clr=54
 		bclr=4
 	}
