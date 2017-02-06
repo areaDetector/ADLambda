@@ -28,7 +28,7 @@ using namespace DetCommonNS;
 class epicsShareClass ADLambda: public ADDriver {
 public:
     static const char *driverName;
-
+    static const int TWELVE_BIT, TWENTY_FOUR_BIT;
     ADLambda(const char *portName, const char *configPath, int maxBuffers,
             size_t maxMemory, int priority, int stackSize);
     ~ADLambda();

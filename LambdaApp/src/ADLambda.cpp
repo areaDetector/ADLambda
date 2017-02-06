@@ -3,6 +3,7 @@
  See LICENSE file.
  */
 /* ADLambda.cpp */
+#include <algorithm>
 #include <iocsh.h>
 
 #include <epicsTime.h>
@@ -49,6 +50,8 @@ static void exitCallbackC(void *pPvt) {
 }
 
 const char *ADLambda::driverName = "Lambda";
+const int ADLambda::TWELVE_BIT = 12;
+const int ADLambda::TWENTY_FOUR_BIT = 24;
 
 /**
  * Constructor
@@ -71,14 +74,16 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
         size_t maxMemory, int priority, int stackSize) :
         ADDriver(portName, 1, int(NUM_LAMBDA_PARAMS), maxBuffers, maxMemory,
                 asynEnumMask, asynEnumMask, ASYN_CANBLOCK, 1, priority,
-                stackSize) {
+                stackSize)
+    ,
+    imageThreadKeepAlive(false),
+    acquiringData(false),
+    frameNumbersRead(0),
+    totalLossFramesRead(0),
+    latestImageNumberRead(0)
+    {
 
     int status = asynSuccess;
-    acquiringData = false;
-    frameNumbersRead = 0;
-    totalLossFramesRead = 0;
-    latestImageNumberRead = 0;
-    imageThreadKeepAlive = false;
 
     lambdaInstance = new DetCommonNS::LambdaSysImpl(configPath);
     printf("Done making instance");
@@ -137,6 +142,7 @@ asynStatus ADLambda::acquireStart(){
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s Enter\n", driverName, __FUNCTION__);
     int status = asynSuccess;
+    int dataType;
     
     setIntegerParam(ADNumImagesCounter, 0);
     setIntegerParam(LAMBDA_BadFrameCounter, 0);
@@ -144,10 +150,12 @@ asynStatus ADLambda::acquireStart(){
     lambdaInstance->GetImageFormat(sizeX, sizeY, imageDepth);
     imageDims[0] = sizeX;
     imageDims[1] = sizeY;
-    imageDataType = NDUInt16;
+    getIntegerParam(NDDataType, &dataType);
+    imageDataType = (NDDataType_t)dataType;
     acquiringData = true;
     acquiredImages = 0;
     lambdaInstance->StartImaging();
+
 
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s Exit\n", driverName, __FUNCTION__);
@@ -160,7 +168,7 @@ asynStatus ADLambda::acquireStart(){
  * number of images have been captured.
  */
 asynStatus ADLambda::acquireStop(){
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s Enter\n", driverName, __FUNCTION__);
 
     int status = asynSuccess;
@@ -171,7 +179,7 @@ asynStatus ADLambda::acquireStop(){
     setIntegerParam(ADAcquire, 0);
     callParamCallbacks();
 
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s Exit\n", driverName, __FUNCTION__);
     return (asynStatus)status;
 }
@@ -199,7 +207,9 @@ short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
 }
 
 int ADLambda::getImageDepth(){
-    return 12;
+    int nX, nY, nImgDepth;
+    lambdaInstance->GetImageFormat(nX, nY, nImgDepth);
+    return nImgDepth;
 }
 
 /**
@@ -254,9 +264,10 @@ void ADLambda::handleNewImageTask() {
     lossFrames = 0;
     currentFrameNo = 0;
     currentFrameNumber = -1;
+    double ONE_BILLION = 1.E9;
 
-    while (true && imageThreadKeepAlive) {
-        //epicsThreadSleep(0.000025);
+    while (imageThreadKeepAlive) {
+        epicsThreadSleep(0.000025);
         numBufferedImages = lambdaInstance->GetQueueDepth();
         getIntegerParam(ADNumImages, &frameNumbersRead);
 
@@ -267,9 +278,11 @@ void ADLambda::handleNewImageTask() {
                     "%s:%s numberBufferedImages: %d\n",
                     driverName, __FUNCTION__,
                     (int) numBufferedImages);
-            if (getImageDepth() == 12){
+            if (getImageDepth() == TWELVE_BIT){
                 long newFrameNumber;
-                shDecodedData = getDecodedImageShort(newFrameNumber, frameErrorCode);
+                shDecodedData = getDecodedImageShort(
+                        newFrameNumber,
+                        frameErrorCode);
                 if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
                         "%s:%s shDecodedData %p, Current Frame Number %ld,"
@@ -325,8 +338,19 @@ void ADLambda::handleNewImageTask() {
                             pImage = this->pArrays[0];
                             pImage->getInfo(&arrayInfo);
                             //copy the data from the input to the output
-                            memcpy(pImage->pData, shDecodedData,
-                                    arrayInfo.totalBytes);
+                            if (imageDataType == NDUInt16){
+                                memcpy(pImage->pData, shDecodedData,
+                                        arrayInfo.totalBytes);
+                            }
+                            else if ( imageDataType == NDUInt32){
+
+                            }
+                            else {
+                                asynPrint (pasynUserSelf, ASYN_TRACE_ERROR,
+                                        "%s:%s Unhandled Data Type %d",
+                                        driverName, __FUNCTION__,
+                                        imageDataType);
+                            }
                             getIntegerParam(NDArrayCounter, &arrayCounter);
                             arrayCounter++;
                             setIntegerParam(NDArrayCounter, arrayCounter);
@@ -334,7 +358,7 @@ void ADLambda::handleNewImageTask() {
                             /* Timestamps */
                             epicsTimeGetCurrent(&currentTime);
                             pImage->timeStamp = currentTime.secPastEpoch +
-                                    currentTime.nsec / 1.e9;
+                                    currentTime.nsec / ONE_BILLION;
                             updateTimeStamp(&pImage->epicsTS);
                             pImage->uniqueId = currentFrameNumber;
                             if (frameErrorCode != 0){
@@ -360,8 +384,30 @@ void ADLambda::handleNewImageTask() {
                 }
 
             }
-            else if (getImageDepth() == 24){
-                decodedData = getDecodedImageInt(currentFrameNumber, frameErrorCode);
+            else if (getImageDepth() == TWENTY_FOUR_BIT){
+                long newFrameNumber;
+                decodedData = getDecodedImageInt(
+                        newFrameNumber,
+                        frameErrorCode);
+                if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                            "%s:%s decodedData %p, CurrentFrameNumber %ld, "
+                                    "frameErrorCode %d equals lastImage\n",
+                                    driverName, __FUNCTION__,
+                                    decodedData,
+                                    currentFrameNumber,
+                                    frameErrorCode);
+                }
+                if ((newFrameNumber != -1 && currentFrameNumber != -1)
+                        && (newFrameNumber - currentFrameNumber) != 1){
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                            "%s:%s missing %ld Frames starting at Frame Number %ld\n",
+                            driverName, __FUNCTION__,
+                            currentFrameNumber + 1,
+                            newFrameNumber - currentFrameNumber);
+                }
+                currentFrameNumber = newFrameNumber;
+
                 if ((decodedData == NULL) &&
                         (currentFrameNumber == -1) &&
                         (frameErrorCode == -1)) {
@@ -372,9 +418,88 @@ void ADLambda::handleNewImageTask() {
                 }
                 if (bRead && acquiredImages < frameNumbersRead){
                     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                            "%s:%s Processing Image 24 bit",
+                            "%s:%s Processing Image 24 bit\n",
                             driverName, __FUNCTION__);
                     //Pass Along images
+                    getIntegerParam(ADNumImagesCounter, &imageCounter);
+                    imageCounter++;
+                    setIntegerParam(ADNumImagesCounter, imageCounter);
+                    /** Upadate The Images */
+                    if (this->pArrays[0]) {
+                        this->pArrays[0]->release();
+                    }
+                    getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
+                    if (arrayCallbacks){
+                        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                            "%s:%s Callbacks Enabled\n",
+                            driverName, __FUNCTION__);
+                        /* Allocate a new array */
+                        this->pArrays[0] = pNDArrayPool->alloc(2, imageDims,
+                            imageDataType, 0,
+                            NULL);
+
+                        if (this->pArrays[0] != NULL) {
+                            asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                    "%s:%s Arrays not NULL\n",
+                                    driverName, __FUNCTION__);
+                            pImage = this->pArrays[0];
+                            pImage->getInfo(&arrayInfo);
+                            //copy the data from the input to the output
+                            if (imageDataType == NDUInt16){
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from U32 to U16 %d\n",
+                                        imageDataType);
+                                int *first = decodedData;
+                                int *last = decodedData + arrayInfo.totalBytes;
+                                unsigned short  *result = (unsigned short *)pImage->pData;
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from U32 to U16 %d %p, %p , %p\n",
+                                        imageDataType, first, last, result);
+ //                               std::copy(first, last, result);
+                                while (first != last){
+                                    *result = *first;
+                                    ++result; ++first;
+                                }
+
+                            }
+                            else if ( imageDataType == NDUInt32){
+                                memcpy(pImage->pData, decodedData,
+                                        arrayInfo.totalBytes);
+                            }
+                            else {
+                                asynPrint (pasynUserSelf, ASYN_TRACE_ERROR,
+                                        "%s:%s Unhandled Data Type %d\n",
+                                        driverName, __FUNCTION__,
+                                        imageDataType);
+                            }
+                            getIntegerParam(NDArrayCounter, &arrayCounter);
+                            arrayCounter++;
+                            setIntegerParam(NDArrayCounter, arrayCounter);
+                            setIntegerParam(NDArraySize, arrayInfo.totalBytes);
+                            /* Time stamps */
+                            epicsTimeGetCurrent(&currentTime);
+                            pImage->timeStamp = currentTime.secPastEpoch +
+                                    currentTime.nsec / ONE_BILLION;
+                            updateTimeStamp(&pImage->epicsTS);
+                            pImage->uniqueId = currentFrameNumber;
+                            if (frameErrorCode != 0){
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "%s:%s Bad Frame\n",
+                                        driverName, __FUNCTION__);
+                                getIntegerParam(LAMBDA_BadFrameCounter, &numBadFrames);
+                                numBadFrames++;
+                                setIntegerParam(LAMBDA_BadFrameCounter, numBadFrames);
+                                setIntegerParam(LAMBDA_BadImage, 1);
+                            }
+                            else {
+                                setIntegerParam(LAMBDA_BadImage, 0);
+                            }
+                            callParamCallbacks();
+                            /* get attributes that have been defined for this driver */
+                            getAttributes(pImage->pAttributeList);
+                            doCallbacksGenericPointer(pImage, NDArrayData, 0);
+                        }
+                    }
                 }
             }
             if (bRead && acquiredImages < frameNumbersRead){
@@ -411,7 +536,7 @@ void ADLambda::handleNewImageTask() {
  */
 asynStatus ADLambda::initializeDetector(){
     int status = asynSuccess;
-    lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
+    getImageFormat(imageWidth, imageHeight, imageDepth);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s imageHeight %d, imageWidth%d\n",
             driverName, __FUNCTION__,
@@ -425,7 +550,12 @@ asynStatus ADLambda::initializeDetector(){
     setIntegerParam(NDArraySizeX, imageWidth);
     setIntegerParam(NDArraySizeY, imageHeight);
     setIntegerParam(NDArraySize, 0);
-
+    if (imageDepth == TWELVE_BIT) {
+        setIntegerParam(NDDataType, NDUInt16);
+    }
+    else if (imageDepth == TWENTY_FOUR_BIT) {
+        setIntegerParam(NDDataType, NDUInt32);
+    }
     callParamCallbacks();
 
 
@@ -468,7 +598,7 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
         setDoubleParam(function, acquirePeriod);
     }
     else if (function == LAMBDA_EnergyThreshold){
-        lambdaInstance->SetThreshold(0, value);
+        lambdaInstance->SetThreshold((int)0, (float)value);
     }
     else {
         if (function < LAMBDA_FIRST_PARAM) {
