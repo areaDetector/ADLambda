@@ -326,3 +326,57 @@ text {
 	limits {
 	}
 }
+composite {
+	object {
+		x=40
+		y=182
+		width=273
+		height=20
+	}
+	"composite name"=""
+	children {
+		text {
+			object {
+				x=40
+				y=182
+				width=90
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Data type"
+			align="horiz. right"
+		}
+		menu {
+			object {
+				x=136
+				y=182
+				width=80
+				height=20
+			}
+			control {
+				chan="$(P)$(R)DataType"
+				clr=14
+				bclr=51
+			}
+		}
+		"text update" {
+			object {
+				x=234
+				y=183
+				width=79
+				height=18
+			}
+			monitor {
+				chan="$(P)$(R)DataType_RBV"
+				clr=54
+				bclr=4
+			}
+			align="horiz. centered"
+			format="string"
+			limits {
+			}
+		}
+	}
+}
