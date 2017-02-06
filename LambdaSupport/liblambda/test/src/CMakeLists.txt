@@ -13,7 +13,7 @@ message(STATUS "testing_source: ${TEST_SOURCES}:${PROJECT_SOURCE_DIR}")
 
 add_executable(${PROJECT_LAMBDA_TEST} ${TEST_SOURCES})
 
-target_link_libraries(${PROJECT_LAMBDA_TEST} boost_system-mt boost_thread-mt dl pthread stdc++ cppunit)
+target_link_libraries(${PROJECT_LAMBDA_TEST} boost_system boost_thread dl pthread stdc++ cppunit z)
 
 add_test(${PROJECT_LAMBDA_TEST} ${PROJECT_LAMBDA_TEST})
 
