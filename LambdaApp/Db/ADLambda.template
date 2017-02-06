@@ -41,3 +41,14 @@ record(mbbo, "$(P)$(R)TriggerMode")
    field(VAL,  "0")
    info(autosaveFields, "VAL")
 }
+
+
+record(ao, "$(P)$(R)AcquireTime")
+{
+   field("PREC","4")
+}
+
+record(ai, "$(P)$(R)AcquireTime_RBV")
+{
+   field("PREC","4")
+}
