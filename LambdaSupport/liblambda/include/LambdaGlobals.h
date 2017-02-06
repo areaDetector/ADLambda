@@ -44,17 +44,13 @@ namespace DetCommonNS
     const short UDP_PORT_1 = 4422;
 
     ///threads number
-    const int THREAD_NUMBER = 18;
+    const int THREAD_NUMBER = 20;
     const bool MULTI_LINK = false;
 
     ///image buffer length(unit:image numbers)
     const int RAW_BUFFER_LENGTH = 100100;
     const int DECODED_BUFFER_LENGTH = 200;
     
-    ///detector operation mode
-    const string OPERATION_MODE_24 = "TwentyFourBit";
-    const string OPERATION_MODE_12 = "ContinuousReadWrite";
-
     ///configuration files
     const string SYSTEM_CONFIG_FILE = "SystemConfig.txt";
     const string DETECTOR_CONFIG_FILE = "LambdaConfig.txt";
@@ -85,6 +81,15 @@ namespace DetCommonNS
     const int PACKET_NUMBERS_6_CHIP = 67;
 
     const int CHIP_HEADER_SIZE = 32; //bytes
+
+    enum Enum_readout_mode
+    {
+        OPERATION_MODE_12,                    /**< enum value 0 */
+        OPERATION_MODE_2x12,
+        OPERATION_MODE_24,
+        OPERATION_MODE_UNKNOWN
+    };
+
     
     ///////////////////////////////////////////////////////////////////////////
     ///Medipix chip data

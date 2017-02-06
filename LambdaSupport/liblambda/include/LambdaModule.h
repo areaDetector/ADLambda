@@ -47,7 +47,7 @@ namespace DetCommonNS
          * @param _stDetCfg detector config data
          * @param _vStChipData for all current used chip data
          */
-        LambdaModule(string _strModuleID, NetworkInterface* _objNetIn,bool _bMultilink, vector<short> _vCurrentChips, stDetCfgData _stDetCfg, vector<stMedipixChipData> _vStChipData);
+        LambdaModule(string _strModuleID, NetworkInterface* _objNetIn,bool _bMultilink, vector<short> _vCurrentChips, stDetCfgData _stDetCfg, vector<stMedipixChipData> _vStChipData, bool _bSlaveModule);
 
         /**
          * @brief set shutter time
@@ -125,6 +125,12 @@ namespace DetCommonNS
          */
         void SetupFastImaging();
 
+
+        /**
+         * @brief Prepare detector for next image series - should be done (A) after changing threshold / matrix config, and (B) after finishing an image series. 
+         */
+        void PrepNextImaging();
+	
         /**
          * @brief  This will automatically start taking a series of images. In the current version, this software takes control. In the future, this should be changed so that the image taking is controlled by the Lambda module, and this function simply sends a command to start the process.
          */
@@ -248,6 +254,7 @@ namespace DetCommonNS
         int m_nChips;
         StringUtils* m_objStrUtil;
         bool m_bMultilink;
+	bool m_bSlaveModule;
         
     };///end of class LambdaModule
 }///end of namespace DetCommonNS

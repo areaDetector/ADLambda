@@ -42,6 +42,11 @@ namespace DetCommonNS
         virtual string GetSensorMaterial() = 0;
 
         /**
+         * @brief get path of calib file
+         */
+        virtual string GetCalibFile() = 0;
+        
+        /**
          * @brief translation information for multi module system
          * @return translation information vector index: 0:x;1:y;2:z
          */
@@ -192,6 +197,29 @@ namespace DetCommonNS
          */
         virtual void StopImaging() = 0;
 
+
+        /**
+         * @brief enable compression
+         *        Note: if compression is enabled, please use GetCompressedData method
+         * @param bCompressionEnabled;true: use compression. false: do not compression
+         * @param compression level
+         */
+        virtual void SetCompressionEnabled(bool bCompressionEnabled,int nCompLevel) = 0;
+
+        /* /\** */
+        /*  * @brief set compression method */
+        /*  * @param nCompresionMethod 0: deflate */
+        /*  *\/ */
+        /* virtual void SetCompressionMethod(int nCompresionMethod) = 0; */
+        virtual void GetCompressionEnabled(bool& bCompressionEnabled,int& nCompLevel) = 0;
+        
+        /**
+         * @brief get compression method
+         * @return the method used
+         *         0 : deflate 
+         */
+        virtual int GetCompressionMethod() = 0;
+        
         /**
          * @brief get pixel mask
          * @return pixel mask array
@@ -250,6 +278,23 @@ namespace DetCommonNS
 
         virtual short* GetDecodedImageShort(long& lFrameNo, short& shErrCode) = 0;
 
+        virtual int* GetCurrentImage(long& lFrameNo,short& shErrCode) = 0;
+        
+        /**
+         * @brief get compressed data
+         * @param frame no
+         * @param error code
+         * @param data length
+         * @return char*(8bit data)
+         */
+        virtual char* GetCompressedData(long& lFrameNo,short& shErrCode,int& nDataLength) = 0;
+
+        /**
+         * @brief get no of subimages for each image taken (e.g. in multiple threshold modes)
+         * @return int
+         */
+	virtual int GetNSubimages() = 0;
+        
         /**
          * @brief destructor
          */

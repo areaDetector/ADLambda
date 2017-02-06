@@ -85,6 +85,12 @@ namespace DetCommonNS
         bool GetMultilink() const;
 
         /**
+         * @brief get "burst mode" (i.e. 1G TCP vs 10G UDP) type
+         * @return true 10G UDP; false 1G TCP
+         */
+        bool GetBurstMode() const;
+	
+        /**
          * @brief get chip config
          * @return vCurrentUsedChips used chips in current detector module
          * @return vStCurrentChipData the chip config data of current used chips\n
@@ -148,9 +154,37 @@ namespace DetCommonNS
          * @return nY
          */
         void GetDistoredImageSize(int& nX,int& nY);
+
+        /**
+         * @brief get maximum raw buffer length
+         * @return raw buffer length
+         */
+        int GetRawBufferLength();
         
         
+        /**
+         * @brief get maximum decoded buffer length
+         * @return decoded buffer length
+         */
+        int GetDecodedBufferLength();
         
+        /**
+         * @brief get number of decoding threads needed of each type
+         * @return Vector lists no of HIGH, NORMAL and LOW priority decoding threads
+         */
+        vector<int> GetDecodingThreadNumbers();
+
+        /**
+         * @brief get shutter time above which the NORMAL decoding threads will run during image reception
+         * @return critical shutter time
+         */
+        double GetCriticalShutterTime();
+
+	 /**
+         * @brief get whether module is a slave module in a multimodule system
+         * @return true if slave modules, false if not
+         */
+        bool GetSlaveModule();
         
       private:
         ///private methods
@@ -195,6 +229,7 @@ namespace DetCommonNS
         
         ///private member variables
         bool m_bMultilink;
+	bool m_bBurstMode;
         short m_shTCPPortNo;
         string m_strConfigFilePath;
         string m_strTCPIPAddress;
@@ -217,9 +252,23 @@ namespace DetCommonNS
         vector<float> m_vfTranslation;
         
 
+        //maximum raw image numbers
+        int m_nMaxRawImageNumbers;
+
+        //maximum decoded image numbers
+        int m_nMaxDecodedImageNumbers;
+
+	//No of decoding threads of different priorities (HIGH, NORMAL, LOW)
+	vector<int> m_vNDecodingThreads;
+	// Shutter time where we switch decoding thread strategy
+	double m_dCriticalShutterTime;
+        
         //final image size
         int m_nX;
         int m_nY;
+
+	// Slave module check (for multimodule systems
+	bool m_bSlaveModule;
 
         //configuration file related
         string m_strSystemConfigFile;
