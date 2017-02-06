@@ -101,6 +101,11 @@ namespace DetCommonNS
             exit(0);
         }
 
+        int nOne = 1;
+        
+        if(setsockopt(m_nSockfd, IPPROTO_TCP, TCP_NODELAY, &nOne, sizeof(nOne))<0)
+            LOG_STREAM(__FUNCTION__,ERROR,"cannot set TCP to be NODELAY:"+to_string(errno));
+        
         ///set timeout for receiving data
         ///avoid recvfrom hanging
         struct timeval tv;
@@ -130,7 +135,6 @@ namespace DetCommonNS
         if(nRet < 0)
         {
             LOG_STREAM(__FUNCTION__,ERROR,"TCP cannot connect to host! Unable to connect to detector - please check that it is powered and correctly connected");
-	    LOG_STREAM(__FUNCTION__,ERROR,m_strIP);
             return nRet;
         }
             
@@ -157,49 +161,168 @@ namespace DetCommonNS
     int NetworkTCPImplementation::ReceivePacket(char* ptrchData,int& nLength)
     {
         LOG_TRACE(__FUNCTION__);
+	int nBytesAv = 0;
+        int nErrorCode = -1;
+        int nRetVal = -1;
+	int nReadLen = 1500;
+	
+	nRetVal =::recv(m_nSockfd,(char*)ptrchData,nReadLen,0);
+	nLength = nRetVal;
+	if(nRetVal>0) return 0; // Indicates OK
+	else return -1; // No data
     }
+
 
     int NetworkTCPImplementation::ReceiveData(char* ptrchData,int nLength)
     {
         LOG_TRACE(__FUNCTION__);
 
+        bool bFirstPacket = true;            
+        int nErrorCode = 0;
+        int nReceivedData = 0;
+        int nRetVal = -1;
+        int nFrameLength = nLength;
+        int nBytesLeft = nLength;
+        int nPos = 0;
+        int nTotalBytesReceived = 0;
+        int nCounter = 0;  
+       
+        int nPacketLength = 1500;
+        char* chDataRec = new char[nPacketLength];
+
+	//cout<<"Receive Data started"<<endl;
+	
+        while(1) // We break when the image is finished
+        {
+	  
+	    while(!HasData())
+	    {
+	        usleep(50); // Don't poll excessively if no data available
+	    }
+
+	    nRetVal = ::recv(m_nSockfd, (char*)chDataRec, nPacketLength, 0);
+	    // nRetVal has no of bytes, 0 if none, -1 if error
+	    if(nRetVal < 0) continue; // If error, try again
+	    
+            if(nRetVal > nBytesLeft)
+            {
+                //data already out of bounds;
+                nErrorCode+=4;
+                LOG_STREAM(__FUNCTION__,ERROR,"Image data is out of bound");
+                LOG_INFOS(("Data out of bound:"+to_string(static_cast<long long>(nRetVal))+"Data remain:"+to_string(static_cast<long long>(nBytesLeft))));
+                break;
+            }
+
+            nCounter++;
+	    
+            if(!bFirstPacket)
+            {
+                //copy data to destination buffer
+                if(nRetVal>0)
+                {
+                    std::copy(chDataRec,chDataRec+nRetVal,ptrchData+nPos);
+                    nReceivedData += nRetVal;
+                }
+                nBytesLeft = nBytesLeft-(nRetVal);
+                nPos = nPos + nRetVal;
+            }
+            else
+            {
+                if(nRetVal >0)
+                {
+                    std::copy(chDataRec,chDataRec+nRetVal,ptrchData);
+                    nReceivedData += nRetVal;
+                }
+
+                //first byte of the image should be 0xa0
+                unsigned char uchByte = ptrchData[0];
+                if(uchByte!=0xa0)
+                {	
+                    LOG_STREAM(__FUNCTION__,ERROR,"Image data is wrong!");
+                    nErrorCode += 2;    
+                }     
+                bFirstPacket = false;
+		nBytesLeft = nBytesLeft-(nRetVal);
+                nPos = nPos + nRetVal;
+            } 
+	
+            if(nPos >= nFrameLength)
+            {
+                LOG_INFOS("One image is finished.");
+                if(nReceivedData<nFrameLength)
+                    nErrorCode++;
+	
+                break;
+            }	
+        }
+        LOG_INFOS(("Total Received Data:"+to_string(static_cast<long long>(nReceivedData))+"Error code is:"+to_string(static_cast<long long>(nErrorCode))));
+        delete chDataRec;
+        return nErrorCode;        
+    }
+
+    bool NetworkTCPImplementation::HasData()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        int nRetVal = -1;
+
+        do
+        {
+            char chTemp;
+            nRetVal =::recv(m_nSockfd,&chTemp,1,MSG_PEEK);
+        }
+        while(nRetVal == -1 && errno == EINTR);
+
+        bool bHasData = (nRetVal!=-1)||errno == EMSGSIZE;
+        return bHasData;
+    
+    }
+
+
+
+    int NetworkTCPImplementation::ReceiveData(char* ptrchData,int nLengthMin, int nLengthMax, int& nTotalReceived)
+    {
+        LOG_TRACE(__FUNCTION__);
+	int nRemainByte = 0;
         int nBytesRead = 0;
-        int nTotalReceivedPacket = 0;
         int nRet = -1;
-        int nRemainByte = nLength;
         int nReadLen = 1500;
         char* ptrChRec = new char[nReadLen];
         int nTry = 0;
 	int nMaxTries = 10000;
+	nTotalReceived = 0;
 
-        while(nTotalReceivedPacket<nLength)
+        while(nTotalReceived<nLengthMax)
         {
-            nRemainByte = nLength-nTotalReceivedPacket;
+            nRemainByte = nLengthMax-nTotalReceived;
             if(nRemainByte<nReadLen)
                 nReadLen = nRemainByte;
-            //read one image
             if((nRet =::recv(m_nSockfd,ptrChRec,nReadLen,0))<0)
             {
-                //cout<<"No Data Received:"<<nRet<<endl;
-                nTry++;
-                if(nTry>nMaxTries)
-                {
-                    delete ptrChRec;
-                    return -1;
-                }
+                //If we already received enough data, then we should return without waiting further
+	        if(nTotalReceived >=nLengthMin) break;
+		else
+		{
+		    nTry++;
+                    if(nTry>nMaxTries)
+                    {
+                        delete ptrChRec;
+                        return -1;
+                    }
+		}
             }
             else
             {
                 nTry = 0;
-                std::copy(ptrChRec,ptrChRec+nRet,ptrchData+nTotalReceivedPacket);
-                nTotalReceivedPacket+=nRet;
-		std::cout<<"nTotalRecived:"<<nTotalReceivedPacket<<"This packet:"<<nRet<<endl;
+                std::copy(ptrChRec,ptrChRec+nRet,ptrchData+nTotalReceived);
+                nTotalReceived+=nRet;
             }
         }
         delete ptrChRec;
         return 0;
     }
 
+  
     int NetworkTCPImplementation::SendData(char* ptrchData,int nLength)
     {
         LOG_TRACE(__FUNCTION__);
@@ -386,7 +509,7 @@ namespace DetCommonNS
             chData = new char[nTempSize];   
 
         }
-        delete chData;
+        delete[] chData;
         return nRetVal;	
     }
 
@@ -398,17 +521,11 @@ namespace DetCommonNS
         int nRetVal = -1;
         struct sockaddr_in stAddr;
         int nAddrLen = sizeof(stAddr);
-        if(HasData())
-        {
-            nBytesAv = HasDataSize();
-            nRetVal = ::recvfrom(m_nSockfd, (char*)ptrchData, nBytesAv, 0,(struct sockaddr*)&stAddr,(socklen_t*)&nAddrLen);
-            nLength = nRetVal;
-            if(nBytesAv!=nRetVal)
-                return 1;
-            else 
-                return 0;
-        }
-        return -1;//no data
+	int nMaxSize = 9600; // For the time being, hard-code a value for test purposes
+	nRetVal = ::recvfrom(m_nSockfd, (char*)ptrchData, nMaxSize, 0,(struct sockaddr*)&stAddr,(socklen_t*)&nAddrLen);
+        nLength = nRetVal;
+	if(nRetVal > 0) return 0; // Indicate data
+        else return -1;//no data
     }
     
     int NetworkUDPImplementation::ReceiveData(char* ptrchData,int nLength)
@@ -470,7 +587,7 @@ namespace DetCommonNS
             {
                 if(nRetVal >0)
                 {
-                    std::copy(chDataRec,chDataRec+nRetVal,ptrchData);
+                    std::copy(chDataRec+UDP_EXTRA_BYTES,chDataRec+nRetVal,ptrchData);
                     nReceivedData += nRetVal;
                 }
 
@@ -482,8 +599,8 @@ namespace DetCommonNS
                     nErrorCode += 2;    
                 }     
                 bFirstPacket = false;
-                nBytesLeft = nBytesLeft-nBytesAv;
-                nPos = nPos +  nBytesAv;
+		nBytesLeft = nBytesLeft-(nBytesAv-UDP_EXTRA_BYTES);
+                nPos = nPos + nBytesAv-UDP_EXTRA_BYTES;
             } 
 	
             if(nPos >= nFrameLength)
@@ -496,8 +613,15 @@ namespace DetCommonNS
             }	
         }
         LOG_INFOS(("Total Received Data:"+to_string(static_cast<long long>(nReceivedData))+"Error code is:"+to_string(static_cast<long long>(nErrorCode))));
-        delete chDataRec;
+        delete[] chDataRec;
         return nErrorCode;        
+    }
+
+    int NetworkUDPImplementation::ReceiveData(char* ptrchData,int nLengthMin, int nLengthMax,int &nTotalReceived)
+    {
+      // NOT YET IMPLEMENTED
+      LOG_TRACE(__FUNCTION__);
+      return -1;
     }
 
     int NetworkUDPImplementation::SendData(char* ptrchData,int nLength)

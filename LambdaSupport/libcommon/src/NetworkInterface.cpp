@@ -99,6 +99,13 @@ namespace DetCommonNS
         
         return m_objNetworkImpl->ReceiveData(ptrChData,nLength);
     }
+
+    int NetworkTCPInterface::ReceiveData(char* ptrChData,int nLengthMin, int nLengthMax, int& nTotalReceived)
+    {
+        LOG_TRACE(__FUNCTION__);
+        
+        return m_objNetworkImpl->ReceiveData(ptrChData,nLengthMin,nLengthMax,nTotalReceived);
+    }  
         
     //////////////////////////////////////////////////
     ///NetworkUDPInterface 
@@ -161,6 +168,15 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
             
         return m_objNetworkImpl->ReceiveData(ptrChData,nLength);
-    }   
+    }
+
+    // NOT YET IMPLEMENTED 
+    int NetworkUDPInterface::ReceiveData(char* ptrChData,int nLengthMin, int nLengthMax, int& nTotalReceived)
+    {
+        LOG_TRACE(__FUNCTION__);
+        
+        return m_objNetworkImpl->ReceiveData(ptrChData,nLengthMin,nLengthMax,nTotalReceived);
+    }  
+  
 }//end of namespace DetCommonNS
 
