@@ -32,8 +32,8 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
     }
 
-    LambdaModule::LambdaModule(string _strModuleID,NetworkInterface* _objNetIn, bool _bMultilink, vector<short> _vCurrentChips, stDetCfgData _stDetCfg, vector<stMedipixChipData> _vStChipData)
-        :m_strModuleID(_strModuleID),m_objNetTCPInterface(_objNetIn),m_bMultilink(_bMultilink),m_vCurrentUsedChips(_vCurrentChips),m_stDetCfg(_stDetCfg),m_vStChips(_vStChipData)
+    LambdaModule::LambdaModule(string _strModuleID,NetworkInterface* _objNetIn, bool _bMultilink, vector<short> _vCurrentChips, stDetCfgData _stDetCfg, vector<stMedipixChipData> _vStChipData, bool _bSlaveModule)
+        :m_strModuleID(_strModuleID),m_objNetTCPInterface(_objNetIn),m_bMultilink(_bMultilink),m_vCurrentUsedChips(_vCurrentChips),m_stDetCfg(_stDetCfg),m_vStChips(_vStChipData),m_bSlaveModule(_bSlaveModule),m_dShutterTime(2000),m_shTriggerMode(0),m_lImageNo(1)
     {
         LOG_TRACE(__FUNCTION__); 
         //init module
@@ -79,26 +79,14 @@ namespace DetCommonNS
         vCmd[1] = 0xf0;
         vCmd[2] = 0x46;
 
-        if(m_bMultilink)
-        {    
-            vCmd[3] = (lClockticks>>56 & lSelector);
-            vCmd[4] = (lClockticks>>48 & lSelector);
-            vCmd[5] = (lClockticks>>40 & lSelector);
-            vCmd[6] = (lClockticks>>32 & lSelector);
-            vCmd[7] = (lClockticks>>24 & lSelector);
-            vCmd[8] = (lClockticks>>16 & lSelector);
-            vCmd[9] = (lClockticks>>8 & lSelector);
-            vCmd[10] = (lClockticks & lSelector);
-        }
-        else
-        {
-            vCmd[3] = (lClockticks>>24 & lSelector);
-            vCmd[4] = (lClockticks>>16 & lSelector);
-            vCmd[5] = (lClockticks>>8 & lSelector);
-            vCmd[6] = (lClockticks & lSelector);
-      
-        }
-        
+        vCmd[3] = (lClockticks>>56 & lSelector);
+        vCmd[4] = (lClockticks>>48 & lSelector);
+        vCmd[5] = (lClockticks>>40 & lSelector);
+        vCmd[6] = (lClockticks>>32 & lSelector);
+        vCmd[7] = (lClockticks>>24 & lSelector);
+        vCmd[8] = (lClockticks>>16 & lSelector);
+        vCmd[9] = (lClockticks>>8 & lSelector);
+        vCmd[10] = (lClockticks & lSelector);        
         
         m_objNetTCPInterface->SendData(vCmd);
     }
@@ -147,17 +135,22 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
         float fEng;
+        short maxVal = 511; // Maximum value of DAC
+        short sEng;
             
         for(int i=0;i<m_vCurrentUsedChips.size();i++)
         {
             fEng = m_vStChips[m_vCurrentUsedChips[i]-1].vKeVToThrSlope[nThresholdNo]*fEnergy
                 + m_vStChips[m_vCurrentUsedChips[i]-1].vThrBaseline[nThresholdNo];
+            sEng = short(fEng);
+            if(sEng > maxVal) sEng = maxVal;
                 
-            m_vStChips[m_vCurrentUsedChips[i]-1].vThreshold[nThresholdNo] = short(fEng);
+            m_vStChips[m_vCurrentUsedChips[i]-1].vThreshold[nThresholdNo] = sEng;
                 
         }
         //send new data to detector
         SetAllDACs();
+        PrepNextImaging();
     }
 
     void LambdaModule::WriteReadOutMode(int nMode)
@@ -178,6 +171,7 @@ namespace DetCommonNS
         vCmd[2] = 0x50;
         vCmd[3] = nMode;
         m_objNetTCPInterface->SendData(vCmd);
+        if(nMode==0) std::cout << "Setting network mode to 0" << "\n";
     }
     
     void LambdaModule::WriteUDPMACAddress(int nCH,vector<string> vStrMAC)
@@ -322,32 +316,39 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
 	
-	// Create a vector to receive OMR data
-	int lengthOMR = 36; // OMR is 36 bytes
-        vector<char> vRecvOMR(lengthOMR,0x00);
+        // Create a vector to receive OMR data
+        // NOTE - length of data can be variable - need to be careful - is it 36 or 40 bytes?
+        // Reversing is dangerous...
+        int lengthOMR = 36; // OMR is 36 bytes. Should ditch excess if possible.
+        int lengthBuffer = 1024; // Oversized buffer to deal with excess data. 
+        vector<char> vRecvOMR(lengthBuffer,0x00);
+        vector<char> vOut; // Empty vector for output
 
-	m_vStChips[nChipNo-1].vStrOMR[3] &= 0x1F; // AND byte with 0001 1111 to set first 3 bits
-	m_vStChips[nChipNo-1].vStrOMR[3] |= 0xE0; // 0xE0 is used for read OMR (111)
+        m_vStChips[nChipNo-1].vStrOMR[3] &= 0x1F; // AND byte with 0001 1111 to set first 3 bits
+        m_vStChips[nChipNo-1].vStrOMR[3] |= 0xE0; // 0xE0 is used for read OMR (111)
         EnableChip(nChipNo);
 
         m_objNetTCPInterface->SendData(m_vStChips[nChipNo-1].vStrOMR);
         m_objNetTCPInterface->SendData(m_vExeCmd);
-	// Having executed command, need to receive data back over TCP interface
-	// Note that we request at least 1 byte; total data is very short, so this means we want at least one packet but are agnostic about the length
-	char * pRecvOMR = vRecvOMR.data();
-	m_objNetTCPInterface->ReceiveData(pRecvOMR,lengthOMR);
-	// For now, put this data to cout
-	std::cout << "Trying Read OMR \n";
-	// Where to do processing? Try bitwise reverse of whole thing?
-	for(int i=(vRecvOMR.size()-1); i>=0; --i)
-	{
-	   char charrev = StringUtils::ReverseChar(vRecvOMR[i]);
-	   unsigned char charval = reinterpret_cast<unsigned char&>(charrev);
-	   unsigned int intval = static_cast<unsigned int>(charval);
-	   std::cout << std::hex << std::setfill('0') << std::setw(2) << intval << " ";
-	}
-	std::cout << "\n";
-	return vRecvOMR;
+        // Having executed command, need to receive data back over TCP interface
+        // Note that we request at least 1 byte; total data is very short, so this means we want at least one packet but are agnostic about the length
+        char * pRecvOMR = vRecvOMR.data();
+        int nDataReceived = 0;
+        m_objNetTCPInterface->ReceiveData(pRecvOMR,lengthOMR,lengthBuffer,nDataReceived);
+        
+        // Truncate to size of OMR
+        vRecvOMR.resize(lengthOMR);
+        // Reverse string to make it more understandable
+        for(int i=(vRecvOMR.size()-1); i>=0; --i)
+        {
+            char charrev = StringUtils::ReverseChar(vRecvOMR[i]);
+            vOut.push_back(charrev);
+        }
+
+        PrepNextImaging();
+        
+        return vOut;
+    
     }
 
     
@@ -377,37 +378,51 @@ namespace DetCommonNS
         else if(m_stDetCfg.nCounterMode ==0 ||m_stDetCfg.nCounterMode==1)
             WriteReadOutMode(2);
 
+        PrepNextImaging();
+
     }
 
     void LambdaModule::StartFastImaging()
     {
         LOG_TRACE(__FUNCTION__);
+        // In code update, will rely on PrepNextImaging to make sure detector is ready for next acquisition. This makes things more complicated (entanglement with state monitoring) but hopefully improves performance.
+        if(!m_bSlaveModule) m_objNetTCPInterface->SendData(m_vExeCmd); // Only send execute command to non-slave modules
+    }
+
+
+    void LambdaModule::PrepNextImaging()
+    {
+
+        LOG_TRACE(__FUNCTION__);
 
         if(m_stDetCfg.shDataOutLines !=8)
         {
             m_stDetCfg.shDataOutLines = 8;
-                
-            for(int i=0;i<m_vCurrentUsedChips.size();i++)
-                for(int j=0;j<m_stDetCfg.vThresholdScan.size();j++)
-                    UpdateOMRString(m_vCurrentUsedChips[i]);
         }
+                
+        for(int i=0;i<m_vCurrentUsedChips.size();i++)
+            UpdateOMRString(m_vCurrentUsedChips[i]);
 
         EnableChip(0);                            
         // No of images and shutter time should already be set - don't need to send this.
-
-	//According to the manual, To reset the full pixel counter
+        //According to the manual, To reset the full pixel counter
         //this command needs to do matrix fast clear twice
         MatrixFastClear();
         MatrixFastClear();
 
-        m_vStChips[m_vCurrentUsedChips[0]].vStrOMR[3] &= 0x1F;
+        m_vStChips[m_vCurrentUsedChips[0]-1].vStrOMR[3] &= 0x1F;
 
         if(m_stDetCfg.nCounterMode == 1)
-            m_vStChips[m_vCurrentUsedChips[0]].vStrOMR[3] |=0x20;
+            m_vStChips[m_vCurrentUsedChips[0]-1].vStrOMR[3] |=0x20;
         
-        m_objNetTCPInterface->SendData(m_vStChips[m_vCurrentUsedChips[0]].vStrOMR);     
-        m_objNetTCPInterface->SendData(m_vExeCmd);
+        m_objNetTCPInterface->SendData(m_vStChips[m_vCurrentUsedChips[0]-1].vStrOMR);
+        // For slave modules, need to give execute command to ensure it's ready to roll
+        if(m_bSlaveModule) m_objNetTCPInterface->SendData(m_vExeCmd);
+    
     }
+
+
+  
     void LambdaModule::StopFastImaging()
     {
         LOG_TRACE(__FUNCTION__);
@@ -418,55 +433,18 @@ namespace DetCommonNS
 
         long lImgNoTmp = m_lImageNo;
         short shTriggerModeTmp = m_shTriggerMode;
-	double dShutterTimeTmp = m_dShutterTime;
+        double dShutterTimeTmp = m_dShutterTime;
 
-	// m_bMultilink should be used to allow different implemenations of stop, depending on firmware version.
+        if(m_shTriggerMode>0)
+            WriteTriggerMode(0);
 
-	if(m_bMultilink)
-	  {
-	    if(m_shTriggerMode>0)
-	      WriteTriggerMode(0);
+        vector<unsigned char> vCmd(COMMAND_LENGTH,0x00);
+        vCmd[1] = 0xf0;
+        vCmd[2] = 0x4a;
+        m_objNetTCPInterface->SendData(vCmd);
 
-	    vector<unsigned char> vCmd(COMMAND_LENGTH,0x00);
-	    vCmd[1] = 0xf0;
-	    vCmd[2] = 0x4a;
-	    m_objNetTCPInterface->SendData(vCmd);
-
-	    if(shTriggerModeTmp>0)
-	      WriteTriggerMode(shTriggerModeTmp);
-	  }
-	else
-	  {
-	    EnableChip(0);
-
-	    if(dShutterTimeTmp > 4.0) 
-	      WriteShutterTime(4.0);
-	    if(lImgNoTmp > 1) 
-	      WriteImageNumbers(1);
-	    if(m_shTriggerMode>0)
-	      WriteTriggerMode(0);
-
-	    m_vStChips[m_vCurrentUsedChips[0]].vStrOMR[3] &= 0x1F;
-	    if(m_stDetCfg.nCounterMode ==1)
-	      m_vStChips[ m_vCurrentUsedChips[0]].vStrOMR[3] |= 0x20;
-
-	    EnableChip(0);
-	    m_objNetTCPInterface->SendData(m_vStChips[m_vCurrentUsedChips[0]].vStrOMR);
-	    m_objNetTCPInterface->SendData(m_vExeCmd);
-
-	    // After a very short delay (e.g. 50ms) want to set the shutter time and no of images back, to make sure everything is set up OK 
-	    usleep(50000);
-	    WriteImageNumbers(lImgNoTmp);
-	    WriteShutterTime(dShutterTimeTmp);
-	    if(shTriggerModeTmp>0)
-	      WriteTriggerMode(shTriggerModeTmp);
-
-	  }
-
-
-            
-
-            
+        if(shTriggerModeTmp>0)
+            WriteTriggerMode(shTriggerModeTmp);
     }
     
     void LambdaModule::SetDAC(int nChipNo)
