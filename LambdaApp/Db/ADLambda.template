@@ -49,6 +49,8 @@ record(mbbo, "$(P)$(R)TriggerMode")
    field(ONVL, "1")
    field(TWST, "External_ImagePer")
    field(TWVL, "2")
+   field(THST, "Gating_Mode")
+   field(THVL, "3")
    field(VAL,  "0")
    info(autosaveFields, "VAL")
 }
