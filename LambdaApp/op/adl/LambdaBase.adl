@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8/support/areaDetector-R2-0/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
+	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
 	version=030107
 }
 display {
 	object {
-		x=112
+		x=67
 		y=67
-		width=711
-		height=674
+		width=717
+		height=730
 	}
 	clr=14
 	bclr=4
@@ -126,7 +126,7 @@ composite {
 		x=353
 		y=193
 		width=350
-		height=405
+		height=430
 	}
 	"composite name"=""
 	"composite file"="LambdaCollect.adl"
@@ -136,7 +136,7 @@ composite {
 		x=1
 		y=264
 		width=350
-		height=380
+		height=250
 	}
 	"composite name"=""
 	"composite file"="LambdaReadout.adl"
@@ -149,5 +149,15 @@ composite {
 		height=80
 	}
 	"composite name"=""
-	"composite file"="ADPlugins.adl"
+	"composite file"="LambdaPlugins.adl"
+}
+composite {
+	object {
+		x=0
+		y=635
+		width=710
+		height=73
+	}
+	"composite name"=""
+	"composite file"="LambdaConfig.adl"
 }
