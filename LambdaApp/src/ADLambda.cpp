@@ -85,36 +85,28 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
 
     int status = asynSuccess;
 
-    lambdaInstance = new DetCommonNS::LambdaSysImpl(configPath);
-    printf("Done making instance");
+    for (unsigned int i=0; i<= strlen(configPath); i++){
+        configFileName[i] = configPath[i];
+    }
+    status |= ADDriver::createParam(LAMBDA_VersionNumberString,
+            asynParamOctet, &LAMBDA_VersionNumber);
+    status |= ADDriver::createParam(LAMBDA_ConfigFilePathString,
+            asynParamOctet, &LAMBDA_ConfigFilePath);
     status |= ADDriver::createParam(LAMBDA_EnergyThresholdString,
             asynParamFloat64, &LAMBDA_EnergyThreshold);
     status |= ADDriver::createParam(LAMBDA_DecodedQueueDepthString,
             asynParamInt32, &LAMBDA_DecodedQueueDepth);
+    status |= ADDriver::createParam(LAMBDA_OperatingModeString,
+            asynParamInt32, &LAMBDA_OperatingMode);
+    status |= ADDriver::createParam(LAMBDA_DetectorStateString,
+            asynParamInt32, &LAMBDA_DetectorState);
     status |= ADDriver::createParam(LAMBDA_BadFrameCounterString,
             asynParamInt32, &LAMBDA_BadFrameCounter);
     status |= ADDriver::createParam(LAMBDA_BadImageString,
             asynParamInt32, &LAMBDA_BadImage);
-    status |= initializeDetector();
+    status |= connect(pasynUserSelf);
 
-    if (status != asynSuccess) {
-        printf("%s:%s: Trouble initializing Lambda detector\n",
-                driverName,
-                __FUNCTION__);
-        return;
-    }
-    /* create the thread that updates new images */
-    status = (epicsThreadCreate("lambdaHandleNewImageTaskC",
-            epicsThreadPriorityMedium,
-            epicsThreadGetStackSize(epicsThreadStackMedium),
-            (EPICSTHREADFUNC)lambdaHandleNewImageTaskC,
-            this) == NULL);
-    if (status) {
-        printf("%s:%s Trouble creating handle new Image task\n",
-                driverName,
-                __FUNCTION__);
-        return;
-    }
+    status |= initializeDetector();
 
     epicsAtExit(exitCallbackC, this);
 }
@@ -126,7 +118,7 @@ ADLambda::~ADLambda() {
     printf("%s:%s Entering ~ADLambda\n",
             driverName,
             __FUNCTION__);
-    imageThreadKeepAlive = false;
+    disconnect(pasynUserSelf);
     printf("%s:%s Exiting ~ADLambda\n",
             driverName,
             __FUNCTION__);
@@ -184,6 +176,66 @@ asynStatus ADLambda::acquireStop(){
     return (asynStatus)status;
 }
 
+asynStatus ADLambda::connect(asynUser* pasynUser){
+    int status = asynSuccess;
+
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s:%s Enter %s\n", driverName, __FUNCTION__,
+            configFileName);
+
+    lambdaInstance = new DetCommonNS::LambdaSysImpl(configFileName);
+    printf("Done making instance");
+    if (status != asynSuccess) {
+        printf("%s:%s: Trouble initializing Lambda detector\n",
+                driverName,
+                __FUNCTION__);
+        return (asynStatus)status;
+    }
+    status = createImageHandlerThread();
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s:%s Leaving\n", driverName, __FUNCTION__);
+
+    return (asynStatus) status;
+
+}
+
+asynStatus ADLambda::createImageHandlerThread(){
+    int status = asynSuccess;
+    /* create the thread that updates new images */
+    status = (epicsThreadCreate("lambdaHandleNewImageTaskC",
+            epicsThreadPriorityMedium,
+            epicsThreadGetStackSize(epicsThreadStackMedium),
+            (EPICSTHREADFUNC)lambdaHandleNewImageTaskC,
+            this) == NULL);
+    if (status) {
+        printf("%s:%s Trouble creating handle new Image task\n",
+                driverName,
+                __FUNCTION__);
+        return (asynStatus)status;
+    }
+    return (asynStatus) status;
+
+}
+
+asynStatus ADLambda::disconnect(asynUser* pasynUser){
+    int status = asynSuccess;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s:%s Enter\n", driverName, __FUNCTION__);
+
+
+    killImageHandlerThread();
+    delete lambdaInstance;
+
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s:%s Exit\n", driverName, __FUNCTION__);
+    return (asynStatus) status;
+
+}
+
+void ADLambda::killImageHandlerThread(){
+    imageThreadKeepAlive = false;
+    epicsThreadSleep(0.000250);
+}
 /**
  * Pass through method to the vendor object requesting an image.
  * Returned image will be returned as a pointer to int.
@@ -280,7 +332,7 @@ void ADLambda::handleNewImageTask() {
                     (int) numBufferedImages);
             if (getImageDepth() == TWELVE_BIT){
                 long newFrameNumber;
-                shDecodedData = getDecodedImageShort(
+                shDecodedData = lambdaInstance->GetDecodedImageShort(
                         newFrameNumber,
                         frameErrorCode);
                 if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
@@ -338,18 +390,87 @@ void ADLambda::handleNewImageTask() {
                             pImage = this->pArrays[0];
                             pImage->getInfo(&arrayInfo);
                             //copy the data from the input to the output
-                            if (imageDataType == NDUInt16){
+                            switch (imageDataType) {
+                            case NDUInt8:
+                               {
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to UInt8 %d\n",
+                                           imageDataType);
+                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsUInt8);
+                                   short *first = shDecodedData;
+                                   short *last =shDecodedData +
+                                           arrayInfo.totalBytes/scaleBytes;
+                                   unsigned char  *result = (unsigned char *)pImage->pData;
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to UInt8 %d %p, %p , %p\n",
+                                           imageDataType, first, last, result);
+                                   std::copy(first, last, result);
+                               }
+                               break;
+                            case NDInt16:
+                               {
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to Int16 %d\n",
+                                           imageDataType);
+                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsInt16);
+                                   short *first = shDecodedData;
+                                   short *last = shDecodedData +
+                                           arrayInfo.totalBytes/scaleBytes;
+                                   short  *result = (short *)pImage->pData;
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to Int16 %d %p, %p , %p\n",
+                                           imageDataType, first, last, result);
+                                   std::copy(first, last, result);
+                               }
+                               break;
+                            case NDUInt16:
+                                {
                                 memcpy(pImage->pData, shDecodedData,
                                         arrayInfo.totalBytes);
-                            }
-                            else if ( imageDataType == NDUInt32){
-
-                            }
-                            else {
+                                }
+                                break;
+                            case NDInt32:
+                               {
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to Int32 %d\n",
+                                           imageDataType);
+                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsInt32);
+                                   short *first = shDecodedData;
+                                   short *last = shDecodedData +
+                                           arrayInfo.totalBytes/scaleBytes;
+                                   int  *result = (int *)pImage->pData;
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to Int32 %d %p, %p , %p\n",
+                                           imageDataType, first, last, result);
+                                   std::copy(first, last, result);
+                               }
+                               break;
+                            case NDUInt32:
+                               {
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to UInt32 %d\n",
+                                           imageDataType);
+                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsUInt32);
+                                   short *first = shDecodedData;
+                                   short *last = shDecodedData +
+                                           arrayInfo.totalBytes/scaleBytes;
+                                   unsigned int  *result = (unsigned int *)pImage->pData;
+                                   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                           "Copying from UInt16 to UInt32 %d %p, %p , %p\n",
+                                           imageDataType, first, last, result);
+                                   std::copy(first, last, result);
+                               }
+                               break;
+                        case NDFloat32:
+                            case NDFloat64:
+                            default:
+                                {
                                 asynPrint (pasynUserSelf, ASYN_TRACE_ERROR,
                                         "%s:%s Unhandled Data Type %d",
                                         driverName, __FUNCTION__,
                                         imageDataType);
+                                }
+                                break;
                             }
                             getIntegerParam(NDArrayCounter, &arrayCounter);
                             arrayCounter++;
@@ -386,7 +507,7 @@ void ADLambda::handleNewImageTask() {
             }
             else if (getImageDepth() == TWENTY_FOUR_BIT){
                 long newFrameNumber;
-                decodedData = getDecodedImageInt(
+                decodedData = lambdaInstance->GetDecodedImageInt(
                         newFrameNumber,
                         frameErrorCode);
                 if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
@@ -445,32 +566,88 @@ void ADLambda::handleNewImageTask() {
                             pImage = this->pArrays[0];
                             pImage->getInfo(&arrayInfo);
                             //copy the data from the input to the output
-                            if (imageDataType == NDUInt16){
+                            switch (imageDataType) {
+                            case NDUInt8:
+                            {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                        "Copying from U32 to U16 %d\n",
+                                        "Copying from UInt32 to UInt8 %d\n",
                                         imageDataType);
+                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt8);
                                 int *first = decodedData;
-                                int *last = decodedData + arrayInfo.totalBytes;
+                                int *last = decodedData +
+                                        arrayInfo.totalBytes/scaleBytes;
+                                unsigned char  *result = (unsigned char *)pImage->pData;
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from UInt32 to UInt8 %d %p, %p , %p\n",
+                                        imageDataType, first, last, result);
+                                std::copy(first, last, result);
+                            }
+
+                                break;
+                            case NDInt16:
+                            {
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from UInt32 to Int16 %d\n",
+                                        imageDataType);
+                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsInt16);
+                                int *first = decodedData;
+                                int *last = decodedData +
+                                        arrayInfo.totalBytes/scaleBytes;
+                                short  *result = (short *)pImage->pData;
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from UInt32 to Int16 %d %p, %p , %p\n",
+                                        imageDataType, first, last, result);
+                                std::copy(first, last, result);
+                            }
+
+                                break;
+                            case NDUInt16:
+                            {
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from UInt32 to UInt16 %d\n",
+                                        imageDataType);
+                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt16);
+                                int *first = decodedData;
+                                int *last = decodedData +
+                                        arrayInfo.totalBytes/scaleBytes;
                                 unsigned short  *result = (unsigned short *)pImage->pData;
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                        "Copying from U32 to U16 %d %p, %p , %p\n",
+                                        "Copying from UInt32 to UInt16 %d %p, %p , %p\n",
                                         imageDataType, first, last, result);
- //                               std::copy(first, last, result);
-                                while (first != last){
-                                    *result = *first;
-                                    ++result; ++first;
-                                }
-
+                                std::copy(first, last, result);
                             }
-                            else if ( imageDataType == NDUInt32){
+
+                                break;
+                            case NDInt32:
+                            {
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from UInt32 to Int32 %d\n",
+                                        imageDataType);
+                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt32);
+                                int *first = decodedData;
+                                int *last = decodedData +
+                                        arrayInfo.totalBytes/scaleBytes;
+                                int  *result = (int *)pImage->pData;
+                                asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+                                        "Copying from UInt32 to Int32 %d %p, %p , %p\n",
+                                        imageDataType, first, last, result);
+                                std::copy(first, last, result);
+                            }
+
+                                break;
+                            case NDUInt32:
                                 memcpy(pImage->pData, decodedData,
                                         arrayInfo.totalBytes);
-                            }
-                            else {
+                                break;
+                            case NDFloat32:
+                            case NDFloat64:
+                            default:
                                 asynPrint (pasynUserSelf, ASYN_TRACE_ERROR,
                                         "%s:%s Unhandled Data Type %d\n",
                                         driverName, __FUNCTION__,
                                         imageDataType);
+                                break;
+
                             }
                             getIntegerParam(NDArrayCounter, &arrayCounter);
                             arrayCounter++;
@@ -571,6 +748,21 @@ void ADLambda::report(FILE *fp, int details) {
     ADDriver::report(fp, details);
 }
 
+asynStatus  ADLambda::readInt32 (asynUser *pasynUser, epicsInt32 *value){
+    int status = asynSuccess;
+    int function = pasynUser->reason;
+
+    if (function == LAMBDA_DetectorState){
+        *value = (epicsInt32)lambdaInstance->GetState();
+    }
+    else {
+        if (function < LAMBDA_FIRST_PARAM) {
+            status = ADDriver::readInt32(pasynUser, value);
+        }
+    }
+    callParamCallbacks();
+    return (asynStatus) status;
+}
 /**
  * Override from super class to handle detector specific parameters.
  * If the parameter is from one of the super classes and is not handled
@@ -648,6 +840,27 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
                 value);
         lambdaInstance->SetTriggerMode((short)value);
     }
+    else if (function == LAMBDA_OperatingMode) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                "%s:%s Setting TriggerMode %d\n",
+                driverName,
+                __FUNCTION__,
+                value);
+        if (value == 0){
+            killImageHandlerThread();
+            lambdaInstance->SetOperationMode(string("ContinuousReadWrite"));
+            setIntegerParam(NDDataType, NDUInt16);
+            callParamCallbacks();
+            createImageHandlerThread();
+        }
+        else if(value == 1) {
+            killImageHandlerThread();
+            lambdaInstance->SetOperationMode(string("TwentyFourBit"));
+            setIntegerParam(NDDataType, NDUInt32);
+            callParamCallbacks();
+            createImageHandlerThread();
+        }        
+    }
     else if (function < LAMBDA_FIRST_PARAM) {
         status = ADDriver::writeInt32(pasynUser, value);
     }
@@ -670,6 +883,41 @@ asynStatus ADLambda::writeOctet(asynUser* pasynUser, const char *value, size_t n
     }
     return (asynStatus) status;
 }
+
+
+/**
+ * Override from superclass to handle cases for detector specific Parameters.
+ * If the parameter is from one of the super classes and is not handled
+ * here, then pass along to ADDriver (direct super class)
+ */
+asynStatus 	ADLambda::readOctet (asynUser *pasynUser, char *value, 
+    size_t maxChars, size_t *nActual, int *eomReason){
+    int status = asynSuccess;
+    int function = pasynUser->reason;
+
+    if (function == LAMBDA_ConfigFilePath) {
+        string pathName = lambdaInstance->GetConfigFilePath();
+        const char *pName = pathName.data();
+        realpath(pName, value);
+        *nActual = strlen(value);
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                "%s:%s  %s\n",
+                driverName,
+                __FUNCTION__,
+                value);
+
+//        for (unsigned int i=0; i< *nActual; i++) {
+//            //value[i] = pName[i];
+//        }
+    }    
+    else if (function < LAMBDA_FIRST_PARAM) {
+        status = ADDriver::readOctet(pasynUser, value, maxChars, nActual, eomReason);
+    }
+    return (asynStatus) status;
+
+}
+
+
 /**
  * Thread Handler function for receiving new images.
  */
