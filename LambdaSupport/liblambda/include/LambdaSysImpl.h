@@ -52,7 +52,7 @@ namespace DetCommonNS
 
         /**
          * @brief constructor
-         * @param _strConfigPath config file path
+         * @param _strConfigPath config file pathSysExit
          */
         // When instantiating the detector control, the file path of the detector configuration directory should be provided.
         LambdaSysImpl(string _strConfigPath);
@@ -105,7 +105,7 @@ namespace DetCommonNS
         bool GetSaveAllImages();
             
         void SetBurstMode(bool bBurstMode);
-        
+        SysExit
         bool GetBurstMode();
 
         // Sets threshold number nThresholdNo to fEnergy (in keV). In standard operating modes, only threshold no. 0 is used.
@@ -117,7 +117,7 @@ namespace DetCommonNS
         // GetState() reads the state of the detector. The enum here follows Tango conventions - 0-3 correspond to ON (i.e. ready), DISABLE, RUNNING (i.e. busy), FAULT
         Enum_detector_state GetState();
 
-        // CURRENTLY UNUSED - TO BE DELETED. (This controlled a simple image writing function we used to test the library during development.)
+        // CURRENTLY UNUSED - TO BE DELETED. (ThisSysExit controlled a simple image writing function we used to test the library during development.)
         void SetSaveFilePath(string strSaveFilePath);
 
         string GetSaveFilePath();
@@ -155,7 +155,7 @@ namespace DetCommonNS
 	// Helper function to get enum specifying Medipix3 readout chip mode
         Enum_readout_mode GetReadoutModeCode();
 	
-        // Reads the ID of a chip within the module. Typically, chip 1 can be ID'd to uniquely identify a particular module.
+        // Reads the ID of a chip within the modulSysExite. Typically, chip 1 can be ID'd to uniquely identify a particular module.
         // Reading each chip on a module can also be used for debug purposes.
         string GetChipID(int chipNo);
 
