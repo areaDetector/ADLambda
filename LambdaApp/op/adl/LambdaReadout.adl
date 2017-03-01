@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8/support/areaDetector-R2-0/ADLambda/LambdaApp/op/adl/LambdaReadout.adl"
+	name="/local/epics/synApps_5_8/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaReadout.adl"
 	version=030107
 }
 display {
 	object {
-		x=400
-		y=261
-		width=350
-		height=230
+		x=391
+		y=253
+		width=356
+		height=253
 	}
 	clr=14
 	bclr=4
@@ -103,7 +103,7 @@ rectangle {
 		x=0
 		y=0
 		width=350
-		height=230
+		height=250
 	}
 	"basic attribute" {
 		clr=14
