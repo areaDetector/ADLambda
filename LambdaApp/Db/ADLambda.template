@@ -1,3 +1,14 @@
+record(waveform, "$(P)$(R)ConfigFilePath")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_CONFIG_FILE_PATH")
+    field(FTVL, "CHAR")
+    field(NELM, "256")
+    field(SCAN, "I/O Intr")
+}
+
+
 record(ao, "$(P)$(R)EnergyThreshold")
 {
    field(DTYP, "asynFloat64")
@@ -40,6 +51,42 @@ record(mbbo, "$(P)$(R)TriggerMode")
    field(TWVL, "2")
    field(VAL,  "0")
    info(autosaveFields, "VAL")
+}
+record(mbbo, "$(P)$(R)OperatingMode")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
+   field(ZRST, "ContinuousReadWrite")
+   field(ZRVL, "0")
+   field(ONST, "TwentyFourBit")
+   field(ONVL, "1")
+   field(VAL,  "0")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)LambdaState")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DETECTOR_STATE")
+   field(ZRST, "ON")
+   field(ZRVL, "0")
+   field(ONST, "DISABLE")
+   field(ONVL, "1")
+   field(TWST, "BUSY")
+   field(TWVL, "2")
+   field(THST, "FAULT")
+   field(THVL, "3")
+   field(FRST, "RECEIVING_IMAGES")
+   field(FRVL, "4")
+   field(FVST, "PROCESSING_IMAGES")
+   field(FVVL, "5")
+   field(SXST, "Finished")
+   field(SXVL, "6")
+   field(SCAN, ".1 second")
+   info(autosaveFields, "VAL")
+   
 }
 
 
