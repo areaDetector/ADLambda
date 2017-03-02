@@ -1,6 +1,6 @@
 
 file {
-	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaConfig.adl"
+	name="/local/epics/synApps_5_8/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaConfig.adl"
 	version=030107
 }
 display {
@@ -153,5 +153,21 @@ rectangle {
 	}
 	"dynamic attribute" {
 		chan="$(P)$(R)OperatingMode"
+	}
+}
+"text update" {
+	object {
+		x=468
+		y=35
+		width=200
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)OperatingMode_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
 	}
 }
