@@ -67,6 +67,19 @@ record(mbbo, "$(P)$(R)OperatingMode")
    info(autosaveFields, "VAL")
 }
 
+record(mbbi, "$(P)$(R)OperatingMode_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
+   field(ZRST, "ContinuousReadWrite")
+   field(ZRVL, "0")
+   field(ONST, "TwentyFourBit")
+   field(ONVL, "1")
+   field(VAL,  "0")
+   field(SCAN, "I/O Intr")
+   info(autosaveFields, "VAL")
+}
+
 record(mbbi, "$(P)$(R)LambdaState")
 {
    field(PINI, "YES")
