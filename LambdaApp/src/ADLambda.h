@@ -37,10 +37,10 @@ public:
     asynStatus createImageHandlerThread();
     void killImageHandlerThread();
     int getImageDepth();
-    int getQueueDepth();
+//    int getQueueDepth();
     short* getDecodedImageShort(long& lFrameNo, short& shErrCode);
     int* getDecodedImageInt(long& lFrameNo, short& shErrCode);
-    void getImageFormat(int& nX, int& nY, int& nImgDepth);
+//    void getImageFormat(int& nX, int& nY, int& nImgDepth);
     void handleNewImageTask(void);
     void report(FILE *fp, int details);
     virtual asynStatus  readInt32 (asynUser *pasynUser, epicsInt32 *value);

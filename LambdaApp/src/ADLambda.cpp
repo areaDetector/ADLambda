@@ -35,7 +35,8 @@ extern "C" {
  */
 int LambdaConfig(const char *portName, const char* configPath, int maxBuffers,
         size_t maxMemory, int priority, int stackSize) {
-    new ADLambda(portName, configPath, maxBuffers, maxMemory, priority, stackSize);
+    new ADLambda(portName, configPath, maxBuffers, maxMemory, priority,
+            stackSize);
     return (asynSuccess);
 }
 
@@ -176,6 +177,13 @@ asynStatus ADLambda::acquireStop(){
     return (asynStatus)status;
 }
 
+/**
+ * First attempt to create connect/disconnect.  This is now used at detector
+ * startup but does not seem to work with connect button, even though disconnect
+ * seems to disconnect using the button.
+ * The idea here is to contain lambdaInstance create here as eell as
+ * starting up the image handling thread
+ */
 asynStatus ADLambda::connect(asynUser* pasynUser){
     int status = asynSuccess;
 
@@ -199,6 +207,9 @@ asynStatus ADLambda::connect(asynUser* pasynUser){
 
 }
 
+/**
+ * Separate out the code that creates the image handling thread
+ */
 asynStatus ADLambda::createImageHandlerThread(){
     int status = asynSuccess;
     /* create the thread that updates new images */
@@ -217,6 +228,13 @@ asynStatus ADLambda::createImageHandlerThread(){
 
 }
 
+/**
+ * First attempt at connect/disconnect.  This method seems to work.  It is
+ * called by the destructor and is also called when disconnect button is
+ * pressed.  The corresponding connect does not work.
+ * The idea of this method is to kill the image handling thread and then delete
+ * the LambdaSysImpl instance.
+ */
 asynStatus ADLambda::disconnect(asynUser* pasynUser){
     int status = asynSuccess;
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
@@ -232,6 +250,9 @@ asynStatus ADLambda::disconnect(asynUser* pasynUser){
 
 }
 
+/**
+ * Kill the image handler thread by setting the keep alive signal to false.
+ */
 void ADLambda::killImageHandlerThread(){
     imageThreadKeepAlive = false;
     epicsThreadSleep(0.000250);
@@ -258,30 +279,13 @@ short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
     return lambdaInstance->GetDecodedImageShort(lFrameNo, shErrCode);
 }
 
+/**
+ * grab the image depth out of the GetImageFormat call
+ */
 int ADLambda::getImageDepth(){
     int nX, nY, nImgDepth;
     lambdaInstance->GetImageFormat(nX, nY, nImgDepth);
     return nImgDepth;
-}
-
-/**
- * Pass through method to get the depth of the raw Image
- * queue.
- *  \return Image queue depth
- */
-int ADLambda::getQueueDepth(){
-    return lambdaInstance->GetQueueDepth();
-}
-
-/**
- * Pass through method to the vendor object to get format information
- * for images
- *  \param[out] nX number of pixels in X dimension
- *  \param[out] nY number of pixels in Y dimension
- *  \param[out] number of bits of image Depth
- */
-void ADLambda::getImageFormat(int& nX, int& nY, int& nImgDepth) {
-    lambdaInstance->GetImageFormat( (int &)nX, (int &)nY, (int &)nImgDepth);
 }
 
 /**
@@ -335,7 +339,8 @@ void ADLambda::handleNewImageTask() {
                 shDecodedData = lambdaInstance->GetDecodedImageShort(
                         newFrameNumber,
                         frameErrorCode);
-                if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
+                if ((newFrameNumber == currentFrameNumber) && \
+                        (newFrameNumber != -1)) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
                         "%s:%s shDecodedData %p, Current Frame Number %ld,"
                             " frameErrorCode %d equals last image\n",
@@ -347,7 +352,8 @@ void ADLambda::handleNewImageTask() {
                 if ((newFrameNumber !=-1) && (currentFrameNumber != -1)
                         && (newFrameNumber - currentFrameNumber) != 1) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                        "%s:%s  missing %ld Frames starting at  Frame Number %ld\n",
+                        "%s:%s  missing %ld Frames starting at  Frame Number"
+                            "%ld\n",
                         driverName, __FUNCTION__,
                         currentFrameNumber + 1,
                         newFrameNumber - currentFrameNumber);
@@ -396,13 +402,16 @@ void ADLambda::handleNewImageTask() {
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                            "Copying from UInt16 to UInt8 %d\n",
                                            imageDataType);
-                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsUInt8);
+                                   int scaleBytes =
+                                       sizeof(epicsUInt16)/sizeof(epicsUInt8);
                                    short *first = shDecodedData;
                                    short *last =shDecodedData +
                                            arrayInfo.totalBytes/scaleBytes;
-                                   unsigned char  *result = (unsigned char *)pImage->pData;
+                                   unsigned char  *result =
+                                           (unsigned char *)pImage->pData;
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                           "Copying from UInt16 to UInt8 %d %p, %p , %p\n",
+                                           "Copying from UInt16 to UInt8 %d "
+                                           "%p, %p , %p\n",
                                            imageDataType, first, last, result);
                                    std::copy(first, last, result);
                                }
@@ -412,13 +421,15 @@ void ADLambda::handleNewImageTask() {
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                            "Copying from UInt16 to Int16 %d\n",
                                            imageDataType);
-                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsInt16);
+                                   int scaleBytes =
+                                       sizeof(epicsUInt16)/sizeof(epicsInt16);
                                    short *first = shDecodedData;
                                    short *last = shDecodedData +
                                            arrayInfo.totalBytes/scaleBytes;
                                    short  *result = (short *)pImage->pData;
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                           "Copying from UInt16 to Int16 %d %p, %p , %p\n",
+                                           "Copying from UInt16 to Int16 %d "
+                                           "%p, %p , %p\n",
                                            imageDataType, first, last, result);
                                    std::copy(first, last, result);
                                }
@@ -434,13 +445,15 @@ void ADLambda::handleNewImageTask() {
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                            "Copying from UInt16 to Int32 %d\n",
                                            imageDataType);
-                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsInt32);
+                                   int scaleBytes =
+                                       sizeof(epicsUInt16)/sizeof(epicsInt32);
                                    short *first = shDecodedData;
                                    short *last = shDecodedData +
                                            arrayInfo.totalBytes/scaleBytes;
                                    int  *result = (int *)pImage->pData;
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                           "Copying from UInt16 to Int32 %d %p, %p , %p\n",
+                                           "Copying from UInt16 to Int32 %d "
+                                           "%p, %p , %p\n",
                                            imageDataType, first, last, result);
                                    std::copy(first, last, result);
                                }
@@ -450,13 +463,16 @@ void ADLambda::handleNewImageTask() {
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                            "Copying from UInt16 to UInt32 %d\n",
                                            imageDataType);
-                                   int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsUInt32);
+                                   int scaleBytes =
+                                       sizeof(epicsUInt16)/sizeof(epicsUInt32);
                                    short *first = shDecodedData;
                                    short *last = shDecodedData +
                                            arrayInfo.totalBytes/scaleBytes;
-                                   unsigned int  *result = (unsigned int *)pImage->pData;
+                                   unsigned int  *result =
+                                           (unsigned int *)pImage->pData;
                                    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                           "Copying from UInt16 to UInt32 %d %p, %p , %p\n",
+                                           "Copying from UInt16 to UInt32 %d"
+                                           "%p, %p , %p\n",
                                            imageDataType, first, last, result);
                                    std::copy(first, last, result);
                                }
@@ -486,16 +502,19 @@ void ADLambda::handleNewImageTask() {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                         "%s:%s Bad Frame\n",
                                         driverName, __FUNCTION__);
-                                getIntegerParam(LAMBDA_BadFrameCounter, &numBadFrames);
+                                getIntegerParam(LAMBDA_BadFrameCounter,
+                                        &numBadFrames);
                                 numBadFrames++;
-                                setIntegerParam(LAMBDA_BadFrameCounter, numBadFrames);
+                                setIntegerParam(LAMBDA_BadFrameCounter,
+                                        numBadFrames);
                                 setIntegerParam(LAMBDA_BadImage, 1);
                             }
                             else {
                                 setIntegerParam(LAMBDA_BadImage, 0);
                             }
                             callParamCallbacks();
-                            /* Get attributes that have been defined for this driver */
+                            /* Get attributes that have been defined for this
+                             * driver */
                             getAttributes(pImage->pAttributeList);
                             doCallbacksGenericPointer(pImage, NDArrayData, 0);
                         }
@@ -510,7 +529,8 @@ void ADLambda::handleNewImageTask() {
                 decodedData = lambdaInstance->GetDecodedImageInt(
                         newFrameNumber,
                         frameErrorCode);
-                if (newFrameNumber == currentFrameNumber && newFrameNumber != -1) {
+                if ((newFrameNumber == currentFrameNumber) &&
+                        (newFrameNumber != -1)) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
                             "%s:%s decodedData %p, CurrentFrameNumber %ld, "
                                     "frameErrorCode %d equals lastImage\n",
@@ -522,7 +542,8 @@ void ADLambda::handleNewImageTask() {
                 if ((newFrameNumber != -1 && currentFrameNumber != -1)
                         && (newFrameNumber - currentFrameNumber) != 1){
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                            "%s:%s missing %ld Frames starting at Frame Number %ld\n",
+                            "%s:%s missing %ld Frames starting at Frame Number"
+                            "%ld\n",
                             driverName, __FUNCTION__,
                             currentFrameNumber + 1,
                             newFrameNumber - currentFrameNumber);
@@ -572,13 +593,16 @@ void ADLambda::handleNewImageTask() {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                         "Copying from UInt32 to UInt8 %d\n",
                                         imageDataType);
-                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt8);
+                                int scaleBytes =
+                                        sizeof(epicsUInt32)/sizeof(epicsUInt8);
                                 int *first = decodedData;
                                 int *last = decodedData +
                                         arrayInfo.totalBytes/scaleBytes;
-                                unsigned char  *result = (unsigned char *)pImage->pData;
+                                unsigned char  *result =
+                                        (unsigned char *)pImage->pData;
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                        "Copying from UInt32 to UInt8 %d %p, %p , %p\n",
+                                        "Copying from UInt32 to UInt8 %d %p, "
+                                        "%p , %p\n",
                                         imageDataType, first, last, result);
                                 std::copy(first, last, result);
                             }
@@ -589,13 +613,15 @@ void ADLambda::handleNewImageTask() {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                         "Copying from UInt32 to Int16 %d\n",
                                         imageDataType);
-                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsInt16);
+                                int scaleBytes =
+                                        sizeof(epicsUInt32)/sizeof(epicsInt16);
                                 int *first = decodedData;
                                 int *last = decodedData +
                                         arrayInfo.totalBytes/scaleBytes;
                                 short  *result = (short *)pImage->pData;
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                        "Copying from UInt32 to Int16 %d %p, %p , %p\n",
+                                        "Copying from UInt32 to Int16 %d "
+                                        "%p, %p , %p\n",
                                         imageDataType, first, last, result);
                                 std::copy(first, last, result);
                             }
@@ -606,13 +632,16 @@ void ADLambda::handleNewImageTask() {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                         "Copying from UInt32 to UInt16 %d\n",
                                         imageDataType);
-                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt16);
+                                int scaleBytes =
+                                        sizeof(epicsUInt32)/sizeof(epicsUInt16);
                                 int *first = decodedData;
                                 int *last = decodedData +
                                         arrayInfo.totalBytes/scaleBytes;
-                                unsigned short  *result = (unsigned short *)pImage->pData;
+                                unsigned short  *result =
+                                        (unsigned short *)pImage->pData;
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                        "Copying from UInt32 to UInt16 %d %p, %p , %p\n",
+                                        "Copying from UInt32 to UInt16 %d %p, "
+                                        "%p , %p\n",
                                         imageDataType, first, last, result);
                                 std::copy(first, last, result);
                             }
@@ -623,13 +652,15 @@ void ADLambda::handleNewImageTask() {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                         "Copying from UInt32 to Int32 %d\n",
                                         imageDataType);
-                                int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt32);
+                                int scaleBytes =
+                                        sizeof(epicsUInt32)/sizeof(epicsUInt32);
                                 int *first = decodedData;
                                 int *last = decodedData +
                                         arrayInfo.totalBytes/scaleBytes;
                                 int  *result = (int *)pImage->pData;
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-                                        "Copying from UInt32 to Int32 %d %p, %p , %p\n",
+                                        "Copying from UInt32 to Int32 %d %p, "
+                                        "%p , %p\n",
                                         imageDataType, first, last, result);
                                 std::copy(first, last, result);
                             }
@@ -663,16 +694,19 @@ void ADLambda::handleNewImageTask() {
                                 asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
                                         "%s:%s Bad Frame\n",
                                         driverName, __FUNCTION__);
-                                getIntegerParam(LAMBDA_BadFrameCounter, &numBadFrames);
+                                getIntegerParam(LAMBDA_BadFrameCounter,
+                                        &numBadFrames);
                                 numBadFrames++;
-                                setIntegerParam(LAMBDA_BadFrameCounter, numBadFrames);
+                                setIntegerParam(LAMBDA_BadFrameCounter,
+                                        numBadFrames);
                                 setIntegerParam(LAMBDA_BadImage, 1);
                             }
                             else {
                                 setIntegerParam(LAMBDA_BadImage, 0);
                             }
                             callParamCallbacks();
-                            /* get attributes that have been defined for this driver */
+                            /* get attributes that have been defined for this
+                             * driver */
                             getAttributes(pImage->pAttributeList);
                             doCallbacksGenericPointer(pImage, NDArrayData, 0);
                         }
@@ -713,7 +747,7 @@ void ADLambda::handleNewImageTask() {
  */
 asynStatus ADLambda::initializeDetector(){
     int status = asynSuccess;
-    getImageFormat(imageWidth, imageHeight, imageDepth);
+    lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s imageHeight %d, imageWidth%d\n",
             driverName, __FUNCTION__,
@@ -874,7 +908,8 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
  * If the parameter is from one of the super classes and is not handled
  * here, then pass along to ADDriver (direct super class)
  */
-asynStatus ADLambda::writeOctet(asynUser* pasynUser, const char *value, size_t nChars, size_t *nActual){
+asynStatus ADLambda::writeOctet(asynUser* pasynUser, const char *value,
+        size_t nChars, size_t *nActual){
     int status = asynSuccess;
     int function = pasynUser->reason;
 
@@ -911,7 +946,8 @@ asynStatus 	ADLambda::readOctet (asynUser *pasynUser, char *value,
 //        }
     }    
     else if (function < LAMBDA_FIRST_PARAM) {
-        status = ADDriver::readOctet(pasynUser, value, maxChars, nActual, eomReason);
+        status = ADDriver::readOctet(pasynUser, value, maxChars, nActual,
+                eomReason);
     }
     return (asynStatus) status;
 
@@ -946,7 +982,8 @@ static void configLambdaCallFunc(const iocshArgBuf *args) {
     LambdaConfig(args[0].sval, args[1].sval, args[2].ival, args[3].ival,
             args[4].ival, args[5].ival);
 }
-static const iocshFuncDef configLambda = { "LambdaConfig", 6, LambdaConfigArgs };
+static const iocshFuncDef configLambda = { "LambdaConfig", 6,
+        LambdaConfigArgs };
 
 static void LambdaRegister(void) {
     iocshRegister(&configLambda, configLambdaCallFunc);
