@@ -83,9 +83,17 @@
          <tr>
             <td>ADTriggerMode</td>
             <td>$(P)$(R)TriggerMode</td>
-            <td>NOT YET IMPLEMENTED IN FIRMWARE:  Allows selection between 
-            external and internal hardware trigger.  This is a planned feature,
-            Once supported in firmware, this should enable switching.</td>
+            <td>Default descriptions are overloaded.  Allows four modes:<p>
+            <ul>
+            <li>Internal</li>
+            <li>External_SequencePer - each external pulse runs an <b>image 
+                           sequence</b> per pulse</i>
+            <li>External_ImagePer - each external pulse runs an <b>image</b> 
+                           per pulse</i>
+            <li>Gating_Mode - Trigger an image that is active while the 
+            pulse is high</li>
+            </ul>
+            </td>
          </tr>
          <tr>
             <td>ADAcquire</td>
@@ -129,6 +137,15 @@
             <th>EPICS record type</th>
          </tr>
          <tr>
+            <td>LAMBDA_ConfigFilePath</td>
+            <td>asynOctet</td>
+            <td>r/w</td>
+            <td>Displays the full path to the detector's configueationFile</td>
+            <td>LAMBDA_CONFIG_FILE_PATH</td>
+            <td>ConfigFilePath</td>
+            <td>waveform</td>
+         </tr>
+         <tr>
             <td>LAMBDA_EnergyThreshold</td>
             <td>asynFloat64</td>
             <td>r/w</td>
@@ -154,9 +171,57 @@
             images are sent as a number of packets, rotating over 4 network ports. 
             If the packets for the next image are received on all 4 ports, before
             the finish of an image, then the frame is counted as a bad frame.</td>
-            <td>LAMNBDA_BAD_FRAME_COUNTER</td>
+            <td>LAMBDA_BAD_FRAME_COUNTER</td>
             <td>BadFrameCounter</td>
             <td>longin</td>
+         </tr>
+         <tr>
+            <td>LAMBDA_OperatingMode</td>
+            <td>asynInt32</td>
+            <td>r/w</td>
+            <td>Switches between 12 and 24 bit counting mode.  These are 
+            referenced in pulldown as<p> 
+            <ul>
+            <li> ContinuousReadWrite - Switches to 12-bit mode and sets image 
+            data type to UInt16.</li>
+            <li> TwentyFourBit - Switches to 24-bit mode also sets image
+            data type to UInt32.
+            </ul>
+            Note that it is possible in each mode to choose any Integer data 
+            type
+            </td>
+            <td>LAMBDA_OPERATING_MODE</td>
+            <td>OperatingMode<p>
+                 OperatingMode_RBV</td>
+            <td>mbbo<p>mbbi</td>
+         </tr>
+         <tr>
+            <td>LAMBDA_DetectorState</td>
+            <td>asynInt32</td>
+            <td>r</td>
+            <td>Displays the current state of the image processing of the
+            detector.
+            <ul>
+            <li>ON - Normal idle state.</li>
+            <li>DISABLE</li>
+            <li>BUSY - Performing non-imaging task such as loading config file.</li>
+            <li>FAULT</li>
+            <li>RECEIVING_IMAGES - Detector is actively taking images 
+            and placing them in the raw buffer to be decoded.</li>
+            <li>PROCSSING_IMAGES - The detector is finished collecting images
+            and has placed the in the raw buffer to be decoded.  The decoding 
+            process is still working on reconstructing packets for images in
+            the raw buffer and placing them in the decoded buffer</li>
+            <li>FINISHED - All images have been received and decoded. The raw
+            buffer is empty.  This signal will remain in this state until 
+            StopAcquisition is called.  Once StopAcquisition is called, then 
+            this signal will return to ON.</li>
+            </li>
+            </ul>
+            </td>
+            <td>LAMBDA_DETECTOR_STATE</td>
+            <td>LambdaState</td>
+            <td>mbbi</td>
          </tr>
       </tbody>
    </table>
@@ -181,9 +246,13 @@
 
    <h2 id="Performance_Measurements">Performance measurements</h2>
     <p>The Lambda detector itself is rated at 2000 frames/sec.  This rate has been achieved simply processing the 
-    detector images into NDArrays.  We have been able to save up to 1000 images/sec for a period of time using 
+    detector images into NDArrays.  We have been able to save up to 2000 images/sec for a period of time using 
     a PipeWriterPlugin that writes to a Unix Pipe which feeds an external MPI program which compresses the
-    image data and writes to a binary file. 
+    image data and writes to a binary file with occasional bad frame errors.  Sometimes the detector seems to 
+    persist giving bad frames once it gets started and the detector has to be reset.  
+    Sometimes we lose communication with the detector through the 1GB command 
+    interface.  When this happens we have to power down the detector for about 10
+    minutes before it will come on again.
     </p>
 
    <h2 id="Hardware_Notes">Hardware Notes</h2>
