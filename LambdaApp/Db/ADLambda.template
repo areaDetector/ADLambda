@@ -101,7 +101,6 @@ record(mbbi, "$(P)$(R)LambdaState")
    field(SXVL, "6")
    field(SCAN, ".1 second")
    info(autosaveFields, "VAL")
-   
 }
 
 
@@ -111,6 +110,16 @@ record(ao, "$(P)$(R)AcquireTime")
 }
 
 record(ai, "$(P)$(R)AcquireTime_RBV")
+{
+   field("PREC","4")
+}
+
+record(ao, "$(P)$(R)AcquirePeriod")
+{
+   field("PREC","4")
+}
+
+record(ai, "$(P)$(R)AcquirePeriod_RBV")
 {
    field("PREC","4")
 }
