@@ -20,7 +20,7 @@ static void lambdaHandleNewImageTaskC(void *drvPvt);
 extern "C" {
 /** Configuration command for Lambda driver; creates a new ADLambda object.
  * \param[in] portName The name of the asyn port driver to be created.
- * \param[in] path to the config files.
+ * \param[in] configPath to the config files.
  * \param[in] maxBuffers The maximum number of NDArray buffers that the
  *            NDArrayPool for this driver is
  *            allowed to allocate. Set this to -1 to allow an unlimited number
@@ -57,7 +57,7 @@ const int ADLambda::TWENTY_FOUR_BIT = 24;
 /**
  * Constructor
  * \param[in] portName The name of the asyn port driver to be created.
- * \param[in] directory containing configuration file location
+ * \param[in] configPath directory containing configuration file location
  * \param[in] maxBuffers The maximum number of NDArray buffers that the
  *            NDArrayPool for this driver is
  *            allowed to allocate. Set this to -1 to allow an unlimited number
@@ -260,8 +260,8 @@ void ADLambda::killImageHandlerThread(){
 /**
  * Pass through method to the vendor object requesting an image.
  * Returned image will be returned as a pointer to int.
- *  \param[in] The requested frame number in the queue.
- *  \param[out] Error code for returned image.
+ *  \param[in] lFrameNo The requested frame number in the queue.
+ *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to integer array representing the requested image.
  */
 int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
@@ -271,8 +271,8 @@ int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
 /**
  * Pass through method to the vendor object requesting an image.
  * Returned image will be returned as a pointer to short.
- *  \param[in] The requested frame number in the queue.
- *  \param[out] Error code for returned image.
+ *  \param[in] lFrameNo The requested frame number in the queue.
+ *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to short array representing the requested image.
  */
 short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
