@@ -83,7 +83,18 @@ namespace DetCommonNS
          * @return error code
          */
         virtual int ReceiveData(char* ptrChData,int nLength) = 0;
-            
+
+        /**
+         * @brief receive data from detector via network
+         * @param ptrChData data
+         * @param nLengthMin - minimum data length expected - we will wait until we receive this much data
+         * @param nLengthMax - maximum data length allowed - if more data is in the buffer we will receive up to this value
+         * @param nTotalReceived - returns number of bytes received
+         * @return error code
+         */
+        virtual int ReceiveData(char* ptrChData,int nLengthMin, int nLengthMax, int& nTotalReceived) = 0;
+
+	
         /**
          * @brief destructor
          */
@@ -134,6 +145,9 @@ namespace DetCommonNS
 
         ///@see NetworkInterface::ReceiveData(char*,int)
         virtual int ReceiveData(char* ptrChData,int nLength);
+
+	///@see NetworkInterface::ReceiveData(char*,int)
+        virtual int ReceiveData(char* ptrChData,int nLengthMin, int nLengthMax, int& nTotalReceived);
             
       private:
         NetworkImplementation* m_objNetworkImpl;
@@ -175,6 +189,10 @@ namespace DetCommonNS
         
         ///@see NetworkInterface::ReceiveData(char*,int)
         virtual int ReceiveData(char* ptrChData,int nLength);
+
+	///NOT YET IMPLEMENTED - NEEDED TO BE ADDED TO ALLOW TCP LINK TO HAVE EQUIVALENT FUNCTION
+        virtual int ReceiveData(char* ptrChData,int nLengthMin, int nLengthMax, int& nTotalReceived);
+
             
       private:
         NetworkImplementation* m_objNetworkImpl;

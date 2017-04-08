@@ -2,25 +2,26 @@ cmake_minimum_required(VERSION 2.8)
 project(lambda)
 
 set(MAJOR_VERSION 0)
-set(MINOR_VERSION 3)
+set(MINOR_VERSION 5)
 set(SO_VERSION 1)
 set(LIBRARY_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}")
 
 
-get_filename_component(SOURCE_PARENT_DIR ${PROJECT_SOURCE_DIR} PATH)
-set(CMAKE_COMMON_PATH "${SOURCE_PARENT_DIR}/libcommon")
+#add module
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+message(STATUS "path is:${CMAKE_MODULE_PATH}")
 
-if(NOT EXISTS ${CMAKE_COMMON_PATH})
-	message(FATAL_ERROR "libcommon is not existing!\nPlease put libcommon under ${SOURCE_PARENT_DIR}/\n")
-#or Input libcommon path by using variable CMAKE_COMMON_PATH")
-endif()
+#find necessary packages
+find_package(LibCommon)
+find_package(LibBoost)
+find_package(Zlib)
 
-#include directories
-include_directories(
-	"${CMAKE_COMMON_PATH}/include/"
-	"${PROJECT_SOURCE_DIR}/include/"
-	"/usr/local/include"
-)
+
+include_directories("${PROJECT_SOURCE_DIR}/include/"
+                    ${BOOST_INCLUDE_DIRS}
+                    ${Z_INC_DIRS}
+					${COMMON_INCLUDE})
+
 
 #set install path
 #set(CMAKE_INSTALL_PREFIX "${SOURCE_PARENT_DIR}/install")
@@ -31,35 +32,18 @@ set(LIBRARY_OUTPUT_PATH "${SOURCE_PARENT_DIR}/bin")
 set(CMAKE_INSTALL_LIB_PATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_INC_PATH "${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}")
 
-#find boost library
-set(BOOST_MIN_VERSION "1.41.0")
-find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
-
-if(Boost_FOUND)
-	include_directories(${Boost_INCLUDE_DIRS})
-endif()
-
 #check compiler ID
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	#message(${CMAKE_CXX_COMPILER_ID})
 	#message(${CMAKE_CXX_COMPILER_VERSION})
-    # require at least gcc 4.4
-    #if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4)
-    #    message(FATAL_ERROR "GCC version must be at least 4.4!")
-    #endif()
+    #require at least gcc 4.4
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4)
+       message(FATAL_ERROR "GCC version must be at least 4.4!")
+    endif()
 else()
 	message(FATAL_ERROR "The script is only tested under GNU g++ compiler")
 endif()
 
-#add all header and  source files from ./libcommon directory
-file(GLOB COMMON_SRC
-		  "${CMAKE_COMMON_PATH}/src/*.cpp")
-
-#file(GLOB COMMON_INC
-#		  "${CMAKE_COMMON_PATH}/include/*.h")
-
-set(COMMON_HEADERS "${CMAKE_COMMON_PATH}/include/DetInterface.h"
-				   "${CMAKE_COMMON_PATH}/include/Globals.h")
 
 #define build type, by default is release
 if (NOT CMAKE_BUILD_TYPE)

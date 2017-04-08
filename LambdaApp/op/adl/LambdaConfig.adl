@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
+	name="/local/epics/synApps_5_8/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaConfig.adl"
 	version=030107
 }
 display {
 	object {
-		x=67
-		y=67
-		width=717
-		height=730
+		x=677
+		y=667
+		width=715
+		height=75
 	}
 	clr=14
 	bclr=4
@@ -87,77 +87,87 @@ display {
 		1a7309,
 	}
 }
-rectangle {
+text {
 	object {
-		x=96
-		y=9
-		width=500
-		height=25
+		x=2
+		y=5
+		width=110
+		height=20
 	}
 	"basic attribute" {
-		clr=2
+		clr=14
+	}
+	textix="Config File Path:"
+}
+"text update" {
+	object {
+		x=180
+		y=7
+		width=519
+		height=10
+	}
+	monitor {
+		chan="$(P)$(R)ConfigFilePath"
+		clr=27
+		bclr=4
+	}
+	format="string"
+	limits {
 	}
 }
 text {
 	object {
-		x=154
-		y=10
-		width=384
-		height=25
+		x=2
+		y=35
+		width=150
+		height=20
 	}
 	"basic attribute" {
-		clr=54
+		clr=14
 	}
-	textix="Area Detector Control - $(P)$(R)"
-	align="horiz. centered"
+	textix="Operating Mode:"
 }
-composite {
+menu {
 	object {
-		x=0
-		y=41
-		width=350
-		height=215
+		x=164
+		y=35
+		width=276
+		height=25
 	}
-	"composite name"=""
-	"composite file"="ADSetup.adl"
-}
-composite {
-	object {
-		x=353
-		y=193
-		width=350
-		height=430
+	control {
+		chan="$(P)$(R)OperatingMode"
+		clr=14
+		bclr=4
 	}
-	"composite name"=""
-	"composite file"="LambdaCollect.adl"
 }
-composite {
+rectangle {
 	object {
 		x=1
-		y=264
-		width=350
-		height=250
-	}
-	"composite name"=""
-	"composite file"="LambdaReadout.adl"
-}
-composite {
-	object {
-		x=356
-		y=56
-		width=350
-		height=80
-	}
-	"composite name"=""
-	"composite file"="LambdaPlugins.adl"
-}
-composite {
-	object {
-		x=0
-		y=635
+		y=1
 		width=710
 		height=73
 	}
-	"composite name"=""
-	"composite file"="LambdaConfig.adl"
+	"basic attribute" {
+		clr=14
+		fill="outline"
+	}
+	"dynamic attribute" {
+		chan="$(P)$(R)OperatingMode"
+	}
+}
+"text update" {
+	object {
+		x=468
+		y=35
+		width=200
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)OperatingMode_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
 }

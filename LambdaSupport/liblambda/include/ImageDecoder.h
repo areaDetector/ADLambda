@@ -57,6 +57,12 @@ namespace DetCommonNS
          * @return pointer to decoded image (within decoder)
          */
         short* RunDecodingImg();
+
+       /**
+         * @brief Check the dimensions of a decoded image (determined by chip layout - doesn't include any subsequent distortion correction)
+         * @param Pass by reference - returns x and y size of decoded image in pixels
+         */
+	void GetDecodedImageSize(int& nX, int& nY);
         
       private:
         /**

@@ -42,10 +42,14 @@ namespace DetCommonNS
         ,m_vfTranslation(3,-1.0)
         ,m_nX(-1)
         ,m_nY(-1)
+        ,m_nMaxRawImageNumbers(RAW_BUFFER_LENGTH)
+        ,m_nMaxDecodedImageNumbers(DECODED_BUFFER_LENGTH)
+	,m_bSlaveModule(false) 
     {
         LOG_TRACE(__FUNCTION__);
 
         m_bMultilink = MULTI_LINK;
+	m_bBurstMode = true;
         
         //TCP link config
         m_strTCPIPAddress = TCP_CONTROL_IP_ADDRESS;
@@ -59,6 +63,13 @@ namespace DetCommonNS
         //destination port No for CH0
         m_vUShPort[1] = UDP_PORT;
         m_vUShPort[2] = UDP_PORT_1;
+
+	m_vNDecodingThreads.resize(3,2);   
+        m_vNDecodingThreads[0] = 3; // Decoding threads with HIGH priority
+	m_vNDecodingThreads[1] = 3; // Threads with moderate NORMAL priority - run at lower frame rates
+        m_vNDecodingThreads[2] = 6; // Threads with LOW priority that only run after all images received
+	m_dCriticalShutterTime = 2.1; // Shutter time below which we should use fewer decoding threads while receiving
+
 
         m_objFileOp = new FileReader(m_strConfigFilePath);
         m_objStrUtil = new StringUtils();
@@ -106,6 +117,13 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
 
         return m_bMultilink;
+    }
+
+    bool LambdaConfigReader::GetBurstMode() const
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_bBurstMode;
     }
 
     void LambdaConfigReader::GetChipConfig(vector<short>& vCurrentUsedChips,vector<stMedipixChipData>& vStCurrentChipData)
@@ -202,6 +220,41 @@ namespace DetCommonNS
          nX = m_nX;
          nY = m_nY;
     }
+
+    int LambdaConfigReader::GetRawBufferLength()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_nMaxRawImageNumbers;
+    }
+
+    int LambdaConfigReader::GetDecodedBufferLength()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_nMaxDecodedImageNumbers;
+    }
+
+    vector<int> LambdaConfigReader::GetDecodingThreadNumbers()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_vNDecodingThreads;
+    }
+
+    double LambdaConfigReader::GetCriticalShutterTime()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_dCriticalShutterTime;
+    }
+
+    bool LambdaConfigReader::GetSlaveModule()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_bSlaveModule;
+    }  
     
     
     //////////////////////////////////////////////////
@@ -227,8 +280,11 @@ namespace DetCommonNS
         string strNominatorPrefix = "nominator";
         string strPixelMaskPrefix = "pixelmask";
 
-        if(vStrFiles.size()!=3 || vStrFiles.empty())
-            LOG_STREAM(__FUNCTION__,ERROR,"File Numbers are not correct");
+        // if(vStrFiles.size()!=3 || vStrFiles.empty())
+        //     LOG_STREAM(__FUNCTION__,ERROR,"File Numbers are not correct");
+
+        if(vStrFiles.empty())
+            LOG_STREAM(__FUNCTION__,ERROR,"There is no calibration file");
 
         for(int i=0;i<vStrFiles.size();i++)
         {
@@ -237,36 +293,43 @@ namespace DetCommonNS
             vector<int> vNData;
 
             string strTmp = vStrFiles[i];
-            if(!vStrSplittedData.empty())
-                vStrSplittedData.clear();
+            //cout<<strTmp.substr(strTmp.length()-4,3)<<endl;
 
-            m_objStrUtil->StrSplit(strTmp,strDelimiter,vStrSplittedData);
-            
-            strPathTmp = strFullPath + "/" + strTmp;
-
-            //get data from binary file
-            if(m_objFileOp->FileExists(strPathTmp))
+            //ignore nexus file
+            if(strTmp.find("nxs") == std::string::npos)
             {
-                m_objFileOp->SetFilePath(strPathTmp);
-                //read from .bin
-                m_objFileOp->OpenFile(true);
-                vNData = m_objFileOp->ReadDataFromIntBinaryFile();
-                m_objFileOp->CloseFile();
+                if(!vStrSplittedData.empty())
+                    vStrSplittedData.clear();
+
+                m_objStrUtil->StrSplit(strTmp,strDelimiter,vStrSplittedData);
+            
+                strPathTmp = strFullPath + "/" + strTmp;
+
+                //get data from binary file
+                if(m_objFileOp->FileExists(strPathTmp))
+                {
+                    m_objFileOp->SetFilePath(strPathTmp);
+                    //read from .bin
+                    m_objFileOp->OpenFile(true);
+                    vNData = m_objFileOp->ReadDataFromIntBinaryFile();
+                    m_objFileOp->CloseFile();
+                }
+            
+                //check which file is actually read
+                if(vStrSplittedData[0] == strIndexPrefix)
+                    m_vNIndex.assign(vNData.begin(),vNData.end());
+                else if(vStrSplittedData[0] == strNominatorPrefix)
+                    m_vNNominator.assign(vNData.begin(),vNData.end());
+                else if(vStrSplittedData[0] == strPixelMaskPrefix)
+                    m_vUnPixelMask.assign(vNData.begin(),vNData.end());
+            
+                m_nX = atoi(vStrSplittedData[2].c_str());
+                m_nY = atoi(vStrSplittedData[3].c_str());
+            
+                if(vNData.size()!= m_nX*m_nY)
+                    LOG_STREAM(__FUNCTION__,ERROR,"File size is not correct");
             }
             
-            //check which file is actually read
-            if(vStrSplittedData[0] == strIndexPrefix)
-                m_vNIndex.assign(vNData.begin(),vNData.end());
-            else if(vStrSplittedData[0] == strNominatorPrefix)
-                m_vNNominator.assign(vNData.begin(),vNData.end());
-            else if(vStrSplittedData[0] == strPixelMaskPrefix)
-                m_vUnPixelMask.assign(vNData.begin(),vNData.end());
-            
-            m_nX = atoi(vStrSplittedData[2].c_str());
-            m_nY = atoi(vStrSplittedData[3].c_str());
-            
-            if(vNData.size()!= m_nX*m_nY)
-                LOG_STREAM(__FUNCTION__,ERROR,"File size is not correct");
         }
     }
     
@@ -325,15 +388,18 @@ namespace DetCommonNS
         //* means A or B
         string strChipTxtFileFormat = string("Chip#_DACsetting.txt");
         string strChipBinFileFormat = string("Chip#_TH*setting.bin");
+	string strChipMaskFileFormat = string("Chip#_mask.bin");
         string strTxtFileNameTemp;
         string strBinFileNameTemp1;
         string strBinFileNameTemp2;
+	string strMaskFileNameTemp;
         //load configurations for each chip
         for(int i=0;i<m_vCurrentChip.size();i++)
         {
             strTxtFileNameTemp = strChipTxtFileFormat;
             strBinFileNameTemp1 = strChipBinFileFormat;
             strBinFileNameTemp2 = strChipBinFileFormat;
+	    strMaskFileNameTemp = strChipMaskFileFormat;
             m_objStrUtil->FindAndReplace(strTxtFileNameTemp,"#",to_string((long long int)m_vCurrentChip[i]));
             strFullPath =  m_strConfigFilePath+"/"
                 +m_strCurrentModuleName
@@ -355,7 +421,7 @@ namespace DetCommonNS
             
 
 
-            //read binary config file
+            //read threshold adjust files (thresholds A and B)
             m_objStrUtil->FindAndReplace(strBinFileNameTemp1,"#",to_string((long long int)m_vCurrentChip[i]));
             m_objStrUtil->FindAndReplace(strBinFileNameTemp1,"*","A");
             strFullPath =  m_strConfigFilePath+"/"
@@ -393,6 +459,26 @@ namespace DetCommonNS
                 m_vStCurrentChipData[m_vCurrentChip[i]-1].vConfigTHB = m_objFileOp->ReadDataFromBinaryFile();
                 m_objFileOp->CloseFile();
             }
+
+	    // Read pixel mask file - this will mask pixels in HARDWARE (i.e. pixel will return 0)
+	    m_objStrUtil->FindAndReplace(strMaskFileNameTemp,"#",to_string((long long int)m_vCurrentChip[i]));
+            strFullPath =  m_strConfigFilePath+"/"
+                +m_strCurrentModuleName
+                +"/"
+                +m_strOperationMode
+                +"/"
+                +strMaskFileNameTemp;
+
+            if(m_objFileOp->FileExists(strFullPath))
+            {
+                m_objFileOp->SetFilePath(strFullPath);
+            
+                //read from THAsetting.bin
+                m_objFileOp->OpenFile(true);
+                m_vStCurrentChipData[m_vCurrentChip[i]-1].vMaskBit = m_objFileOp->ReadDataFromBinaryFile();
+                m_objFileOp->CloseFile();
+            }
+
              
         }
     }
@@ -468,6 +554,14 @@ namespace DetCommonNS
                 {
                     m_bMultilink = (atoi(vSplittedVal[1].c_str()) == 1);
                 }
+		else if(vSplittedVal[0] == "setSlaveModule")
+                {
+                    m_bSlaveModule = (atoi(vSplittedVal[1].c_str()) == 1);
+		}
+		else if(vSplittedVal[0] == "setBurstMode")
+                {
+                    m_bBurstMode = (atoi(vSplittedVal[1].c_str()) != 0);
+                }
                 else if(vSplittedVal[0] == "defineDstPortNo")
                 {
                     m_vUShPort[1] = atoi(vSplittedVal[1].c_str());
@@ -512,7 +606,31 @@ namespace DetCommonNS
                 else if(vSplittedVal[0] == "defineDetIPAddressTCP")
                 {
                     m_strTCPIPAddress = vSplittedVal[1];
-                }    
+                }
+                else if(vSplittedVal[0] == "defineRawBuffer")
+                {
+                    m_nMaxRawImageNumbers = atoi(vSplittedVal[1].c_str());
+                }
+                else if(vSplittedVal[0] == "defineDecodedBuffer")
+                {
+                    m_nMaxDecodedImageNumbers = atoi(vSplittedVal[1].c_str());
+                }
+		else if(vSplittedVal[0] == "defineDecodingThreads")
+                {
+		    // Allows optimisation of number of decoding threads running under different circumstances
+		    // Aim - optimise speed and reliability when running on different computers
+		    if(vSplittedVal.size()==5) // Require correct number of parameters
+		    {
+			m_vNDecodingThreads[0] = atoi(vSplittedVal[1].c_str()); // Decoders that always run
+			m_vNDecodingThreads[1] = atoi(vSplittedVal[2].c_str()); // Decoders that run IF shutter time above critical value (see below), or image reception finished
+			m_vNDecodingThreads[2] = atoi(vSplittedVal[3].c_str()); // Decoders that run ONLY when image reception finished
+			m_dCriticalShutterTime = atof(vSplittedVal[4].c_str()); // Critical shutter time
+		    }
+		    else
+		    {
+			LOG_STREAM(__FUNCTION__,ERROR,"Wrong number of parameters for decoding threads!!!");
+		    }
+                }
             }
         }
     }

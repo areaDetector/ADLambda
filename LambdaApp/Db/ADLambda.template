@@ -1,3 +1,14 @@
+record(waveform, "$(P)$(R)ConfigFilePath")
+{
+    field(PINI, "YES")
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_CONFIG_FILE_PATH")
+    field(FTVL, "CHAR")
+    field(NELM, "256")
+    field(SCAN, "I/O Intr")
+}
+
+
 record(ao, "$(P)$(R)EnergyThreshold")
 {
    field(DTYP, "asynFloat64")
@@ -12,7 +23,7 @@ record(longin, "$(P)$(R)DecodedQueueDepth")
    field(SCAN, "I/O Intr")
 }
 
-record(longin, "$(P)$(R)BadFrameCount")
+record(longin, "$(P)$(R)BadFrameCounter")
 {
    field(DTYP, "asynInt32")
    field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
@@ -24,4 +35,91 @@ record(mbbo, "$(P)$(R)ImageMode")
    field(TWST, "")
    field(TWVL, "")
    field(VAL,  "1")
+}
+
+# Override values from ADBase
+record(mbbo, "$(P)$(R)TriggerMode")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))TRIGGER_MODE")
+   field(ZRST, "Internal")
+   field(ZRVL, "0")
+   field(ONST, "External_SequencePer")
+   field(ONVL, "1")
+   field(TWST, "External_ImagePer")
+   field(TWVL, "2")
+   field(THST, "Gating_Mode")
+   field(THVL, "3")
+   field(VAL,  "0")
+   info(autosaveFields, "VAL")
+}
+record(mbbo, "$(P)$(R)OperatingMode")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
+   field(ZRST, "ContinuousReadWrite")
+   field(ZRVL, "0")
+   field(ONST, "TwentyFourBit")
+   field(ONVL, "1")
+   field(VAL,  "0")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)OperatingMode_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
+   field(ZRST, "ContinuousReadWrite")
+   field(ZRVL, "0")
+   field(ONST, "TwentyFourBit")
+   field(ONVL, "1")
+   field(VAL,  "0")
+   field(SCAN, "I/O Intr")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)LambdaState")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DETECTOR_STATE")
+   field(ZRST, "ON")
+   field(ZRVL, "0")
+   field(ONST, "DISABLE")
+   field(ONVL, "1")
+   field(TWST, "BUSY")
+   field(TWVL, "2")
+   field(THST, "FAULT")
+   field(THVL, "3")
+   field(FRST, "RECEIVING_IMAGES")
+   field(FRVL, "4")
+   field(FVST, "PROCESSING_IMAGES")
+   field(FVVL, "5")
+   field(SXST, "FINISHED")
+   field(SXVL, "6")
+   field(SCAN, ".1 second")
+   info(autosaveFields, "VAL")
+}
+
+
+record(ao, "$(P)$(R)AcquireTime")
+{
+   field("PREC","6")
+}
+
+record(ai, "$(P)$(R)AcquireTime_RBV")
+{
+   field("PREC","6")
+}
+
+record(ao, "$(P)$(R)AcquirePeriod")
+{
+   field("PREC","4")
+}
+
+record(ai, "$(P)$(R)AcquirePeriod_RBV")
+{
+   field("PREC","4")
 }

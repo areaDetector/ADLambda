@@ -54,7 +54,10 @@ namespace DetCommonNS
         
         ///@see NetworkInterface::ReceiveData(char*)
         virtual int ReceiveData(char* ptrChData,int nLength) = 0;
-            
+
+        ///@see NetworkInterface::ReceiveData(char*,int,int)
+        virtual int ReceiveData(char* ptrChData,int nLengthMin, int nLengthMax, int& nTotalReceived) = 0;
+
         /**
          * @brief destructor
          */
@@ -131,6 +134,13 @@ namespace DetCommonNS
 
         ///@see NetworkTCPInterface::ReceiveData(char*)
         int ReceiveData(char* ptrchData,int nLength);
+
+	///@see NetworkTCPInterface::ReceiveData(char*)
+        int ReceiveData(char* ptrchData,int nLengthMin, int nLengthMax,int &nTotalReceived);
+
+      private:
+        bool HasData();
+
     };///end of class NetworkTCPImplementation
         
 
@@ -178,6 +188,10 @@ namespace DetCommonNS
         
         ///@see NetworkUDPInterface::ReceiveData(char*)
         int ReceiveData(char* ptrchData,int nLength);
+
+	// NOT YET IMPLEMENTED
+	int ReceiveData(char* ptrchData,int nLengthMin, int nLengthMax,int &nTotalReceived);
+
             
       private:
         bool HasData();

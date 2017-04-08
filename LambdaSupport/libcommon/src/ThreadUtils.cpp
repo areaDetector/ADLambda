@@ -142,8 +142,8 @@ namespace DetCommonNS
 
     void ThreadPool::SetPriorityLevel(Enum_priority _newPriority)
     {
+        boost::unique_lock<boost::mutex> lock(m_boostMtx);
         m_enumCurrentPriority = _newPriority;
-        return;
     }
 
     

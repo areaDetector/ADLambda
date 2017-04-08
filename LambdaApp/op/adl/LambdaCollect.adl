@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8/support/areaDetector-R2-0/ADLambda/LambdaApp/op/adl/LambdaCollect.adl"
+	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaCollect.adl"
 	version=030107
 }
 display {
 	object {
-		x=44
-		y=221
-		width=350
-		height=405
+		x=35
+		y=213
+		width=351
+		height=434
 	}
 	clr=14
 	bclr=4
@@ -92,7 +92,7 @@ rectangle {
 		x=0
 		y=0
 		width=350
-		height=405
+		height=430
 	}
 	"basic attribute" {
 		clr=14
@@ -496,50 +496,39 @@ composite {
 		}
 	}
 }
-composite {
+text {
 	object {
 		x=35
 		y=255
-		width=303
+		width=140
 		height=20
 	}
-	"composite name"=""
-	children {
-		text {
-			object {
-				x=35
-				y=255
-				width=140
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="Detector state"
-			align="horiz. right"
-		}
-		"text update" {
-			object {
-				x=180
-				y=255
-				width=158
-				height=18
-			}
-			monitor {
-				chan="$(P)$(R)DetectorState_RBV"
-				clr=54
-				bclr=2
-			}
-			clrmod="alarm"
-			limits {
-			}
-		}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Detector state"
+	align="horiz. right"
+}
+"text update" {
+	object {
+		x=180
+		y=255
+		width=158
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)DetectorState_RBV"
+		clr=54
+		bclr=2
+	}
+	clrmod="alarm"
+	limits {
 	}
 }
 composite {
 	object {
 		x=35
-		y=305
+		y=330
 		width=212
 		height=20
 	}
@@ -548,7 +537,7 @@ composite {
 		text {
 			object {
 				x=35
-				y=305
+				y=330
 				width=140
 				height=20
 			}
@@ -561,7 +550,7 @@ composite {
 		"text update" {
 			object {
 				x=180
-				y=306
+				y=331
 				width=67
 				height=18
 			}
@@ -575,53 +564,10 @@ composite {
 		}
 	}
 }
-"text entry" {
-	object {
-		x=180
-		y=330
-		width=60
-		height=20
-	}
-	control {
-		chan="$(P)$(R)ArrayCounter"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-text {
-	object {
-		x=45
-		y=330
-		width=130
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Image counter"
-	align="horiz. right"
-}
-"text update" {
-	object {
-		x=245
-		y=331
-		width=80
-		height=18
-	}
-	monitor {
-		chan="$(P)$(R)ArrayCounter_RBV"
-		clr=54
-		bclr=4
-	}
-	limits {
-	}
-}
 composite {
 	object {
 		x=75
-		y=355
+		y=380
 		width=205
 		height=20
 	}
@@ -630,7 +576,7 @@ composite {
 		text {
 			object {
 				x=75
-				y=355
+				y=380
 				width=100
 				height=20
 			}
@@ -643,7 +589,7 @@ composite {
 		"text update" {
 			object {
 				x=180
-				y=356
+				y=381
 				width=100
 				height=18
 			}
@@ -660,7 +606,7 @@ composite {
 composite {
 	object {
 		x=5
-		y=380
+		y=405
 		width=330
 		height=20
 	}
@@ -669,7 +615,7 @@ composite {
 		text {
 			object {
 				x=5
-				y=380
+				y=405
 				width=150
 				height=20
 			}
@@ -682,7 +628,7 @@ composite {
 		menu {
 			object {
 				x=160
-				y=380
+				y=405
 				width=90
 				height=20
 			}
@@ -695,7 +641,7 @@ composite {
 		"text update" {
 			object {
 				x=255
-				y=382
+				y=407
 				width=80
 				height=18
 			}
@@ -800,6 +746,89 @@ text {
 		clr=14
 		bclr=51
 	}
+	limits {
+	}
+}
+composite {
+	object {
+		x=45
+		y=355
+		width=280
+		height=20
+	}
+	"composite name"=""
+	children {
+		"text entry" {
+			object {
+				x=180
+				y=355
+				width=60
+				height=20
+			}
+			control {
+				chan="$(P)$(R)ArrayCounter"
+				clr=14
+				bclr=51
+			}
+			limits {
+			}
+		}
+		text {
+			object {
+				x=45
+				y=355
+				width=130
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Image counter"
+			align="horiz. right"
+		}
+		"text update" {
+			object {
+				x=245
+				y=356
+				width=80
+				height=18
+			}
+			monitor {
+				chan="$(P)$(R)ArrayCounter_RBV"
+				clr=54
+				bclr=4
+			}
+			limits {
+			}
+		}
+	}
+}
+text {
+	object {
+		x=5
+		y=305
+		width=60
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="State"
+	align="horiz. right"
+}
+"text update" {
+	object {
+		x=70
+		y=305
+		width=275
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)LambdaState"
+		clr=54
+		bclr=2
+	}
+	format="string"
 	limits {
 	}
 }

@@ -56,6 +56,12 @@ namespace DetCommonNS
         virtual Enum_priority GetPriority() const;
 
         /**
+         * @brief set target priority
+         * @param pointer to priority variable to track, e.g. in thread pool.
+         */
+        virtual void SetTargetPriority(Enum_priority * _targetPriority);
+
+        /**
          * @brief get task id
          * @return task id
          */
@@ -104,7 +110,12 @@ namespace DetCommonNS
          */
         int GetAvailableThreads();
         
-      
+
+        /**
+         * @brief set prioritization of tasks
+         * @param priority level - tasks lower than this may be throttled (implementation dependent)
+         */
+        void SetPriorityLevel(Enum_priority _newPriority);
       private:
         void Run();
                     
@@ -115,7 +126,8 @@ namespace DetCommonNS
         bool m_bRunning;
         queue< Task* > m_qTaskList;
         boost::mutex m_boostMtx;
-        boost::condition_variable m_boostCond;        
+        boost::condition_variable m_boostCond;
+        Enum_priority m_enumCurrentPriority;
     };///end of class ThreadPool    
 }///end of namespace DetCommonNS
 

@@ -31,7 +31,7 @@ namespace DetCommonNS
             
         m_vCurrentUsedChips = _vCurrentChips;
         m_nChipNumbers = m_vCurrentUsedChips.size();
-        m_nChipHeaderLength = CHIP_HEADER_SIZE*m_nChipNumbers+UDP_EXTRA_BYTES;
+        m_nChipHeaderLength = CHIP_HEADER_SIZE*m_nChipNumbers;
         m_vChipRotated.resize(STANDARD_CHIP_NUMBERS);
         m_vXstartPos.resize(STANDARD_CHIP_NUMBERS);
         m_vYstartPos.resize(STANDARD_CHIP_NUMBERS);
@@ -377,6 +377,13 @@ namespace DetCommonNS
         m_nModuleSizeY = nMaxYStartPos + CHIP_SIZE;
     }
         
+
+    void ImageDecoder::GetDecodedImageSize(int& nX, int& nY)
+    {
+        nX = m_nModuleSizeX;
+	nY = m_nModuleSizeY;
+    }
+
 
     void ImageDecoder::ExtractPixelVal()
     {

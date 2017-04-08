@@ -74,6 +74,7 @@ namespace DetUnitTestNS
         void TestReset();
         void TestStartFastImaging();
         void TestStopFastImaging();
+        
       private:
         bool ReadConfig(bool bSwitchMode,string strOpMode);
 

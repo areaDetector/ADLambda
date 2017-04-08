@@ -34,6 +34,7 @@ namespace DetCommonNS
     class FileOperation;
     class LambdaModule;
     class Task;
+    class ImageDecoder;
     template<class T>
         class MemPool;
  
@@ -51,9 +52,9 @@ namespace DetCommonNS
 
         /**
          * @brief constructor
-         * @param _strConfigPath config file path
+         * @param _strConfigPath config file pathSysExit
          */
-	// When instantiating the detector control, the file path of the detector configuration directory should be provided.
+        // When instantiating the detector control, the file path of the detector configuration directory should be provided.
         LambdaSysImpl(string _strConfigPath);
             
         /**
@@ -66,116 +67,133 @@ namespace DetCommonNS
         //////////////////////////////////////////////////
 
         string GetSensorMaterial();
-
+        string GetCalibFile();
+        
         vector<float> GetPosition();
         
         
-	// Different operating modes (e.g. continuous read write, 24 bit) require different configuration files.
-	// We store the config files for each mode in its own directory.
-	// This command then sets the operating mode, using the files from the directory named strOperationMode.
+        // Different operating modes (e.g. continuous read write, 24 bit) require different configuration files.
+        // We store the config files for each mode in its own directory.
+        // This command then sets the operating mode, using the files from the directory named strOperationMode.
         void SetOperationMode(string strOperationMode); 
 
         string GetOperationMode();
 
-	// Controls how the detector is triggered. Currently 0-> detector takes images immediately, 1-> detector starts taking images when externally triggered
+        // Controls how the detector is triggered. Currently 0-> detector takes images immediately, 1-> detector starts taking images when externally triggered
         void SetTriggerMode(short shTriggerMode);
 
         short GetTriggerMode();
 
-	// Sets time per image in milliseconds
+        // Sets time per image in milliseconds
         void SetShutterTime(double dShutterTime);
 
         double GetShutterTime();
 
-	// Sets time gap between images (when not in continuous mode) - also in ms.
+        // Sets time gap between images (when not in continuous mode) - also in ms.
         void SetDelayTime(double dDelayTime);
 
         double GetDelayTime();
 
-	// Sets number of images to be taken in acquisition
+        // Sets number of images to be taken in acquisition
         void SetNImages(long lImages);
 
         long GetNImages();
-            
+
 	// CURRENTLY UNUSED - TO BE DELETED. (This controlled a simple image writing function we used to test the library during development.)
         void SetSaveAllImages(bool bSaveAllImgs);
 
         bool GetSaveAllImages();
-
-	// CURRENTLY UNUSED - TO BE DELETED. (For test purposes, this previously toggled between readout over 1G or 10G link.) 
+            
         void SetBurstMode(bool bBurstMode);
-        
+        SysExit
         bool GetBurstMode();
 
-	// Sets threshold number nThresholdNo to fEnergy (in keV). In standard operating modes, only threshold no. 0 is used.
+        // Sets threshold number nThresholdNo to fEnergy (in keV). In standard operating modes, only threshold no. 0 is used.
         void SetThreshold(int nThresholdNo, float fEnergy);
 
         float GetThreshold(int nThresholdNo);
 
         void SetState(Enum_detector_state emState);
-	// GetState() reads the state of the detector. The enum here follows Tango conventions - 0-3 correspond to ON (i.e. ready), DISABLE, RUNNING (i.e. busy), FAULT
+        // GetState() reads the state of the detector. The enum here follows Tango conventions - 0-3 correspond to ON (i.e. ready), DISABLE, RUNNING (i.e. busy), FAULT
         Enum_detector_state GetState();
 
-	// CURRENTLY UNUSED - TO BE DELETED. (This controlled a simple image writing function we used to test the library during development.)
+        // CURRENTLY UNUSED - TO BE DELETED. (ThisSysExit controlled a simple image writing function we used to test the library during development.)
         void SetSaveFilePath(string strSaveFilePath);
 
         string GetSaveFilePath();
 
-	// Path to the main directory where configuration files are contained.
+        // Path to the main directory where configuration files are contained.
         void SetConfigFilePath(string strConfigFilePath);
 
         string GetConfigFilePath();
 
-	// Commands below start and stop imaging. "Start imaging" does not directly return a pointer to images.
-	// When the detector is taking images, each decoded image is added to a queue.
-	// GetQueueDepth returns the number of images available in the queue.
-	// When the queue is not empty (>0), GetDecodedImageInt and GetDecodedImageShort functions below can be used to remove images from the queue
-	// (in 12-bit mode and 24-bit mode respectively)
+        // Commands below start and stop imaging. "Start imaging" does not directly return a pointer to images.
+        // When the detector is taking images, each decoded image is added to a queue.
+        // GetQueueDepth returns the number of images available in the queue.
+        // When the queue is not empty (>0), GetDecodedImageInt and GetDecodedImageShort functions below can be used to remove images from the queue
+        // (in 12-bit mode and 24-bit mode respectively)
 
         void StartImaging();
 
         void StopImaging();
 
+        void SetCompressionEnabled(bool bCompressionEnabled,int nCompLevel); 
+        void GetCompressionEnabled(bool& bCompressionEnabled,int& nCompLevel);
+        int GetCompressionMethod();
+        
         vector<unsigned int> GetPixelMask();
         
         void SetDistortionCorrecttionMethod(int nMethod);
         int GetDistortionCorrecttionMethod();
         
-	// Helper function to check the image size - nX and nY are x and y size in pixels, nImgDepth is the bit-depth (12 or 24).
+        // Helper function to check the image size - nX and nY are x and y size in pixels, nImgDepth is the bit-depth (12 or 24).
         void GetImageFormat(int& nX, int& nY, int& nImgDepth);
-        
-	// Reads the ID of a chip within the module. Typically, chip 1 can be ID'd to uniquely identify a particular module.
-	// Reading each chip on a module can also be used for debug purposes.
+
+        // Helper function to check the number of subimages (e.g. when using multiple thresholds
+        int GetNSubimages();
+
+	// Helper function to get enum specifying Medipix3 readout chip mode
+        Enum_readout_mode GetReadoutModeCode();
+	
+        // Reads the ID of a chip within the modulSysExite. Typically, chip 1 can be ID'd to uniquely identify a particular module.
+        // Reading each chip on a module can also be used for debug purposes.
         string GetChipID(int chipNo);
 
-	// CURRENTLY UNUSED
+        // CURRENTLY UNUSED
         long GetLatestImageNo();
 	
-    // Checks no of decoded images in queue.
+        // Checks no of decoded images in queue.
         long GetQueueDepth();
 
-	// CURRENTLY UNUSED - TO BE DELETED. (This allowed us to read raw, undecoded image data for test purposes.) 
+        // CURRENTLY UNUSED - TO BE DELETED. (This allowed us to read raw, undecoded image data for test purposes.) 
         void GetRawImage(char* ptrchRetImg, long& lFrameNo,short& shErrCode);
 
-	// In 24-bit mode, returns a pointer to the first image in the queue (int format) and removes the image from the queue
-    // If first image is unavailable, returns null pointer
-	// lFrameNo (pass by reference) returns the image number
-	// shErrCode (pass by reference) returns 0 if image is OK, -1 if there was data loss
+        // In 24-bit mode, returns a pointer to the first image in the queue (int format) and removes the image from the queue
+        // If first image is unavailable, returns null pointer
+        // lFrameNo (pass by reference) returns the image number
+        // shErrCode (pass by reference) returns 0 if image is OK, -1 if there was data loss
         int* GetDecodedImageInt(long& lFrameNo, short& shErrCode);
 
-	// In 12-bit mode, returns a pointer to the first image in the queue (short format) and removes the image from the queue
-	// If queue is empty, returns null pointer
-	// lFrameNo (pass by reference) returns the image number
-	// shErrCode (pass by reference) returns 0 if image is OK, -1 if there was data loss
+        // In 12-bit mode, returns a pointer to the first image in the queue (short format) and removes the image from the queue
+        // If queue is empty, returns null pointer
+        // lFrameNo (pass by reference) returns the image number
+        // shErrCode (pass by reference) returns 0 if image is OK, -1 if there was data loss
         short* GetDecodedImageShort(long& lFrameNo, short& shErrCode);
+        
+        char* GetCompressedData(long& lFrameNo,short& shErrCode,int& nDataLength);
+
+        void SetCurrentImage(short* ptrshImg,long lFrameNo,short shErrCode);
+        void SetCurrentImage(int* ptrnImg,long lFrameNo,short shErrCode);
+        int* GetCurrentImage(long& lFrameNo,short& shErrCode);
             
-	// These check on the status of certain internal variables for test purposes.
+        // These check on the status of certain internal variables for test purposes.
         bool GetAcquisitionStart() const;
         bool GetAcquisitionStop() const;
 
         void SetAcquisitionStart(const bool bStatus);
         void SetAcquisitionStop(const bool bStatus);
         bool SysExit() const;
+        
         
       protected:
         /**
@@ -203,7 +221,13 @@ namespace DetCommonNS
          */
         bool FileExists(string strFileName);
 
-
+        /**
+         * @brief get Medipix3 readout mode from operating mode string name - initial hard-coded approach for creating new op modes
+         * @param strOpMode op mode name
+         * @return true file exists;flase file does not exists
+         */
+        Enum_readout_mode GetReadoutModeEnum(string strOperationMode);
+	
         /**
          * @brief create task for threads(e.g. decode image)
          * @param strOpMode operation mode
@@ -212,13 +236,23 @@ namespace DetCommonNS
         void CreateTask(string strOpMode, string strTaskName);
         void CreateTask(string strOpMode, string strTaskName, Enum_priority enumTaskPriority);
         void CreateTask(string strOpMode,string strTaskName,NetworkInterface* objNetInterface);
+
+        /**
+         * @brief join all decode tasks
+         */
+        bool JoinAllDecodeTasks();
 	
-        
+        /**
+         * @brief stop all decode tasks
+         */
+        bool StopAllDecodeTasks();
+	
       protected:
         ThreadPool* m_objThPool;
         MemPool<short> *m_objMemPoolDecodedShort;
         MemPool<int> *m_objMemPoolDecodedInt;
         MemPool<char> *m_objMemPoolRaw;
+        MemPool<char> *m_objMemPoolCompressed;
         vector<NetworkInterface*> m_vNetInterface;
         NetworkInterface* m_objUDPInterface;
         FileOperation* m_objFileOp;
@@ -240,11 +274,12 @@ namespace DetCommonNS
         double m_dShutterTime;
         double m_dDelayTime;
         long m_lFrameNo;
-        bool m_bSaveAllImg;
+	bool m_bSaveAllImg;
         bool m_bBurstMode;
         int m_nThreshold;
         float m_fEnergy;
         Enum_detector_state m_emState;
+	Enum_readout_mode m_emReadoutMode;
         string m_strSaveFilePath;
         string m_strConfigFilePath;
         int m_nX;
@@ -255,7 +290,9 @@ namespace DetCommonNS
         int m_nDistortedY;
         int m_nDistortedImageSize;
         int m_nDistortionCorrectionMethod;
-        
+
+	bool m_bSlaveModule;
+	
         vector<unsigned int> m_vUnPixelMask;
         vector<int> m_vNIndex;
         vector<int> m_vNNominator;
@@ -268,6 +305,11 @@ namespace DetCommonNS
         short m_shQueueImgErrCode;
         int* m_ptrnDecodeImg;
         short* m_ptrshDecodeImg;
+
+        int* m_ptrnLiveData;
+        long m_lLiveFrameNo;
+        short m_shLiveErrCode;
+        
         bool m_bRunning;
         bool m_bSysExit;
         vector<float> m_vThreshold;
@@ -276,15 +318,16 @@ namespace DetCommonNS
           
         int m_nModuleType;
         int m_nImgDataSize;
-        int m_nSubImgNo;
+        int m_nSubimages;
         int m_nPacketsNumber;
         int m_nTaskID;
 
         int m_nThreadNumbers;
         int m_nRawBufferLength;
         int m_nDecodedBufferLength;
-	int m_nDecodingThreads;
-	int m_nLowPriorityDecodingThreads;
+        int m_nDecodingThreads;
+	vector<int> m_vNDecodingThreads;
+	double m_dCriticalShutterTime;
 
         bool m_bMultilink;
 
@@ -294,6 +337,14 @@ namespace DetCommonNS
         vector<unsigned short> m_vUShPort;
         string m_strTCPIPAddress;
         short m_shTCPPortNo;
+
+        //compression
+        bool m_bCompressionEnabled;
+        int m_nCompressionLevel;
+        int m_nCompressionMethod;
+
+        char* m_ptrchData;
+        
 
         ///boost mutex
         boost::mutex m_bstMtxSync;

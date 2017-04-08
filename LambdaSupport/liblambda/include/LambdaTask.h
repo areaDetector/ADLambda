@@ -24,6 +24,8 @@
 
 #include "LambdaGlobals.h"
 #include "ThreadUtils.h"
+#include "CompressionContext.h"
+#include "Compression.h"
 
 ///namespace DetCommonNS
 namespace DetCommonNS
@@ -33,7 +35,8 @@ namespace DetCommonNS
     class LambdaModule;
     template<class T>
         class  MemPool;
-   
+
+    using namespace CompressionNS;
     /**
      * @brief LambdaTask class
      */
@@ -64,12 +67,16 @@ namespace DetCommonNS
         LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID,LambdaSysImpl* _objSys,NetworkInterface* _objNetInt, MemPool<char>* _objMemPoolRaw,MemPool<short>* _objMemPoolDecoded12,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator);
         
         LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<int>* _objMemPoolDecoded24,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator);
+
+        LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<char>* _objMemPoolCompressed,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator,int _nDistortedImageSize);
         
         /**
          * @brief desctructor
          */
         ~LambdaTask();
 
+        void SetCompressedBuffer(MemPool<char>* objMemPoolCompressed);
+        
          /**
          * @brief do task action
          */
@@ -88,7 +95,12 @@ namespace DetCommonNS
          * @brief do acquisition task
          */
         void DoAcquisition();
-        
+
+        /**
+         * @brief do acquisition task with TCP link for tests (requires special handling of data)
+         */
+        void DoAcquisitionTCP();
+	
         /**
          * @brief decode image task
          */
@@ -98,6 +110,7 @@ namespace DetCommonNS
         LambdaSysImpl* m_objSys;
         NetworkInterface* m_objNetInterface;
         MemPool<char>* m_objMemPoolRaw;
+        MemPool<char>* m_objMemPoolCompressed;
         MemPool<short>* m_objMemPoolDecodedShort;
         MemPool<int>* m_objMemPoolDecodedInt;
         boost::mutex* m_boostMtx;

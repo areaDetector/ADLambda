@@ -71,6 +71,7 @@ namespace DetCommonNS
             m_nAllowedImages = m_nSize - m_nSafetyMargin;
             m_vFrameNumber.resize(m_nSize,LONG_MIN);
             m_vErrorCode.resize(m_nSize,SHRT_MIN);
+            m_vDataSize.resize(m_nSize,0);
             m_vAcquiredPacketNumbers.resize(m_nSize,0);
             AllocateMem();
         }
@@ -103,6 +104,8 @@ namespace DetCommonNS
             m_lCurrentWorkingFrame = 0;
             std::fill(m_vFrameNumber.begin(),m_vFrameNumber.end(),LONG_MIN);
             std::fill(m_vErrorCode.begin(),m_vErrorCode.end(),SHRT_MIN);
+            std::fill(m_vDataSize.begin(),m_vDataSize.end(),0);
+            
             std::fill(m_vAcquiredPacketNumbers.begin(),m_vAcquiredPacketNumbers.end(),0);
             m_vTaskMonitor.clear();
             m_bStartAcq = true;
@@ -239,20 +242,20 @@ namespace DetCommonNS
         bool IsImageFinished()
         {
             //frame finished, all packets received
-	    boost::unique_lock<boost::mutex> lock(m_bstMtx);
+            boost::unique_lock<boost::mutex> lock(m_bstMtx);
             if(m_vAcquiredPacketNumbers[m_lEndPos] == m_nRequestedPacketsNumber)
-	    {
-	        lock.unlock();
+            {
+                lock.unlock();
                 UpdateFrame(true);
-	    }
+            }
             else //check current working on frame
             {
                 long lVal = *min_element(m_vTaskMonitor.begin(),m_vTaskMonitor.end());
                 if(lVal>(m_lLastUnfinishedFrame+1) && lVal!=-1)//all bigger than current lImgNo by at least 1
-		{
-		    lock.unlock();
+                {
+                    lock.unlock();
                     UpdateFrame(false);
-		}
+                }
             }
         }
 
@@ -273,6 +276,7 @@ namespace DetCommonNS
                 strTmp2+="\n";
                 vGlobalDebugInfo.push_back(strTmp2);
             }
+	    m_vAcquiredPacketNumbers[m_lEndPos]=0;
             m_lLastArrived = m_lLastUnfinishedFrame;
             m_vFrameNumber[m_lEndPos] = m_lLastUnfinishedFrame;
             if(bFullFinished)
@@ -340,7 +344,7 @@ namespace DetCommonNS
             lock.unlock();
         }
 
-         /**
+        /**
          * @brief get two images from buffer
          * @param objImg1 image buffer - this is a POINTER to the data that will remain valid for "m_nSafetyMargin" inserts
          * @param lImgNo1 img No
@@ -434,8 +438,9 @@ namespace DetCommonNS
          * @param objImg image buffer
          * @param lImgNo img No
          * @param shErrCode error code
+         * @param nDataSize data size
          */
-        bool GetImage(T*& objImg,long& lImgNo,short& shErrCode)
+        bool GetImage(T*& objImg,long& lImgNo,short& shErrCode,int& nDataSize)
         {
             /* if(!IsImageReadyForReading(1)) */
             /* { */
@@ -470,6 +475,9 @@ namespace DetCommonNS
 
                 shErrCode = m_vErrorCode[m_lStartPos];
                 m_vErrorCode[m_lStartPos] = SHRT_MIN;
+
+                nDataSize = m_vDataSize[m_lStartPos];
+                m_vDataSize[m_lStartPos] = 0;
 
                 m_lStoredImageNumbers--;
                 m_lStartPos = (m_lStartPos+1)%(m_nSize);
@@ -556,35 +564,43 @@ namespace DetCommonNS
          * @param lImgNo image No.
          * @param shErrCode error code
          * @param bFixedPosQueue the position for each frame is fixed through the frame no
+         * @param nDataSize data size
          */
-        bool SetImage(T* objImg,const long lImgNo,const short shErrCode,bool bFixedPosQueue)
+        bool SetImage(T* objImg,const long lImgNo,const short shErrCode,bool bFixedPosQueue,int nDataSize = 0)
         {
             boost::unique_lock<boost::mutex> lock(m_bstMtx);
-	    // Check if image falls into "safety margin" region - if so, don't allow insertion.
-	    long lPos = GetPosByFrameNo(lImgNo);
-	    long lSafetyTest = lPos-m_lStartPos;
-	    if(lSafetyTest < 0) lSafetyTest+=m_nSize; // This avoids odd behaviour of modulus with negatives
+            // Check if image falls into "safety margin" region - if so, don't allow insertion.
+            long lPos = GetPosByFrameNo(lImgNo);
+            long lSafetyTest = lPos-m_lStartPos;
+            if(lSafetyTest < 0) lSafetyTest+=m_nSize; // This avoids odd behaviour of modulus with negatives
 
             if(lSafetyTest >= m_nAllowedImages)
             {
                 lock.unlock();
                 return false;
             }
-
+            
             bool bVal = (m_vFrameNumber[lPos] == LONG_MIN);
 
             if(bVal)
             {				    
-	        // Insertion operation should be done with mutex unlocked to prevent blocking in this case
-	        // Rely on correct image numbering here
-	        // Only update queue info etc after insertion, to prevent invalid images from causing problems.
-	        lock.unlock();
+                // Insertion operation should be done with mutex unlocked to prevent blocking in this case
+                // Rely on correct image numbering here
+                // Only update queue info etc after insertion, to prevent invalid images from causing problems.
+                lock.unlock();
 
-		copy(objImg,objImg+m_nElemSize,m_vImgBuff[lPos]);
-	        
-		lock.lock();
+                if(nDataSize == 0)
+                   copy(objImg,objImg+m_nElemSize,m_vImgBuff[lPos]);
+                else
+                {
+                    
+                    copy(objImg,objImg+nDataSize,m_vImgBuff[lPos]);
+                    m_vDataSize[lPos] = nDataSize;
+                }
+                
+                lock.lock();
 
-	        m_lLastArrived = lImgNo; // Not guaranteed to be correct - depends on ordering
+                m_lLastArrived = lImgNo; // Not guaranteed to be correct - depends on ordering
                 m_lStoredImageNumbers++;
 
                 m_vFrameNumber[lPos] = lImgNo;
@@ -642,7 +658,11 @@ namespace DetCommonNS
         {
             //LOG_TRACE(__FUNCTION__);
             //clear the memory
-            boost::singleton_pool<boost::fast_pool_allocator_tag,sizeof(T*)>::release_memory();
+	    //Loop through image buffer and deallocate
+	    for(int i = 0; i < m_vImgBuff.size(); i++)
+	    {
+	        delete [] m_vImgBuff[i];
+	    }
         }
 
 
@@ -665,12 +685,13 @@ namespace DetCommonNS
         long m_lFirstFrameNumber;
         bool m_bFirstFrameSet;
         int m_nSafetyMargin; // When checking if buffer is full, report as full when number of unoccupied
-            // images equals safety margin - ensures pointers remain valid for long enough during readout.
+        // images equals safety margin - ensures pointers remain valid for long enough during readout.
         int m_nAllowedImages;
         
-        vector<T*,boost::fast_pool_allocator<T*> > m_vImgBuff;
+        vector<T*> m_vImgBuff;
         vector<long> m_vFrameNumber;
-        vector<short> m_vErrorCode;   
+        vector<short> m_vErrorCode;
+        vector<int> m_vDataSize;
         mutable boost::mutex m_bstMtx;
         vector<long> m_vTaskMonitor;
         vector<int> m_vAcquiredPacketNumbers;

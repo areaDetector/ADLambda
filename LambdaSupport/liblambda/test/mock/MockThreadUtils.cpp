@@ -51,6 +51,11 @@ namespace DetCommonNS
         return m_enumPriority;
     }
 
+    void Task::SetTargetPriority(Enum_priority * _targetPriority)
+    {
+        LOG_TRACE(__FUNCTION__);
+    }
+
     int Task::GetID() const
     {
         LOG_TRACE(__FUNCTION__);
@@ -130,6 +135,12 @@ namespace DetCommonNS
     {
         boost::unique_lock<boost::mutex> lock(m_boostMtx);
         return m_nAvailableThreads;
+    }
+
+    void ThreadPool::SetPriorityLevel(Enum_priority _newPriority)
+    {
+        boost::unique_lock<boost::mutex> lock(m_boostMtx);
+        m_enumCurrentPriority = _newPriority;
     }
     
     void ThreadPool::Run()
