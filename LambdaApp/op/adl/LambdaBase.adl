@@ -1,5 +1,6 @@
 
 file {
+<<<<<<< HEAD
 	name="/home/epics/devel/areaDetector-3-1/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
 	version=030109
 }
@@ -9,6 +10,17 @@ display {
 		y=67
 		width=715
 		height=720
+=======
+	name="../../../../LambdaApp/op/adl/LambdaBase.adl"
+	version=030112
+}
+display {
+	object {
+		x=102
+		y=106
+		width=717
+		height=729
+>>>>>>> 6190c26 (Change sizes/locations to accommodate changes to some of the pieces.)
 	}
 	clr=14
 	bclr=4
@@ -133,8 +145,13 @@ composite {
 }
 composite {
 	object {
+<<<<<<< HEAD
 		x=5
 		y=386
+=======
+		x=1
+		y=387
+>>>>>>> 6190c26 (Change sizes/locations to accommodate changes to some of the pieces.)
 		width=350
 		height=250
 	}
@@ -193,6 +210,7 @@ text {
 }
 menu {
 	object {
+<<<<<<< HEAD
 		x=168
 		y=675
 		width=276
@@ -209,6 +227,11 @@ rectangle {
 		x=5
 		y=641
 		width=705
+=======
+		x=0
+		y=645
+		width=710
+>>>>>>> 6190c26 (Change sizes/locations to accommodate changes to some of the pieces.)
 		height=73
 	}
 	"basic attribute" {
