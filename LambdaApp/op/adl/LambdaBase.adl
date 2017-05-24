@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
-	version=030107
+	name="../../../../LambdaApp/op/adl/LambdaBase.adl"
+	version=030112
 }
 display {
 	object {
-		x=67
-		y=67
+		x=102
+		y=106
 		width=717
-		height=730
+		height=729
 	}
 	clr=14
 	bclr=4
@@ -116,7 +116,7 @@ composite {
 		x=0
 		y=41
 		width=350
-		height=215
+		height=340
 	}
 	"composite name"=""
 	"composite file"="ADSetup.adl"
@@ -134,7 +134,7 @@ composite {
 composite {
 	object {
 		x=1
-		y=264
+		y=387
 		width=350
 		height=250
 	}
@@ -154,7 +154,7 @@ composite {
 composite {
 	object {
 		x=0
-		y=635
+		y=645
 		width=710
 		height=73
 	}
