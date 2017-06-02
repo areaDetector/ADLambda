@@ -1,7 +1,7 @@
 
 file {
 	name="/local/epics/synApps_5_8/support/areaDetector-R3-0/ADLambda/LambdaApp/op/adl/LambdaPlugins.adl"
-	version=030112
+	version=030111
 }
 display {
 	object {
@@ -221,6 +221,11 @@ text {
 		args="P=$(P), R=IMM2:"
 	}
 	display[11] {
+		label="IMM Plugin 3"
+		name="NDFileIMM.adl"
+		args="P=$(P), R=IMM3:"
+	}
+	display[12] {
 		label="IMM Plugin out"
 		name="NDFileIMM.adl"
 		args="P=$(P), R=IMMout:"
