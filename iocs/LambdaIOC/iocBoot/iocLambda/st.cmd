@@ -55,6 +55,8 @@ NDFileIMMConfigure("IMM1", 2000000, 300, 0, "$(PORT)",  0, 0, 0 )
 dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM1:,PORT=IMM1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
 NDFileIMMConfigure("IMM2", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
 dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM2:,PORT=IMM2,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
+NDFileIMMConfigure("IMM3", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
+dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM3:,PORT=IMM3,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
 NDFileIMMConfigure("IMMout", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
 dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMMout:,PORT=IMMout,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
 
