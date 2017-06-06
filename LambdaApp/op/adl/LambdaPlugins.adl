@@ -230,6 +230,11 @@ text {
 		name="NDFileIMM.adl"
 		args="P=$(P), R=IMMout:"
 	}
+	display[13] {
+		label="IMMJoin"
+		name="IMMJoin.adl"
+		args="P=$(P), R=IMMJoin:"
+	}
 	clr=14
 	bclr=51
 }
