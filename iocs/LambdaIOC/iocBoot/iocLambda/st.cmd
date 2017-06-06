@@ -60,6 +60,7 @@ dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM3:,PORT=IMM3,
 NDFileIMMConfigure("IMMout", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
 dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMMout:,PORT=IMMout,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
 
+dbLoadRecords("$(TOP)/iocBoot/iocLambda/IMMJoin.template", "P=$(PREFIX), R=IMMJoin:")
 set_requestfile_path("$(ADLAMBDA)/LambdaApp/Db")
 set_requestfile_path("$(NDPLUGINPIPEWRITER)/PipeWriterApp/Db")
 set_requestfile_path("$(NDPLUGINFILEIMM)/NDFileIMMApp/Db")
@@ -70,4 +71,25 @@ iocInit()
 
 # save things every thirty seconds
 create_monitor_set("auto_settings.req", 30, "P=$(PREFIX)")
+
+
+# Initialize the NDFileIMM_format for the IMM  plugins since not set on iocInit
+dbpf "8LAMBDA1:IMM0:NDFileIMM_format.PROC", "1"
+dbpf "8LAMBDA1:IMM1:NDFileIMM_format.PROC", "1"
+dbpf "8LAMBDA1:IMM2:NDFileIMM_format.PROC", "1"
+dbpf "8LAMBDA1:IMM3:NDFileIMM_format.PROC", "1"
+dbpf "8LAMBDA1:IMMout:NDFileIMM_format.PROC", "1"
+# Initialize the EnergyThreshold on the Lambda since this does not happen on iocInit
+dbpf "8LAMBDA1:cam1:EnergyThreshold.PROC", "1"
+# Collect some images to initialize IMM0-IMM3.
+dbpf "8LAMBDA1:cam1:Acquire", "1"
+epicsThreadSleep "1"
+dbpf "8LAMBDA1:cam1:Acquire", "0"
+# Use the IMM Join which uses dfanout to set IMM0-IMM3 to Capture
+dbpf "8LAMBDA1:IMMJoin:IMMJoinedCapture", "1"
+#Collect a few images to Initialize the IMMout plugin
+dbpf "8LAMBDA1:cam1:Acquire", "1"
+epicsThreadSleep "1"
+dbpf "8LAMBDA1:cam1:Acquire", "0"
+# All ready for users to take some images.
 

@@ -15,3 +15,4 @@ file "NDPluginFile_settings.req", P=$(P), R=IMM3:
 file "NDFileIMM_settings.req", P=$(P), R=IMM3:
 file "NDPluginFile_settings.req", P=$(P), R=IMMout:
 file "NDFileIMM_settings.req", P=$(P), R=IMMout:
+file "IMMJoin_settings.req", P=$(P), R=IMMJoin:
