@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
-	version=030107
+	name="/home/epics/devel/areaDetector-3-1/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
+	version=030109
 }
 display {
 	object {
 		x=67
 		y=67
-		width=717
-		height=730
+		width=715
+		height=720
 	}
 	clr=14
 	bclr=4
@@ -113,18 +113,18 @@ text {
 }
 composite {
 	object {
-		x=0
+		x=5
 		y=41
 		width=350
-		height=215
+		height=340
 	}
 	"composite name"=""
 	"composite file"="ADSetup.adl"
 }
 composite {
 	object {
-		x=353
-		y=193
+		x=360
+		y=126
 		width=350
 		height=430
 	}
@@ -133,8 +133,8 @@ composite {
 }
 composite {
 	object {
-		x=1
-		y=264
+		x=5
+		y=386
 		width=350
 		height=250
 	}
@@ -143,21 +143,95 @@ composite {
 }
 composite {
 	object {
-		x=356
-		y=56
+		x=360
+		y=41
 		width=350
 		height=80
 	}
 	"composite name"=""
 	"composite file"="LambdaPlugins.adl"
 }
-composite {
+text {
 	object {
-		x=0
-		y=635
-		width=710
+		x=6
+		y=645
+		width=110
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Config File Path:"
+}
+"text update" {
+	object {
+		x=184
+		y=647
+		width=519
+		height=10
+	}
+	monitor {
+		chan="$(P)$(R)ConfigFilePath"
+		clr=27
+		bclr=4
+	}
+	format="string"
+	limits {
+	}
+}
+text {
+	object {
+		x=6
+		y=675
+		width=150
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Operating Mode:"
+}
+menu {
+	object {
+		x=168
+		y=675
+		width=276
+		height=25
+	}
+	control {
+		chan="$(P)$(R)OperatingMode"
+		clr=14
+		bclr=4
+	}
+}
+rectangle {
+	object {
+		x=5
+		y=641
+		width=705
 		height=73
 	}
-	"composite name"=""
-	"composite file"="LambdaConfig.adl"
+	"basic attribute" {
+		clr=14
+		fill="outline"
+	}
+	"dynamic attribute" {
+		chan="$(P)$(R)OperatingMode"
+	}
+}
+"text update" {
+	object {
+		x=472
+		y=675
+		width=200
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)OperatingMode_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
 }
