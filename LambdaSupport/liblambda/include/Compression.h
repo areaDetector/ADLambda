@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,18 +19,12 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __COMPRESSION_H__
-#define __COMPRESSION_H__
+#pragma once
 
-#include <iostream>
-#include <memory>
-#include <vector>
+#include "LambdaGlobals.h"
 
-///namespace 
-namespace CompressionNS
-{   
-    using namespace std;
-    
+namespace DetLambdaNS
+{
     class ZlibWrapper;
     
     /**
@@ -46,7 +40,9 @@ namespace CompressionNS
          * @param compression level,between 0-9. Default value is 2
          * @return true: OK; false: error during compression
          */
-        virtual bool CompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData,int nLevel = 2) = 0;
+        virtual bool CompressData(vector<uchar>& vuchSrcData,
+                                  vector<uchar>& vuchDstData,
+                                  szt nLevel = 2) = 0;
 
         /**
          * @brief decompress data
@@ -54,7 +50,8 @@ namespace CompressionNS
          * @param compressed data
          * @return true: OK; false: error during decompression
          */
-        virtual bool DecompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData) = 0;
+        virtual bool DecompressData(vector<uchar>& vuchSrcData,
+                                    vector<uchar>& vuchDstData) = 0;
 
         /**
          * @brief get error message
@@ -65,7 +62,7 @@ namespace CompressionNS
       protected:
         string m_strErrMsg;
         
-    };///end of class
+    };
 
     /**
      * @brief compression with zlib
@@ -84,18 +81,13 @@ namespace CompressionNS
          */
         ~CompressionZlib();
         
-        bool CompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData,int nLevel = 2);
-        bool DecompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData);
+        bool CompressData(vector<uchar>& vuchSrcData,
+                          vector<uchar>& vuchDstData,
+                          szt nLevel = 2);
+        bool DecompressData(vector<uchar>& vuchSrcData,
+                            vector<uchar>& vuchDstData);
         
       private:
         shared_ptr<ZlibWrapper> m_sptrZlibWrapper;
-        
-        
-    };///end of class
-    
-    
-    
-}///end of namespace
-
-
-#endif
+    };
+}

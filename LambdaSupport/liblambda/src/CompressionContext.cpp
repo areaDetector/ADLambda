@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -22,8 +22,7 @@
 #include "CompressionContext.h"
 #include "Compression.h"
 
-///namespace 
-namespace CompressionNS
+namespace DetLambdaNS
 {
     CompressionContext::CompressionContext(unique_ptr<CompressionInterface> _uptrCompInterface)
         :m_uptrCompInterface(move(_uptrCompInterface))
@@ -34,12 +33,14 @@ namespace CompressionNS
         m_uptrCompInterface.reset();
     }
     
-    bool CompressionContext::CompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData,int nLevel)
+    bool CompressionContext::CompressData(vector<uchar>& vuchSrcData,
+                                          vector<uchar>& vuchDstData,szt nLevel)
     {
         return m_uptrCompInterface->CompressData(vuchSrcData,vuchDstData,nLevel);
     }
     
-    bool CompressionContext::DecompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData)
+    bool CompressionContext::DecompressData(vector<uchar>& vuchSrcData,
+                                            vector<uchar>& vuchDstData)
     {
         return m_uptrCompInterface->DecompressData(vuchSrcData,vuchDstData);
     }
@@ -49,5 +50,5 @@ namespace CompressionNS
     {
         return m_uptrCompInterface->GetErrorMessage();
     }
-    
-}///end of namespace
+   
+}
