@@ -1,6 +1,5 @@
-
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -22,18 +21,12 @@
 
 #include "LambdaGlobals.h"
 #include "LambdaSysImpl.h"
-#include "MemUtils.h"
-#include "ThreadUtils.h"
-#include "NetworkInterface.h"
-#include "NetworkImplementation.h"
-#include "FilesOperation.h"
 #include "LambdaModule.h"
 #include "ImageDecoder.h"
 #include "LambdaTask.h"
 #include "LambdaConfigReader.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
     LambdaSysImpl::LambdaSysImpl()
     {
@@ -62,7 +55,7 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
 
-	float fDefaultEnergy = 6.0;
+        float fDefaultEnergy = 6.0;
         m_strCurrentModuleName = "";
         m_strOperationMode= "";
         m_shTriggerMode = 0;
@@ -71,6 +64,7 @@ namespace DetCommonNS
         m_lFrameNo = 1;
         m_bSaveAllImg = false;
         m_bBurstMode = true;
+        m_nThreshold = 0;
         m_fEnergy = fDefaultEnergy;
         //m_nState = 0;
         m_strSaveFilePath = "./";
@@ -100,15 +94,25 @@ namespace DetCommonNS
         m_bCompressionEnabled = false;
         m_nCompressionLevel = 2;
         m_nCompressionMethod = 0;
+
+        m_strModuleID = "unknown";
         
         m_nThreadNumbers = THREAD_NUMBER;
         m_nRawBufferLength = RAW_BUFFER_LENGTH;
         m_nDecodedBufferLength = DECODED_BUFFER_LENGTH;
-        m_vNDecodingThreads.resize(3,2);    
-        m_vNDecodingThreads[0] = 3; // Decoding threads with HIGH priority
-        m_vNDecodingThreads[1] = 3; // Threads with moderate NORMAL priority - run at lower frame rates
-        m_vNDecodingThreads[2] = 6; // Threads with LOW priority that only run after all images received
-        m_dCriticalShutterTime = 2.1; // Shutter time below which we should use fewer decoding threads while receiving
+        m_vNDecodingThreads.resize(3,2);
+
+        // Decoding threads with HIGH priority
+        m_vNDecodingThreads[0] = 3;
+
+        // Threads with moderate NORMAL priority - run at lower frame rates
+        m_vNDecodingThreads[1] = 3;
+        
+        // Threads with LOW priority that only run after all images received
+        m_vNDecodingThreads[2] = 6;
+
+        // Shutter time below which we should use fewer decoding threads while receiving
+        m_dCriticalShutterTime = 2.1;
 
         m_nDistortionCorrectionMethod = 1;
 
@@ -125,12 +129,12 @@ namespace DetCommonNS
 
         m_bAcquisitionStart = false;
         m_bAcquisitionStop = true;
-        m_ptrnLiveData = new int[m_nDistortedImageSize];
+        m_ptrnLiveData = new int32[m_nDistortedImageSize];
         std::fill(m_ptrnLiveData,m_ptrnLiveData+m_nDistortedImageSize,0);
         m_lLiveFrameNo = -1;
         m_shLiveErrCode = -1;
 
-	SetThreshold(m_nThreshold, m_fEnergy);
+        SetThreshold(m_nThreshold, m_fEnergy);
         SetShutterTime(m_dShutterTime);
         SetTriggerMode(m_shTriggerMode);
         SetNImages(m_lFrameNo);
@@ -139,15 +143,15 @@ namespace DetCommonNS
         JoinAllDecodeTasks();
         
         ///quick fix for reading out unsual data
-        char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];    
-        int nPacketSize = UDP_PACKET_SIZE_NORMAL;
-        int nCount = 50;
-        short shErrorCode = 0;
-        int nNoDataTimes = 0;
+        char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];
+        szt nPacketSize = UDP_PACKET_SIZE_NORMAL;
+        int32 nCount = 50;
+        int16 shErrorCode = 0;
+        int32 nNoDataTimes = 0;
 
         usleep(500000); // Wait to ensure bad packets are caught
                     
-        for(int i=1;i<m_vNetInterface.size();i++)
+        for(szt i=1;i<m_vNetInterface.size();i++)
         {
             nNoDataTimes = 0;
             while(true)
@@ -171,10 +175,12 @@ namespace DetCommonNS
         ptrchPacket = NULL;
 
         // Throw in a test of Read OMR
-        for(int i=0; i<m_vCurrentChip.size();i++)
+        for(szt i=0; i<m_vCurrentChip.size();i++)
         {
-            int currentChip = m_vCurrentChip[i];
+            int32 currentChip = m_vCurrentChip[i];
             string IDtest = GetChipID(currentChip);
+            if(i == 0)
+                m_strModuleID = IDtest;
             std::cout << "ID of chip " << currentChip << " is " << IDtest << "\n";
         }
                 
@@ -185,7 +191,7 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
             
-        for(int i=0;i<m_vNetInterface.size();i++)
+        for(szt i=0;i<m_vNetInterface.size();i++)
             m_vNetInterface[i]->Disconnect();
 
         m_bSysExit = true;
@@ -222,7 +228,7 @@ namespace DetCommonNS
        
     }
     
-    bool LambdaSysImpl::ReadConfig(bool bSwitchMode, string strOpMode)
+    void LambdaSysImpl::ReadConfig(bool bSwitchMode, string strOpMode)
     {
         LOG_TRACE(__FUNCTION__);
        
@@ -314,7 +320,10 @@ namespace DetCommonNS
 
 
         m_nSubimages = 1;
-        if(m_emReadoutMode == OPERATION_MODE_2x12) m_nSubimages = 2; // Have 2 thresholds in 2x12 mode currently
+        
+        // Have 2 thresholds in 2x12 mode currently
+        if(m_emReadoutMode == OPERATION_MODE_2x12) m_nSubimages = 2; 
+
         //depends on the the number of chips. Decide the image size
         if(m_vCurrentChip.size() == 12)
         {
@@ -334,11 +343,13 @@ namespace DetCommonNS
         }
 
         // Calculate the image size and no of packets based on the no of chips
-        // Note - for 1-chip tests, might need to "force" the image size to simplify firmware tests (e.g. test 1 chip without having to change data output)
-
+        // Note - for 1-chip tests, might need to "force" the image size to
+        // simplify firmware tests (e.g. test 1 chip without having to change data output)
         m_nImgDataSize = m_vCurrentChip.size()  * (BYTES_IN_CHIP  + CHIP_HEADER_SIZE);
         m_nPacketsNumber = m_nImgDataSize / (UDP_PACKET_SIZE_NORMAL - UDP_EXTRA_BYTES);
-        if((m_nImgDataSize / (UDP_PACKET_SIZE_NORMAL - UDP_EXTRA_BYTES)) != 0) m_nPacketsNumber++; // No of packets is total data divided by data per packet, rounded up
+
+        // No of packets is total data divided by data per packet, rounded up
+        if((m_nImgDataSize / (UDP_PACKET_SIZE_NORMAL - UDP_EXTRA_BYTES)) != 0) m_nPacketsNumber++;
     }
     
     bool LambdaSysImpl::InitNetwork()
@@ -348,15 +359,22 @@ namespace DetCommonNS
         if(m_bMultilink)
         {
             //establish TCP link first
-            NetworkImplementation* objNetImplTCP = new NetworkTCPImplementation(m_strTCPIPAddress,m_shTCPPortNo);
-            NetworkInterface* objNetInterfaceTCP = new NetworkTCPInterface(objNetImplTCP);
+            NetworkImplementation* objNetImplTCP
+                = new NetworkTCPImplementation(m_strTCPIPAddress,m_shTCPPortNo);
+            NetworkInterface* objNetInterfaceTCP
+                = new NetworkTCPInterface(objNetImplTCP);
             m_vNetInterface.push_back(objNetInterfaceTCP);
             
             ///once TCP is connected successfully, config UDP connections
             if(m_vNetInterface[0]->Connect()==0)
             {
-                m_objLambdaModule = new LambdaModule(m_strCurrentModuleName,m_vNetInterface[0],m_bMultilink
-                                                     ,m_vCurrentChip,m_stDetCfgData,m_vStCurrentChipData,m_bSlaveModule);
+                m_objLambdaModule = new LambdaModule(m_strCurrentModuleName,
+                                                     m_vNetInterface[0],
+                                                     m_bMultilink,
+                                                     m_vCurrentChip,
+                                                     m_stDetCfgData,
+                                                     m_vStCurrentChipData,
+                                                     m_bSlaveModule);
 
                 //send udp data via TCP
                 m_objLambdaModule->WriteUDPMACAddress(0,m_vStrMAC[0]);
@@ -368,10 +386,14 @@ namespace DetCommonNS
                 m_objLambdaModule->WriteUDPPorts(0,m_vUShPort);
                 m_objLambdaModule->WriteUDPPorts(1,m_vUShPort);
                 
-                NetworkImplementation* objNetImplUDP = new NetworkUDPImplementation(m_vStrIP[0][0],m_vUShPort[1]);
-                NetworkImplementation* objNetImplUDP1 = new NetworkUDPImplementation(m_vStrIP[0][0],m_vUShPort[2]);
-                NetworkImplementation* objNetImplUDP2 = new NetworkUDPImplementation(m_vStrIP[1][0],m_vUShPort[1]);
-                NetworkImplementation* objNetImplUDP3 = new NetworkUDPImplementation(m_vStrIP[1][0],m_vUShPort[2]);
+                NetworkImplementation* objNetImplUDP
+                    = new NetworkUDPImplementation(m_vStrIP[0][0],m_vUShPort[1]);
+                NetworkImplementation* objNetImplUDP1
+                    = new NetworkUDPImplementation(m_vStrIP[0][0],m_vUShPort[2]);
+                NetworkImplementation* objNetImplUDP2
+                    = new NetworkUDPImplementation(m_vStrIP[1][0],m_vUShPort[1]);
+                NetworkImplementation* objNetImplUDP3
+                    = new NetworkUDPImplementation(m_vStrIP[1][0],m_vUShPort[2]);
             
                 NetworkInterface* objNetInterfaceUDP = new NetworkUDPInterface(objNetImplUDP);
                 NetworkInterface* objNetInterfaceUDP1 = new NetworkUDPInterface(objNetImplUDP1);
@@ -383,27 +405,33 @@ namespace DetCommonNS
                 m_vNetInterface.push_back(objNetInterfaceUDP2);
                 m_vNetInterface.push_back(objNetInterfaceUDP3);
                 
-                for(int i=1;i<m_vNetInterface.size();i++)
+                for(szt i=1;i<m_vNetInterface.size();i++)
                     m_vNetInterface[i]->Connect();
                 return true;
             }
             else
                 return false;
-            
         }
         else
         {
             //init network
-            NetworkImplementation* objNetImplTCP = new NetworkTCPImplementation(m_strTCPIPAddress,m_shTCPPortNo);         
-            NetworkInterface* objNetInterfaceTCP = new NetworkTCPInterface(objNetImplTCP);
+            NetworkImplementation* objNetImplTCP
+                = new NetworkTCPImplementation(m_strTCPIPAddress,m_shTCPPortNo);         
+            NetworkInterface* objNetInterfaceTCP
+                = new NetworkTCPInterface(objNetImplTCP);
             
             m_vNetInterface.push_back(objNetInterfaceTCP);
             
             if(m_vNetInterface[0]->Connect() == 0)
             {
 
-                m_objLambdaModule = new LambdaModule(m_strCurrentModuleName,m_vNetInterface[0],m_bMultilink
-                                                     ,m_vCurrentChip,m_stDetCfgData,m_vStCurrentChipData,m_bSlaveModule);
+                m_objLambdaModule = new LambdaModule(m_strCurrentModuleName,
+                                                     m_vNetInterface[0],
+                                                     m_bMultilink,
+                                                     m_vCurrentChip,
+                                                     m_stDetCfgData,
+                                                     m_vStCurrentChipData,
+                                                     m_bSlaveModule);
                 //send udp data via TCP
                 m_objLambdaModule->WriteUDPMACAddress(0,m_vStrMAC[0]);
                 m_objLambdaModule->WriteUDPIP(0,m_vStrIP[0]);
@@ -411,24 +439,30 @@ namespace DetCommonNS
 
                 if(m_bBurstMode)
                 {
-                    NetworkImplementation* objNetImplData = new NetworkUDPImplementation(m_vStrIP[0][0],m_vUShPort[1]);
-                    NetworkInterface* objNetInterfaceData = new NetworkUDPInterface(objNetImplData);
+                    NetworkImplementation* objNetImplData
+                        = new NetworkUDPImplementation(m_vStrIP[0][0],m_vUShPort[1]);
+                    NetworkInterface* objNetInterfaceData
+                        = new NetworkUDPInterface(objNetImplData);
                     m_vNetInterface.push_back(objNetInterfaceData);
                     m_vNetInterface[1]->Connect();
                 }
                 else
                 {
-                    //Use TCP interface - for now, have "magic number" 3490 as port but should implement more flexibly
-                    NetworkImplementation* objNetImplData = new NetworkTCPImplementation(m_strTCPIPAddress,3490);
-                    NetworkInterface* objNetInterfaceData = new NetworkTCPInterface(objNetImplData);
+                    //Use TCP interface - for now, have "magic number" 3490
+                    //as port but should implement more flexibly
+                    NetworkImplementation* objNetImplData
+                        = new NetworkTCPImplementation(m_strTCPIPAddress,3490);
+                    NetworkInterface* objNetInterfaceData
+                        = new NetworkTCPInterface(objNetImplData);
                     m_vNetInterface.push_back(objNetInterfaceData);
                     m_vNetInterface[1]->Connect();		    
-                }		
+                }
 
+                return true;
             }
-            
+            else
+                return false;
         }
-        
     }
 
     void LambdaSysImpl::InitThreadPool()
@@ -444,9 +478,11 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
         if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
-            m_objMemPoolDecodedShort = new MemPool<short>(m_nDecodedBufferLength,m_nDistortedImageSize);
+            m_objMemPoolDecodedShort
+                = new MemPool<int16>(m_nDecodedBufferLength,m_nDistortedImageSize);
         else if(m_emReadoutMode == OPERATION_MODE_24)
-            m_objMemPoolDecodedInt = new MemPool<int>(m_nDecodedBufferLength,m_nDistortedImageSize);
+            m_objMemPoolDecodedInt
+                = new MemPool<int32>(m_nDecodedBufferLength,m_nDistortedImageSize);
         usleep(100);
         m_objMemPoolRaw = new MemPool<char>(m_nRawBufferLength,m_nImgDataSize);
         usleep(100);
@@ -467,6 +503,21 @@ namespace DetCommonNS
         
     }
 
+    string LambdaSysImpl::GetModuleID()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_strModuleID;
+    }
+
+    string LambdaSysImpl::GetSystemInfo()
+    {
+        return string("liblambda version:")
+            + LAMBDA_VERSION
+            + string(" -- firmware version:")
+            + m_objLambdaModule->GetFirmwareVersion();
+    }
+
     string LambdaSysImpl::GetCalibFile()
     {
         LOG_TRACE(__FUNCTION__);
@@ -485,7 +536,8 @@ namespace DetCommonNS
     {
         Enum_readout_mode emNewMode;
         LOG_TRACE(__FUNCTION__);
-        // For time being, hard-code options - in future, should make this more flexible (or carefully tailored)
+        // For time being, hard-code options -
+        // in future, should make this more flexible (or carefully tailored)
         if(strOperationMode=="ContinuousReadWrite") emNewMode = OPERATION_MODE_12;
         else if(strOperationMode=="TwentyFourBit") emNewMode = OPERATION_MODE_24;
         else if(strOperationMode=="DualThreshold") emNewMode = OPERATION_MODE_2x12;
@@ -516,21 +568,30 @@ namespace DetCommonNS
                 ReadConfig(true,m_strOperationMode);
                 delete m_objLambdaModule;
                 
-                m_objLambdaModule = new LambdaModule(m_strCurrentModuleName,m_vNetInterface[0],m_bMultilink,m_vCurrentChip,m_stDetCfgData,m_vStCurrentChipData,m_bSlaveModule);
+                m_objLambdaModule = new LambdaModule(m_strCurrentModuleName,
+                                                     m_vNetInterface[0],
+                                                     m_bMultilink,
+                                                     m_vCurrentChip,
+                                                     m_stDetCfgData,
+                                                     m_vStCurrentChipData,m_bSlaveModule);
 		
-                //cout << "Existing threshold = " << m_nThreshold << " and energy = " << m_fEnergy << endl;            
-                if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
+                //cout << "Existing threshold = " << m_nThreshold
+                //<< " and energy = " << m_fEnergy << endl;            
+                if((m_emReadoutMode == OPERATION_MODE_12)
+                   || (m_emReadoutMode == OPERATION_MODE_2x12))
                 {
                     delete m_objMemPoolDecodedInt;
                     m_objMemPoolDecodedInt = NULL;
-                    m_objMemPoolDecodedShort = new MemPool<short>(m_nDecodedBufferLength,m_nDistortedImageSize);
+                    m_objMemPoolDecodedShort
+                        = new MemPool<int16>(m_nDecodedBufferLength,m_nDistortedImageSize);
                     usleep(100);
                 }               
                 else if(m_emReadoutMode == OPERATION_MODE_24)
                 {
                     delete m_objMemPoolDecodedShort;
                     m_objMemPoolDecodedShort = NULL;
-                    m_objMemPoolDecodedInt = new MemPool<int>(m_nDecodedBufferLength,m_nDistortedImageSize);
+                    m_objMemPoolDecodedInt
+                        = new MemPool<int32>(m_nDecodedBufferLength,m_nDistortedImageSize);
                     usleep(100);
                 }
                
@@ -546,7 +607,8 @@ namespace DetCommonNS
             }
         }
         else
-            LOG_STREAM(__FUNCTION__,ERROR,("This Operation Mode( "+strOperationMode +") does not exist!"));
+            LOG_STREAM(__FUNCTION__,ERROR,
+                       ("This Operation Mode( "+strOperationMode +") does not exist!"));
         
         SetState(ON);
     }
@@ -557,7 +619,7 @@ namespace DetCommonNS
         return m_strOperationMode;           
     }
 
-    void LambdaSysImpl::SetTriggerMode(short shTriggerMode)
+    void LambdaSysImpl::SetTriggerMode(int16 shTriggerMode)
     {
         LOG_TRACE(__FUNCTION__);
         SetState(BUSY);
@@ -566,7 +628,7 @@ namespace DetCommonNS
         SetState(ON);
     }
 
-    short LambdaSysImpl::GetTriggerMode()
+    int16 LambdaSysImpl::GetTriggerMode()
     {
         LOG_TRACE(__FUNCTION__);
         return m_shTriggerMode;            
@@ -602,7 +664,7 @@ namespace DetCommonNS
         return m_dDelayTime;
     }
 
-    void LambdaSysImpl::SetNImages(long lImages)
+    void LambdaSysImpl::SetNImages(int32 lImages)
     {
         LOG_TRACE(__FUNCTION__);
         SetState(BUSY);
@@ -611,7 +673,7 @@ namespace DetCommonNS
         SetState(ON);
     }
 
-    long LambdaSysImpl::GetNImages()
+    int32 LambdaSysImpl::GetNImages()
     {
         LOG_TRACE(__FUNCTION__);
         return m_lFrameNo; 
@@ -647,7 +709,7 @@ namespace DetCommonNS
         return m_bBurstMode;
     }
 
-    void LambdaSysImpl::SetThreshold(int nThresholdNo, float fEnergy)
+    void LambdaSysImpl::SetThreshold(int32 nThresholdNo, float fEnergy)
     {
         LOG_TRACE(__FUNCTION__);
         SetState(BUSY);
@@ -658,7 +720,7 @@ namespace DetCommonNS
         SetState(ON);
     }
 
-    float LambdaSysImpl::GetThreshold(int nThresholdNo)
+    float LambdaSysImpl::GetThreshold(int32 nThresholdNo)
     {
         LOG_TRACE(__FUNCTION__);
         m_nThreshold = nThresholdNo;
@@ -669,7 +731,8 @@ namespace DetCommonNS
     void LambdaSysImpl::SetState(Enum_detector_state emState)
     {
         LOG_TRACE(__FUNCTION__);
-        // When exiting RECEIVING_IMAGES state, we want to make sure detector module is ready for next acquisition
+        // When exiting RECEIVING_IMAGES state,
+        // we want to make sure detector module is ready for next acquisition
         if((m_emState == RECEIVING_IMAGES) && (emState != RECEIVING_IMAGES))
         {
             m_objLambdaModule->PrepNextImaging();
@@ -682,7 +745,8 @@ namespace DetCommonNS
         //LOG_TRACE(__FUNCTION__);
         boost::unique_lock<boost::mutex> lock(m_bstMtxSync); 
         // If imaging is running, need to check on progress here and update if necessary
-        if (m_emState >= 4) // States 4 and above are RECEIVING_IMAGES, PROCESSING_IMAGES, FINISHED
+        // States 4 and above are RECEIVING_IMAGES, PROCESSING_IMAGES, FINISHED
+        if (m_emState >= 4) 
         {
             //Check for raw images complete  
             int expectedframes = m_lFrameNo;
@@ -701,7 +765,8 @@ namespace DetCommonNS
                 int decodedframes = 0;
                 if(!m_bCompressionEnabled)
                 {
-                    if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
+                    if((m_emReadoutMode == OPERATION_MODE_12)
+                       || (m_emReadoutMode == OPERATION_MODE_2x12))
                         decodedframes =  m_objMemPoolDecodedShort->GetTotalReceivedFrames();
                     else if(m_emReadoutMode == OPERATION_MODE_24)
                         decodedframes =  m_objMemPoolDecodedInt->GetTotalReceivedFrames();
@@ -716,12 +781,18 @@ namespace DetCommonNS
                     if (m_emState != 5) 
                     {
                         SetState(PROCESSING_IMAGES);
-                        m_objThPool->SetPriorityLevel(LOW); // Allow low priority tasks to run if image collection is done but we have images to process
+                        // Allow low priority tasks to run if image collection is
+                        // done but we have images to process
+                        m_objThPool->SetPriorityLevel(LOW); 
                     }
                 }
                 else
-                    SetState(FINISHED); // This indicates library done, BUT that we haven't reset state to ON with StopFastImaging.
-                // The FINISHED state is to help Tango - it allows the library to remain in a "not ON" state until the Tango server is finished with files etc.
+                    // This indicates library done, BUT that we haven't reset state
+                    // to ON with StopFastImaging.
+                    // The FINISHED state is to help Tango -
+                    // it allows the library to remain in a "not ON" state until
+                    // the Tango server is finished with files etc.
+                    SetState(FINISHED); 
             }
         }
 
@@ -766,11 +837,13 @@ namespace DetCommonNS
         SetState(RECEIVING_IMAGES);
         if(m_dShutterTime > m_dCriticalShutterTime)
         {
-            m_objThPool->SetPriorityLevel(NORMAL); // Go to normal priority for task processing
+            // Go to normal priority for task processing
+            m_objThPool->SetPriorityLevel(NORMAL); 
         }
         else
         {
-            m_objThPool->SetPriorityLevel(HIGH); // Limit number of decoders to improve reliability at high frame rates
+            // Limit number of decoders to improve reliability at high frame rates
+            m_objThPool->SetPriorityLevel(HIGH); 
         }
         std::fill(m_ptrnLiveData,m_ptrnLiveData+m_nDistortedImageSize,0);
         //cout << "Putting into receiving state \n";
@@ -804,7 +877,7 @@ namespace DetCommonNS
         }
         else
         {   
-            for(int i=1;i<m_vNetInterface.size();i++)
+            for(szt i=1;i<m_vNetInterface.size();i++)
                 CreateTask(m_strOperationMode,"MultiLink",m_vNetInterface[i]);
             
             CreateTask(m_strOperationMode,"MonitorTask"); 
@@ -817,12 +890,14 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
 
-        // Only use LambdaModule command to stop imaging if it's currently receiving images - otherwise nothing needs to be done
+        // Only use LambdaModule command to stop imaging
+        // if it's currently receiving images - otherwise nothing needs to be done
         if(GetState()==RECEIVING_IMAGES)
             m_objLambdaModule->StopFastImaging();
 
         boost::unique_lock<boost::mutex> lock(m_bstMtxSync);
-        // Do all of this during locked mutex - don't allow state updates during this process for safety!
+        // Do all of this during locked mutex -
+        // don't allow state updates during this process for safety!
         m_bAcquisitionStart = false;
         m_bAcquisitionStop = true;
     
@@ -843,7 +918,7 @@ namespace DetCommonNS
         SetState(ON);
     }
 
-    void LambdaSysImpl::SetCompressionEnabled(bool bCompressionEnabled,int nCompLevel)
+    void LambdaSysImpl::SetCompressionEnabled(bool bCompressionEnabled,int32 nCompLevel)
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -856,20 +931,19 @@ namespace DetCommonNS
         {
             if(m_objMemPoolCompressed == NULL)
             {
+                // Allocate 5 bytes of memory for each pixel in compressed image to avoid overflow
+                int safetyFactor = 5; 
 
-                int safetyFactor = 5; // Allocate 5 bytes of memory for each pixel in compressed image to avoid overflow 
-
-                m_objMemPoolCompressed = new MemPool<char>(m_nDecodedBufferLength,m_nDistortedImageSize*safetyFactor);
+                m_objMemPoolCompressed = new MemPool<char>(
+                    m_nDecodedBufferLength,m_nDistortedImageSize*safetyFactor);
                 usleep(100);
             }
         }
 
         JoinAllDecodeTasks();
-        
-        
     }
 
-    void LambdaSysImpl::GetCompressionEnabled(bool& bCompressionEnabled,int& nCompLevel)
+    void LambdaSysImpl::GetCompressionEnabled(bool& bCompressionEnabled,int32& nCompLevel)
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -886,14 +960,14 @@ namespace DetCommonNS
     }
     
 
-    vector<unsigned int> LambdaSysImpl::GetPixelMask()
+    vector<uint32> LambdaSysImpl::GetPixelMask()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_vUnPixelMask;
     }
 
-    void LambdaSysImpl::SetDistortionCorrecttionMethod(int nMethod)
+    void LambdaSysImpl::SetDistortionCorrecttionMethod(int32 nMethod)
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -905,14 +979,14 @@ namespace DetCommonNS
         }
     }
 
-    int LambdaSysImpl::GetDistortionCorrecttionMethod()
+    int32 LambdaSysImpl::GetDistortionCorrecttionMethod()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_nDistortionCorrectionMethod;
     }
         
-    void LambdaSysImpl::GetImageFormat(int& nX, int& nY, int& nImgDepth)
+    void LambdaSysImpl::GetImageFormat(int32& nX, int32& nY, int32& nImgDepth)
     {
         LOG_TRACE(__FUNCTION__);
         nX = m_nX;
@@ -920,7 +994,7 @@ namespace DetCommonNS
         nImgDepth = m_nImgDepth;
     }
 
-    int LambdaSysImpl::GetNSubimages()
+    int32 LambdaSysImpl::GetNSubimages()
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -934,13 +1008,13 @@ namespace DetCommonNS
         return m_emReadoutMode;
     }
   
-    long LambdaSysImpl::GetLatestImageNo()
+    int32 LambdaSysImpl::GetLatestImageNo()
     {
         LOG_TRACE(__FUNCTION__);
         return m_lLastestImgNo;
     }
 
-    long LambdaSysImpl::GetQueueDepth()
+    int32 LambdaSysImpl::GetQueueDepth()
     {
         //LOG_TRACE(__FUNCTION__);
 
@@ -949,7 +1023,8 @@ namespace DetCommonNS
             
             if(m_emReadoutMode == OPERATION_MODE_24)
                 m_lQueueDepth =  m_objMemPoolDecodedInt->GetStoredImageNumbers();
-            else if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
+            else if((m_emReadoutMode == OPERATION_MODE_12)
+                    || (m_emReadoutMode == OPERATION_MODE_2x12))
                 m_lQueueDepth =  m_objMemPoolDecodedShort->GetStoredImageNumbers();
         }
         else
@@ -957,15 +1032,22 @@ namespace DetCommonNS
         
         
         if(m_lQueueDepth>0)
-            LOG_INFOS(("Currently stored images are:"+to_string(static_cast<long long>(m_lQueueDepth))));
+            LOG_INFOS(("Currently stored images are:"+to_string(m_lQueueDepth)));
         return m_lQueueDepth;
     }
 
-    string LambdaSysImpl::GetChipID(int chipNo)
+    int32 LambdaSysImpl::GetFreeBufferSize()
     {
-        // Use Read OMR functionality to get the OMR value back. This function waits for timeout when called.
+        return (m_nRawBufferLength - (m_objMemPoolRaw->GetStoredImageNumbers()));
+    }
+    
+    string LambdaSysImpl::GetChipID(int32 chipNo)
+    {
+        // Use Read OMR functionality to get the OMR value back.
+        // This function waits for timeout when called.
         vector<char> v_OMRread = m_objLambdaModule->ReadOMR(chipNo);
-        // Current version prints debug info when reading OMR - this is sufficient for tests, but should implement some 
+        // Current version prints debug info when reading OMR -
+        // this is sufficient for tests, but should implement some 
         // Medipix-specific decoding ultimately.
         // For now, just return arbitrary value
         string str_output = "";
@@ -976,23 +1058,24 @@ namespace DetCommonNS
         else
         {
             string alphabet = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            unsigned char ycoord_raw = static_cast<unsigned char>(v_OMRread[13] & 0x0F); // Last 4 bits
+            uchar ycoord_raw = static_cast<uchar>(v_OMRread[13] & 0x0F); // Last 4 bits
             string ycoord = std::to_string(ycoord_raw);
-            unsigned char xcoord_raw = static_cast<unsigned char>(v_OMRread[13] & 0xF0);
+            uchar xcoord_raw = static_cast<uchar>(v_OMRread[13] & 0xF0);
             xcoord_raw = xcoord_raw>>4;
             // Need to convert this to letter, where A=1, B=2 etc.
-            int xcoord_pos = (int)xcoord_raw; // Possible danger? Remove minus 1 here temporarily?
+            // Possible danger? Remove minus 1 here temporarily?
+            int32 xcoord_pos = (int32)xcoord_raw; 
             string xcoord = alphabet.substr(xcoord_pos,1);
             // Then, grab wafer number - need to be careful with signed vs unsigned char
-            unsigned char lowerpart = static_cast<unsigned char>(v_OMRread[12]);
-            unsigned char upperpart = static_cast<unsigned char>(v_OMRread[11] & 0x0F);
-            unsigned int waferval = lowerpart;
+            uchar lowerpart = static_cast<uchar>(v_OMRread[12]);
+            uchar upperpart = static_cast<uchar>(v_OMRread[11] & 0x0F);
+            uint32 waferval = lowerpart;
             waferval+= upperpart * 256;
             string waferstr = std::to_string(waferval);
             // Now, deal with possible corrections
             char correcttest = (v_OMRread[11] & 0x30)>>4;
             // Bit of a pain - construct 8 bit value spread across 2 bytes
-            unsigned char correct_raw = static_cast<unsigned char>((v_OMRread[11] & 0xC0)>>6);
+            uchar correct_raw = static_cast<uchar>((v_OMRread[11] & 0xC0)>>6);
             correct_raw = correct_raw | ((v_OMRread[10] & 0x3F)<<2);
             switch(correcttest)
             {
@@ -1002,7 +1085,7 @@ namespace DetCommonNS
                     break;
                 case 2: // X correction
                     correct_raw = correct_raw & 0x0F;
-                    xcoord_pos = (int)correct_raw;
+                    xcoord_pos = static_cast<int32>(correct_raw);
                     xcoord = alphabet.substr(xcoord_pos,1);
                     break;
                 case 3: // Wafer correction
@@ -1018,23 +1101,22 @@ namespace DetCommonNS
             str_output.append(ycoord);
         }
         return str_output;
-
     }
 
-    void LambdaSysImpl::GetRawImage(char* ptrchRetImg,long& lFrameNo,short& shErrCode)
+    void LambdaSysImpl::GetRawImage(char* ptrchRetImg,int32& lFrameNo,int16& shErrCode)
     {
         LOG_TRACE(__FUNCTION__);
         //m_objMemPoolRaw->GetImage(ptrchRetImg,lFrameNo,shErrCode);
     }
 
-    int* LambdaSysImpl::GetDecodedImageInt(long& lFrameNo, short& shErrCode)
+    int32* LambdaSysImpl::GetDecodedImageInt(int32& lFrameNo, int16& shErrCode)
     {
         LOG_TRACE(__FUNCTION__);
-        int nDataLength;
+        int32 nDataLength;
       
         if(m_objMemPoolDecodedInt->IsImageReadyForReading(1))
         {
-            m_objMemPoolDecodedInt->GetImage(m_ptrnDecodeImg,lFrameNo,shErrCode,nDataLength);
+            m_objMemPoolDecodedInt->GetImage(m_ptrnDecodeImg,lFrameNo,shErrCode,nDataLength);  
             return m_ptrnDecodeImg;
         }
         else
@@ -1045,10 +1127,10 @@ namespace DetCommonNS
         }
     }
   
-    short* LambdaSysImpl::GetDecodedImageShort(long& lFrameNo, short& shErrCode)
+    int16* LambdaSysImpl::GetDecodedImageShort(int32& lFrameNo, int16& shErrCode)
     {
         LOG_TRACE(__FUNCTION__);
-        int nDataLength;
+        int32 nDataLength;
         
         if(m_objMemPoolDecodedShort->IsImageReadyForReading(1))
         {
@@ -1064,14 +1146,13 @@ namespace DetCommonNS
 
     }
     
-    char* LambdaSysImpl::GetCompressedData(long& lFrameNo,short& shErrCode,int& nDataLength)
+    char* LambdaSysImpl::GetCompressedData(int32& lFrameNo,int16& shErrCode,int32& nDataLength)
     {
         LOG_TRACE(__FUNCTION__);
 
         if(m_objMemPoolCompressed->IsImageReadyForReading(1))
-        {
-            ///TODO:return data
-            m_objMemPoolCompressed->GetImage(m_ptrchData,lFrameNo,shErrCode,nDataLength);
+        { 
+            m_objMemPoolCompressed->GetImage(m_ptrchData,lFrameNo,shErrCode,nDataLength); 
             return m_ptrchData;
         }
         else
@@ -1083,14 +1164,13 @@ namespace DetCommonNS
         
     }
 
-    void LambdaSysImpl::SetCurrentImage(short* ptrshImg,long lFrameNo,short shErrCode)
+    void LambdaSysImpl::SetCurrentImage(int16* ptrshImg,int32 lFrameNo,int16 shErrCode)
     {
-        unsigned int nFPS = (unsigned int)(1*1000/((m_dShutterTime)*10));
+        uint32 nFPS = static_cast<uint32>(1*1000/((m_dShutterTime)*10));
         if(nFPS == 0)
             nFPS = 1;
         if(lFrameNo % nFPS == 0)
         {
-             
             m_lLiveFrameNo = lFrameNo;
             m_shLiveErrCode = shErrCode;
             std::copy(ptrshImg,ptrshImg+m_nDistortedImageSize,m_ptrnLiveData);
@@ -1098,9 +1178,9 @@ namespace DetCommonNS
          
     }
 
-    void LambdaSysImpl::SetCurrentImage(int* ptrnImg,long lFrameNo,short shErrCode)
+    void LambdaSysImpl::SetCurrentImage(int32* ptrnImg,int32 lFrameNo,int16 shErrCode)
     {
-        unsigned int nFPS = (unsigned int)(1*1000/((m_dShutterTime)*10));
+        uint32 nFPS = static_cast<uint32>(1*1000/((m_dShutterTime)*10));
         if(nFPS == 0)
             nFPS = 1;
         if(lFrameNo % nFPS == 0)
@@ -1112,7 +1192,7 @@ namespace DetCommonNS
          
     }
     
-    int* LambdaSysImpl::GetCurrentImage(long& lFrameNo,short& shErrCode)
+    int32* LambdaSysImpl::GetCurrentImage(int32& lFrameNo,int16& shErrCode)
     {
         boost::unique_lock<boost::mutex> lock(m_bstMtxSync);
         lFrameNo = m_lLiveFrameNo;
@@ -1157,18 +1237,28 @@ namespace DetCommonNS
         {
             
             if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
-                objTask = new LambdaTask(strTaskName,HIGH,1,this,m_vNetInterface[1],m_objMemPoolRaw,m_objMemPoolDecodedShort,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+                objTask = new LambdaTask(strTaskName,HIGH,1,this,m_vNetInterface[1],
+                                         m_objMemPoolRaw,m_objMemPoolDecodedShort,
+                                         &m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+            
             else if(m_emReadoutMode == OPERATION_MODE_24)
-                objTask = new LambdaTask(strTaskName,HIGH,1,this,m_vNetInterface[1],m_objMemPoolRaw,m_objMemPoolDecodedInt,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+                objTask = new LambdaTask(strTaskName,HIGH,1,this,m_vNetInterface[1],
+                                         m_objMemPoolRaw,m_objMemPoolDecodedInt,
+                                         &m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
         }
         else
-            objTask = new LambdaTask(strTaskName,HIGH,1,this,m_vNetInterface[1],m_objMemPoolRaw,m_objMemPoolCompressed,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator,m_nDistortedImageSize);
+            objTask = new LambdaTask(strTaskName,HIGH,1,this,m_vNetInterface[1],
+                                     m_objMemPoolRaw,m_objMemPoolCompressed,
+                                     &m_bstMtxSync,m_vCurrentChip,m_vNIndex,
+                                     m_vNNominator,m_nDistortedImageSize);
         
         
         m_objThPool->AddTask(objTask);
     }
 
-    void LambdaSysImpl::CreateTask(string strOpMode, string strTaskName, Enum_priority enumTaskPriority)
+    void LambdaSysImpl::CreateTask(string strOpMode,
+                                   string strTaskName,
+                                   Enum_priority enumTaskPriority)
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -1177,55 +1267,74 @@ namespace DetCommonNS
         {
             
             if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
-                objTask = new LambdaTask(strTaskName,enumTaskPriority,1,this,m_vNetInterface[1],m_objMemPoolRaw,m_objMemPoolDecodedShort,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+                objTask = new LambdaTask(strTaskName,enumTaskPriority,1,this,
+                                         m_vNetInterface[1],m_objMemPoolRaw,
+                                         m_objMemPoolDecodedShort,&m_bstMtxSync,
+                                         m_vCurrentChip,m_vNIndex,m_vNNominator);
             else if(m_emReadoutMode == OPERATION_MODE_24) 
-                objTask = new LambdaTask(strTaskName,enumTaskPriority,1,this,m_vNetInterface[1],m_objMemPoolRaw,m_objMemPoolDecodedInt,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+                objTask = new LambdaTask(strTaskName,enumTaskPriority,1,this,
+                                         m_vNetInterface[1],m_objMemPoolRaw,
+                                         m_objMemPoolDecodedInt,&m_bstMtxSync,
+                                         m_vCurrentChip,m_vNIndex,m_vNNominator);
         }
         else
-            objTask = new LambdaTask(strTaskName,enumTaskPriority,1,this,m_vNetInterface[1],m_objMemPoolRaw,m_objMemPoolCompressed,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator,m_nDistortedImageSize);
+            objTask = new LambdaTask(strTaskName,enumTaskPriority,1,this,
+                                     m_vNetInterface[1],m_objMemPoolRaw,
+                                     m_objMemPoolCompressed,&m_bstMtxSync,
+                                     m_vCurrentChip,m_vNIndex,m_vNNominator,
+                                     m_nDistortedImageSize);
 
         m_objThPool->AddTask(objTask);
     }
 
 
-    void LambdaSysImpl::CreateTask(string strOpMode,string strTaskName,NetworkInterface* objNetInterface)
+    void LambdaSysImpl::CreateTask(string strOpMode,
+                                   string strTaskName,
+                                   NetworkInterface* objNetInterface)
     {      
         Task*  objTask = NULL;
         if(!m_bCompressionEnabled)
         {
             
             if((m_emReadoutMode == OPERATION_MODE_12) || (m_emReadoutMode == OPERATION_MODE_2x12))
-                objTask = new LambdaTask(strTaskName,HIGH,m_nTaskID,this,objNetInterface,m_objMemPoolRaw,m_objMemPoolDecodedShort,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+                objTask = new LambdaTask(strTaskName,HIGH,m_nTaskID,this,
+                                         objNetInterface,m_objMemPoolRaw,
+                                         m_objMemPoolDecodedShort
+                                         ,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
             else if(m_emReadoutMode == OPERATION_MODE_24)
-                objTask = new LambdaTask(strTaskName,HIGH,m_nTaskID,this,objNetInterface,m_objMemPoolRaw,m_objMemPoolDecodedInt,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
+                objTask = new LambdaTask(strTaskName,HIGH,m_nTaskID,this,
+                                         objNetInterface,m_objMemPoolRaw,
+                                         m_objMemPoolDecodedInt,
+                                         &m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator);
         }
         else
-            objTask = new LambdaTask(strTaskName,HIGH,m_nTaskID,this,objNetInterface,m_objMemPoolRaw,m_objMemPoolCompressed,&m_bstMtxSync,m_vCurrentChip,m_vNIndex,m_vNNominator,m_nDistortedImageSize);
-        
-        
+            objTask = new LambdaTask(strTaskName,HIGH,m_nTaskID,this,
+                                     objNetInterface,m_objMemPoolRaw,
+                                     m_objMemPoolCompressed,
+                                     &m_bstMtxSync,m_vCurrentChip,
+                                     m_vNIndex,m_vNNominator,m_nDistortedImageSize);
         m_objThPool->AddTask(objTask);
         m_nTaskID++;
     }
 
-    bool LambdaSysImpl::JoinAllDecodeTasks()
+    void LambdaSysImpl::JoinAllDecodeTasks()
     {
-        for(int i=0;i<m_vNDecodingThreads[0];i++)
+        for(int32 i=0;i<m_vNDecodingThreads[0];i++)
             CreateTask(m_strOperationMode,"DecodeImage");
         //Decoders that will run if not receiving images or if frame rates are lower
-        for(int i=0;i<m_vNDecodingThreads[1];i++)
+        for(int32 i=0;i<m_vNDecodingThreads[1];i++)
             CreateTask(m_strOperationMode,"DecodeImage",NORMAL);
         //Additional decoders that will only run if not receiving images
-        for(int i=0;i<m_vNDecodingThreads[2];i++)
+        for(int32 i=0;i<m_vNDecodingThreads[2];i++)
             CreateTask(m_strOperationMode,"DecodeImage",LOW);
     }
 
-    bool LambdaSysImpl::StopAllDecodeTasks()
+    void LambdaSysImpl::StopAllDecodeTasks()
     {
         //in order to reinitialize the decode thread
         m_bSysExit = true;
         while(m_objThPool->GetAvailableThreads()!=m_nThreadNumbers)
             usleep(10000);
         m_bSysExit = false;
-    }
-  
-}///end of namespace DetCommonNS
+    } 
+}

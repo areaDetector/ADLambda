@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,24 +19,23 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __LAMBDA_SYSTEM_IMPL_H__
-#define __LAMBDA_SYSTEM_IMPL_H__
+#pragma once
 
 #include "LambdaGlobals.h"
 #include "LambdaInterface.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
+#include <fsdetector/core/NetworkInterface.h>
+#include <fsdetector/core/NetworkImplementation.h>
+#include <fsdetector/core/Utils.h>
+#include <fsdetector/core/FilesOperation.h>
+#include <fsdetector/core/ThreadUtils.h>
+#include <fsdetector/core/MemUtils.h>
+
+namespace DetLambdaNS
 {
     class LambdaConfigReader;
-    class NetworkInterface;
-    class ThreadPool;
-    class FileOperation;
     class LambdaModule;
-    class Task;
-    class ImageDecoder;
-    template<class T>
-        class MemPool;
+    class ImageDecoder;  
  
     /**
      * @brief Lambda system implementation class
@@ -52,9 +51,10 @@ namespace DetCommonNS
 
         /**
          * @brief constructor
-         * @param _strConfigPath config file pathSysExit
+         * @param _strConfigPath config file path
          */
-        // When instantiating the detector control, the file path of the detector configuration directory should be provided.
+        // When instantiating the detector control,
+        // the file path of the detector configuration directory should be provided.
         LambdaSysImpl(string _strConfigPath);
             
         /**
@@ -67,22 +67,30 @@ namespace DetCommonNS
         //////////////////////////////////////////////////
 
         string GetSensorMaterial();
+
+        string GetModuleID();
+        string GetSystemInfo();
+        
         string GetCalibFile();
         
         vector<float> GetPosition();
         
         
-        // Different operating modes (e.g. continuous read write, 24 bit) require different configuration files.
+        // Different operating modes (e.g. continuous read write, 24 bit)
+        // require different configuration files.
         // We store the config files for each mode in its own directory.
-        // This command then sets the operating mode, using the files from the directory named strOperationMode.
+        // This command then sets the operating mode,
+        // using the files from the directory named strOperationMode.
         void SetOperationMode(string strOperationMode); 
 
         string GetOperationMode();
 
-        // Controls how the detector is triggered. Currently 0-> detector takes images immediately, 1-> detector starts taking images when externally triggered
-        void SetTriggerMode(short shTriggerMode);
+        // Controls how the detector is triggered.
+        // Currently 0-> detector takes images immediately,
+        // 1-> detector starts taking images when externally triggered
+        void SetTriggerMode(int16 shTriggerMode);
 
-        short GetTriggerMode();
+        int16 GetTriggerMode();
 
         // Sets time per image in milliseconds
         void SetShutterTime(double dShutterTime);
@@ -95,29 +103,36 @@ namespace DetCommonNS
         double GetDelayTime();
 
         // Sets number of images to be taken in acquisition
-        void SetNImages(long lImages);
+        void SetNImages(int32 lImages);
 
-        long GetNImages();
+        int32 GetNImages();
 
-	// CURRENTLY UNUSED - TO BE DELETED. (This controlled a simple image writing function we used to test the library during development.)
+        // CURRENTLY UNUSED - TO BE DELETED.
+        // (This controlled a simple image writing function
+        // we used to test the library during development.)
         void SetSaveAllImages(bool bSaveAllImgs);
 
         bool GetSaveAllImages();
             
         void SetBurstMode(bool bBurstMode);
-        SysExit
+        
         bool GetBurstMode();
 
-        // Sets threshold number nThresholdNo to fEnergy (in keV). In standard operating modes, only threshold no. 0 is used.
-        void SetThreshold(int nThresholdNo, float fEnergy);
+        // Sets threshold number nThresholdNo to fEnergy (in keV).
+        // In standard operating modes, only threshold no. 0 is used.
+        void SetThreshold(int32 nThresholdNo, float fEnergy);
 
-        float GetThreshold(int nThresholdNo);
+        float GetThreshold(int32 nThresholdNo);
 
         void SetState(Enum_detector_state emState);
-        // GetState() reads the state of the detector. The enum here follows Tango conventions - 0-3 correspond to ON (i.e. ready), DISABLE, RUNNING (i.e. busy), FAULT
+        // GetState() reads the state of the detector.
+        // The enum here follows Tango conventions -
+        // 0-3 correspond to ON (i.e. ready), DISABLE, RUNNING (i.e. busy), FAULT
         Enum_detector_state GetState();
 
-        // CURRENTLY UNUSED - TO BE DELETED. (ThisSysExit controlled a simple image writing function we used to test the library during development.)
+        // CURRENTLY UNUSED - TO BE DELETED.
+        // (This controlled a simple image writing function
+        // we used to test the library during development.)
         void SetSaveFilePath(string strSaveFilePath);
 
         string GetSaveFilePath();
@@ -127,64 +142,74 @@ namespace DetCommonNS
 
         string GetConfigFilePath();
 
-        // Commands below start and stop imaging. "Start imaging" does not directly return a pointer to images.
+        // Commands below start and stop imaging.
+        // "Start imaging" does not directly return a pointer to images.
         // When the detector is taking images, each decoded image is added to a queue.
         // GetQueueDepth returns the number of images available in the queue.
-        // When the queue is not empty (>0), GetDecodedImageInt and GetDecodedImageShort functions below can be used to remove images from the queue
+        // When the queue is not empty (>0),
+        // GetDecodedImageInt and GetDecodedImageShort functions below
+        // can be used to remove images from the queue
         // (in 12-bit mode and 24-bit mode respectively)
 
         void StartImaging();
 
         void StopImaging();
 
-        void SetCompressionEnabled(bool bCompressionEnabled,int nCompLevel); 
-        void GetCompressionEnabled(bool& bCompressionEnabled,int& nCompLevel);
-        int GetCompressionMethod();
+        void SetCompressionEnabled(bool bCompressionEnabled,int32 nCompLevel); 
+        void GetCompressionEnabled(bool& bCompressionEnabled,int32& nCompLevel);
+        int32 GetCompressionMethod();
         
-        vector<unsigned int> GetPixelMask();
+        vector<uint32> GetPixelMask();
         
-        void SetDistortionCorrecttionMethod(int nMethod);
-        int GetDistortionCorrecttionMethod();
+        void SetDistortionCorrecttionMethod(int32 nMethod);
+        int32 GetDistortionCorrecttionMethod();
         
-        // Helper function to check the image size - nX and nY are x and y size in pixels, nImgDepth is the bit-depth (12 or 24).
-        void GetImageFormat(int& nX, int& nY, int& nImgDepth);
+        // Helper function to check the image size -
+        // nX and nY are x and y size in pixels, nImgDepth is the bit-depth (12 or 24).
+        void GetImageFormat(int32& nX, int32& nY, int32& nImgDepth);
 
         // Helper function to check the number of subimages (e.g. when using multiple thresholds
-        int GetNSubimages();
+        int32 GetNSubimages();
 
-	// Helper function to get enum specifying Medipix3 readout chip mode
+        // Helper function to get enum specifying Medipix3 readout chip mode
         Enum_readout_mode GetReadoutModeCode();
 	
-        // Reads the ID of a chip within the modulSysExite. Typically, chip 1 can be ID'd to uniquely identify a particular module.
+        // Reads the ID of a chip within the module.
+        // Typically, chip 1 can be ID'd to uniquely identify a particular module.
         // Reading each chip on a module can also be used for debug purposes.
-        string GetChipID(int chipNo);
+        string GetChipID(int32 chipNo);
 
         // CURRENTLY UNUSED
-        long GetLatestImageNo();
+        int32 GetLatestImageNo();
 	
         // Checks no of decoded images in queue.
-        long GetQueueDepth();
+        int32 GetQueueDepth();
 
-        // CURRENTLY UNUSED - TO BE DELETED. (This allowed us to read raw, undecoded image data for test purposes.) 
-        void GetRawImage(char* ptrchRetImg, long& lFrameNo,short& shErrCode);
+        int32 GetFreeBufferSize();
 
-        // In 24-bit mode, returns a pointer to the first image in the queue (int format) and removes the image from the queue
+        // CURRENTLY UNUSED - TO BE DELETED.
+        // (This allowed us to read raw, undecoded image data for test purposes.) 
+        void GetRawImage(char* ptrchRetImg, int32& lFrameNo,int16& shErrCode);
+
+        // In 24-bit mode, returns a pointer to the first image in the queue (int format) and
+        // removes the image from the queue
         // If first image is unavailable, returns null pointer
         // lFrameNo (pass by reference) returns the image number
         // shErrCode (pass by reference) returns 0 if image is OK, -1 if there was data loss
-        int* GetDecodedImageInt(long& lFrameNo, short& shErrCode);
+        int32* GetDecodedImageInt(int32& lFrameNo, int16& shErrCode);
 
-        // In 12-bit mode, returns a pointer to the first image in the queue (short format) and removes the image from the queue
+        // In 12-bit mode, returns a pointer to the first image
+        // in the queue (short format) and removes the image from the queue
         // If queue is empty, returns null pointer
         // lFrameNo (pass by reference) returns the image number
         // shErrCode (pass by reference) returns 0 if image is OK, -1 if there was data loss
-        short* GetDecodedImageShort(long& lFrameNo, short& shErrCode);
+        int16* GetDecodedImageShort(int32& lFrameNo, int16& shErrCode);
         
-        char* GetCompressedData(long& lFrameNo,short& shErrCode,int& nDataLength);
+        char* GetCompressedData(int32& lFrameNo,int16& shErrCode,int32& nDataLength);
 
-        void SetCurrentImage(short* ptrshImg,long lFrameNo,short shErrCode);
-        void SetCurrentImage(int* ptrnImg,long lFrameNo,short shErrCode);
-        int* GetCurrentImage(long& lFrameNo,short& shErrCode);
+        void SetCurrentImage(int16* ptrshImg,int32 lFrameNo,int16 shErrCode);
+        void SetCurrentImage(int32* ptrnImg,int32 lFrameNo,int16 shErrCode);
+        int32* GetCurrentImage(int32& lFrameNo,int16& shErrCode);
             
         // These check on the status of certain internal variables for test purposes.
         bool GetAcquisitionStart() const;
@@ -204,7 +229,7 @@ namespace DetCommonNS
         /**
          * @brief several help methods for initializing system
          */
-        bool ReadConfig(bool bSwitchMode, string strOpMode);
+        void ReadConfig(bool bSwitchMode, string strOpMode);
         bool InitNetwork();
         void InitThreadPool();
         void InitMemoryPool();
@@ -222,7 +247,8 @@ namespace DetCommonNS
         bool FileExists(string strFileName);
 
         /**
-         * @brief get Medipix3 readout mode from operating mode string name - initial hard-coded approach for creating new op modes
+         * @brief get Medipix3 readout mode from operating mode string name -
+         * initial hard-coded approach for creating new op modes
          * @param strOpMode op mode name
          * @return true file exists;flase file does not exists
          */
@@ -240,23 +266,23 @@ namespace DetCommonNS
         /**
          * @brief join all decode tasks
          */
-        bool JoinAllDecodeTasks();
+        void JoinAllDecodeTasks();
 	
         /**
          * @brief stop all decode tasks
          */
-        bool StopAllDecodeTasks();
+        void StopAllDecodeTasks();
 	
       protected:
         ThreadPool* m_objThPool;
-        MemPool<short> *m_objMemPoolDecodedShort;
-        MemPool<int> *m_objMemPoolDecodedInt;
+        MemPool<int16> *m_objMemPoolDecodedShort;
+        MemPool<int32> *m_objMemPoolDecodedInt;
         MemPool<char> *m_objMemPoolRaw;
         MemPool<char> *m_objMemPoolCompressed;
         vector<NetworkInterface*> m_vNetInterface;
         NetworkInterface* m_objUDPInterface;
         FileOperation* m_objFileOp;
-        vector<short> m_vCurrentChip;
+        vector<int16> m_vCurrentChip;
         vector<stMedipixChipData> m_vStCurrentChipData;
         LambdaModule* m_objLambdaModule;
         Task* m_objTask;
@@ -270,45 +296,45 @@ namespace DetCommonNS
         ///System parameters
         //////////////////////////////////////////////////
         string m_strOperationMode;
-        short m_shTriggerMode;
+        int16 m_shTriggerMode;
         double m_dShutterTime;
         double m_dDelayTime;
-        long m_lFrameNo;
-	bool m_bSaveAllImg;
+        int32 m_lFrameNo;
+        bool m_bSaveAllImg;
         bool m_bBurstMode;
-        int m_nThreshold;
+        int32 m_nThreshold;
         float m_fEnergy;
         Enum_detector_state m_emState;
-	Enum_readout_mode m_emReadoutMode;
+        Enum_readout_mode m_emReadoutMode;
         string m_strSaveFilePath;
         string m_strConfigFilePath;
-        int m_nX;
-        int m_nY;
-        int m_nImgDepth;
+        int32 m_nX;
+        int32 m_nY;
+        int32 m_nImgDepth;
 
-        int m_nDistortedX;
-        int m_nDistortedY;
-        int m_nDistortedImageSize;
-        int m_nDistortionCorrectionMethod;
+        int32 m_nDistortedX;
+        int32 m_nDistortedY;
+        int32 m_nDistortedImageSize;
+        int32 m_nDistortionCorrectionMethod;
 
-	bool m_bSlaveModule;
+        bool m_bSlaveModule;
 	
-        vector<unsigned int> m_vUnPixelMask;
-        vector<int> m_vNIndex;
-        vector<int> m_vNNominator;
+        vector<uint32> m_vUnPixelMask;
+        vector<int32> m_vNIndex;
+        vector<int32> m_vNNominator;
         vector<float> m_vfTranslation;
         
-        long m_lLastestImgNo;
-        long m_lImgNo;
-        long m_lQueueDepth;
-        long m_lQueueImgNo;
-        short m_shQueueImgErrCode;
-        int* m_ptrnDecodeImg;
-        short* m_ptrshDecodeImg;
+        int32 m_lLastestImgNo;
+        int32 m_lImgNo;
+        int32 m_lQueueDepth;
+        int32 m_lQueueImgNo;
+        int16 m_shQueueImgErrCode;
+        int32* m_ptrnDecodeImg;
+        int16* m_ptrshDecodeImg;
 
-        int* m_ptrnLiveData;
-        long m_lLiveFrameNo;
-        short m_shLiveErrCode;
+        int32* m_ptrnLiveData;
+        int32 m_lLiveFrameNo;
+        int16 m_shLiveErrCode;
         
         bool m_bRunning;
         bool m_bSysExit;
@@ -316,41 +342,38 @@ namespace DetCommonNS
 
         stDetCfgData m_stDetCfgData;
           
-        int m_nModuleType;
-        int m_nImgDataSize;
-        int m_nSubimages;
-        int m_nPacketsNumber;
-        int m_nTaskID;
+        int32 m_nModuleType;
+        int32 m_nImgDataSize;
+        int32 m_nSubimages;
+        int32 m_nPacketsNumber;
+        int32 m_nTaskID;
 
-        int m_nThreadNumbers;
-        int m_nRawBufferLength;
-        int m_nDecodedBufferLength;
-        int m_nDecodingThreads;
-	vector<int> m_vNDecodingThreads;
-	double m_dCriticalShutterTime;
+        int32 m_nThreadNumbers;
+        int32 m_nRawBufferLength;
+        int32 m_nDecodedBufferLength;
+        int32 m_nDecodingThreads;
+        vector<int32> m_vNDecodingThreads;
+        double m_dCriticalShutterTime;
 
         bool m_bMultilink;
 
         ///structure
         vector< vector<string> > m_vStrMAC;
         vector< vector<string> > m_vStrIP;
-        vector<unsigned short> m_vUShPort;
+        vector<uint16> m_vUShPort;
         string m_strTCPIPAddress;
-        short m_shTCPPortNo;
+        int16 m_shTCPPortNo;
 
         //compression
         bool m_bCompressionEnabled;
-        int m_nCompressionLevel;
-        int m_nCompressionMethod;
+        int32 m_nCompressionLevel;
+        int32 m_nCompressionMethod;
 
         char* m_ptrchData;
-        
 
+        string m_strModuleID;
+        
         ///boost mutex
         boost::mutex m_bstMtxSync;
-        
     };///end of class LambdaSysImpl    
-}///end of namespace DetCommonNS
-
-
-#endif
+}

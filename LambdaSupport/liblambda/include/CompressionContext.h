@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,21 +19,14 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __COMPRESSION_CONTEXT_H__
-#define __COMPRESSION_CONTEXT_H__
+#pragma once
 
-#include <iostream>
-#include <memory>
-#include <vector>
+#include "LambdaGlobals.h"
 
-///namespace 
-namespace CompressionNS
+namespace DetLambdaNS
 {
-    using namespace std;
-    
     class CompressionInterface;
     
-
     /**
      * @brief compression strategy choose
      */
@@ -58,14 +51,17 @@ namespace CompressionNS
          * @param compression level,between 0-9. Default value is 2
          * @return true: OK; false: error during compression
          */
-        bool CompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData,int nLevel = 2);
-         /**
+        bool CompressData(vector<uchar>& vuchSrcData,
+                          vector<uchar>& vuchDstData,
+                          szt nLevel = 2);
+        /**
          * @brief decompress data
          * @param src data
          * @param compressed data
          * @return true: OK; false: error during decompression
          */
-        bool DecompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData);
+        bool DecompressData(vector<uchar>& vuchSrcData,
+                            vector<uchar>& vuchDstData);
 
         /**
          * @brief get error message
@@ -75,10 +71,5 @@ namespace CompressionNS
         
       private:
         unique_ptr<CompressionInterface> m_uptrCompInterface;
-    };
-    
-    
-}///end of namespace
-
-
-#endif
+    }; 
+}

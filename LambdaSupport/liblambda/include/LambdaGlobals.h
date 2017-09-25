@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,15 +19,15 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __LAMBDA_GLOBALS_H__
-#define __LAMBDA_GLOBALS_H__
+#pragma once
 
-#include "Globals.h"
+#include <fsdetector/core/Globals.h>
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
-//    using namespace DetCommonNS;
+    using namespace FSDetCoreNS;
+
+    const string LAMBDA_VERSION="0.8_develop";
     
     ///lambda control ip address for TCP control socket
     const string TCP_CONTROL_IP_ADDRESS = "169.254.1.1";
@@ -143,9 +143,25 @@ namespace DetCommonNS
         vector<float> vThrBaseline;
 
     stMedipixChipData()
-    :shPreamp(100),shIkrum(20),shShaper(150),shDisc(150),shDiscLS(200),shDACDiscL(0),shDACDiscH(0)
-            ,shDelay(128),shTPBufferIn(50),shTPBufferOut(128),shRPZ(255),shGND(100),shTPREF(0),shFBK(100)
-            ,shCAS(140),shTPREFA(511),shTPREFB(255),strSenseDAC("none"),strExtDAC("none")
+    :shPreamp(100),
+            shIkrum(20),
+            shShaper(150),
+            shDisc(150),
+            shDiscLS(200),
+            shDACDiscL(0),
+            shDACDiscH(0),
+            shDelay(128),
+            shTPBufferIn(50),
+            shTPBufferOut(128),
+            shRPZ(255),
+            shGND(100),
+            shTPREF(0),
+            shFBK(100),
+            shCAS(140),
+            shTPREFA(511),
+            shTPREFB(255),
+            strSenseDAC("none"),
+            strExtDAC("none")
             {
                 int nPhysicalCounterSize = 12;
                 int nThresholds = 8;
@@ -190,18 +206,24 @@ namespace DetCommonNS
         short shDataOutLines;
 
     stDetCfgData()
-    :nCounterMode(0),shCounterBitDepth(12),shTriggerMode(0),shRowBlockSel(0)
-            ,shGainMode(0),bCRW(false),bPolarity(true),bEnableTP(false),bEqualise(false),bDiscSPMCSM(false)
-            ,bColorMode(false),bChargeSum(false),shDataOutLines(0)
+    :nCounterMode(0),
+            shCounterBitDepth(12),
+            shTriggerMode(0),
+            shRowBlockSel(0),
+            shGainMode(0),
+            bCRW(false),
+            bPolarity(true),
+            bEnableTP(false),
+            bEqualise(false),
+            bDiscSPMCSM(false),
+            bColorMode(false),
+            bChargeSum(false),
+            shDataOutLines(0)
             {
                 vThresholdScan.resize(1,0);
             }
     };
     ///////////////////////////////////////////////////////////////////////////
     ///end of Medipix chip data
-    ///////////////////////////////////////////////////////////////////////////        
-
-}///end of namespace DetCommonNS
-
-
-#endif
+    ///////////////////////////////////////////////////////////////////////////
+}

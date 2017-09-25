@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, David Pennicard <david.pennicard@desy.de>
+ * (c) Copyright 2014-2017 DESY, David Pennicard <david.pennicard@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,18 +19,16 @@
  *     Author: David Pennicard <david.pennicard@desy.de>
  */
 
-#ifndef __DISTORTION_CORRECTOR_H__
-#define __DISTORTION_CORRECTOR_H__
+#pragma once
 
-#include "Globals.h"
+#include "LambdaGlobals.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
     /**
      * @brief class DistortionCorrector
      */
-    template <typename T> 
+    template <typename T>
         class DistortionCorrector
     {
 
@@ -41,8 +39,8 @@ namespace DetCommonNS
          * @param _vNominator: specifies what should be done with each output pixel (e.g. blank)
          * @param _nSaturatedPixel : saturated pixel value
          */
-        DistortionCorrector(vector<int> _vIndex, vector<int> _vNominator,int _nSaturatedPixel)
-            :m_nSaturatedPixel(_nSaturatedPixel)
+      DistortionCorrector(vector<int32> _vIndex, vector<int32> _vNominator,int32 _nSaturatedPixel)
+          :m_nSaturatedPixel(_nSaturatedPixel)
         {
             // Set up lookup tables 
             m_vIndex = _vIndex;
@@ -70,41 +68,37 @@ namespace DetCommonNS
         {
             // Possibly add in error checking here, e.g. segfault avoidance
       
-            int nomVal;
-            int indexVal;
+            int32 nomVal;
+//            int32 indexVal;
   
-            for(int j=0;j<m_outputLength;j++)
+            for(int32 j=0;j<m_outputLength;j++)
             {
                 nomVal = m_vNominator[j];
-		if (nomVal == 1) m_ptrCorrectedImage[j] = ptrInput[m_vIndex[j]]; // Grab data from input pixel given by index                
+                // Grab data from input pixel given by index
+                if (nomVal == 1) m_ptrCorrectedImage[j] = ptrInput[m_vIndex[j]]; 
                 else
                 {
-		    if (nomVal <= 0) m_ptrCorrectedImage[j] = nomVal;
+                    if (nomVal <= 0) m_ptrCorrectedImage[j] = nomVal;
                     else
                     {
                         //for saturated pixel, do not apply division
                         if(ptrInput[m_vIndex.at(j)] != m_nSaturatedPixel)
-                            m_ptrCorrectedImage[j] = round((ptrInput[m_vIndex[j]]*1.0) / nomVal);  // Positive nominator implies extra-large pixel, so divide
+                            // Positive nominator implies extra-large pixel, so divide
+                            m_ptrCorrectedImage[j] = round((ptrInput[m_vIndex[j]]*1.0) / nomVal);  
                         else
                             m_ptrCorrectedImage[j] = ptrInput[m_vIndex[j]];
                     }
-                    
                 }
             }
             return m_ptrCorrectedImage;
         }
-            
         
       private:
         T* m_ptrCorrectedImage;
-        vector<int> m_vIndex;
-        vector<int> m_vNominator;
-        int m_outputLength;
-        int m_nSaturatedPixel;
+        vector<int32> m_vIndex;
+        vector<int32> m_vNominator;
+        int32 m_outputLength;
+        int32 m_nSaturatedPixel;
 
     };///end of class DistortionCorrector
-
-}///end of namespace DetCommonNS
-
-
-#endif 
+}

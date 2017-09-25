@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,24 +19,26 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __LAMBDA_TASK_H__
-#define __LAMBDA_TASK_H__
+#pragma once
 
 #include "LambdaGlobals.h"
-#include "ThreadUtils.h"
 #include "CompressionContext.h"
 #include "Compression.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
-{
-    class LambdaSysImpl;
-    class NetworkInterface;
-    class LambdaModule;
-    template<class T>
-        class  MemPool;
+#include <fsdetector/core/NetworkInterface.h>
+#include <fsdetector/core/NetworkImplementation.h>
+#include <fsdetector/core/Utils.h>
+#include <fsdetector/core/FilesOperation.h>
+#include <fsdetector/core/ThreadUtils.h>
+#include <fsdetector/core/MemUtils.h>
 
-    using namespace CompressionNS;
+///namespace DetCommonNS
+namespace DetLambdaNS
+{
+    using namespace FSDetCoreNS;
+    
+    class LambdaSysImpl;
+    class LambdaModule;
     /**
      * @brief LambdaTask class
      */
@@ -64,11 +66,23 @@ namespace DetCommonNS
          * @param _vNNominator nominator
          */
 
-        LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID,LambdaSysImpl* _objSys,NetworkInterface* _objNetInt, MemPool<char>* _objMemPoolRaw,MemPool<short>* _objMemPoolDecoded12,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator);
+        LambdaTask(string _strTaskName, Enum_priority _Epriority, int32 _nID,
+                   LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,
+                   MemPool<char>* _objMemPoolRaw,MemPool<int16>* _objMemPoolDecoded12,
+                   boost::mutex* _bstMtx,vector<int16> _vCurrentChip,vector<int32> _vNIndex,
+                   vector<int32> _vNNominator);
         
-        LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<int>* _objMemPoolDecoded24,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator);
+        LambdaTask(string _strTaskName, Enum_priority _Epriority, int32 _nID,
+                   LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,
+                   MemPool<char>* _objMemPoolRaw,MemPool<int32>* _objMemPoolDecoded24,
+                   boost::mutex* _bstMtx,vector<int16> _vCurrentChip,vector<int32> _vNIndex,
+                   vector<int32> _vNNominator);
 
-        LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<char>* _objMemPoolCompressed,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator,int _nDistortedImageSize);
+        LambdaTask(string _strTaskName, Enum_priority _Epriority, int32 _nID,
+                   LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,
+                   MemPool<char>* _objMemPoolRaw,MemPool<char>* _objMemPoolCompressed,
+                   boost::mutex* _bstMtx,vector<int16> _vCurrentChip,
+                   vector<int32> _vNIndex,vector<int32> _vNNominator,int32 _nDistortedImageSize);
         
         /**
          * @brief desctructor
@@ -77,7 +91,7 @@ namespace DetCommonNS
 
         void SetCompressedBuffer(MemPool<char>* objMemPoolCompressed);
         
-         /**
+        /**
          * @brief do task action
          */
         void DoTaskAction();
@@ -111,15 +125,13 @@ namespace DetCommonNS
         NetworkInterface* m_objNetInterface;
         MemPool<char>* m_objMemPoolRaw;
         MemPool<char>* m_objMemPoolCompressed;
-        MemPool<short>* m_objMemPoolDecodedShort;
-        MemPool<int>* m_objMemPoolDecodedInt;
+        MemPool<int16>* m_objMemPoolDecodedShort;
+        MemPool<int32>* m_objMemPoolDecodedInt;
         boost::mutex* m_boostMtx;
-        int m_nRawImageSize;
-        int m_nDecodedImageSize;
-        vector<short> m_vCurrentChip;
-        vector<int> m_vNIndex;
-        vector<int> m_vNNominator;
+        vector<int16> m_vCurrentChip;
+        vector<int32> m_vNIndex;
+        vector<int32> m_vNNominator;
+        int32 m_nRawImageSize;
+        int32 m_nDecodedImageSize;
     };///end of class LambdaTask
-}///end of namespace DetCommonNS
-
-#endif
+}

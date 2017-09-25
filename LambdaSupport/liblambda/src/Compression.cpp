@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -22,8 +22,7 @@
 #include "Compression.h"
 #include "ZlibWrapper.h"
 
-///namespace 
-namespace CompressionNS
+namespace DetLambdaNS
 {
     string CompressionInterface::GetErrorMessage()
     {
@@ -36,14 +35,15 @@ namespace CompressionNS
     CompressionZlib::CompressionZlib()
         :m_sptrZlibWrapper(new ZlibWrapper())
     {
-        
     }    
     
     CompressionZlib::~CompressionZlib()
     {
     }
     
-    bool CompressionZlib::CompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData,int nLevel)
+    bool CompressionZlib::CompressData(vector<uchar>& vuchSrcData,
+                                       vector<uchar>& vuchDstData,
+                                       szt nLevel)
     {
         //check compression level, must be between 0-9
         if(nLevel < 0 || nLevel > 9)
@@ -66,10 +66,10 @@ namespace CompressionNS
     
 
 
-    bool CompressionZlib::DecompressData(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData)
+    bool CompressionZlib::DecompressData(vector<uchar>& vuchSrcData,
+                                         vector<uchar>& vuchDstData)
     {
         //TODO:
+        return false;
     }
-    
-
-}///end of namespace
+}

@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,13 +19,12 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __LAMBDA_INTERFACE_H__
-#define __LAMBDA_INTERFACE_H__
+#pragma once
 
 #include "LambdaGlobals.h"
 
 ///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {        
     /**
      * @brief Lambda Interface class
@@ -38,8 +37,19 @@ namespace DetCommonNS
          * @brief get sensor material
          * @return sensor matetrial
          */
-
         virtual string GetSensorMaterial() = 0;
+
+        /**
+         * @brief get module ID
+         * @return module ID
+         */
+        virtual string GetModuleID() = 0;
+
+        /**
+         * @brief get system info. Includes software version, firmware version
+         * @return system info
+         */
+        virtual string GetSystemInfo() = 0;
 
         /**
          * @brief get path of calib file
@@ -68,13 +78,13 @@ namespace DetCommonNS
          * @brief set the trigger mode
          * @param sTriggerMode trigger mode
          */
-        virtual void SetTriggerMode(short sTriggerMode) = 0;
+        virtual void SetTriggerMode(int16 sTriggerMode) = 0;
 
         /**
          * @brief get the trigger mode
          * @return trigger mode
          */
-        virtual short GetTriggerMode() = 0;
+        virtual int16 GetTriggerMode() = 0;
 
         /**
          * @brief set the shutter time
@@ -104,13 +114,13 @@ namespace DetCommonNS
          * @brief set number of images that the detector should take during acquisition
          * @param lImages number of images
          */
-        virtual void SetNImages(long lImages) = 0;
+        virtual void SetNImages(int32 lImages) = 0;
 
         /**
          * @brief get the number of images that the detector will take
          * @return number of images
          */
-        virtual long GetNImages() = 0;
+        virtual int32 GetNImages() = 0;
             
         /**
          * @brief set saving all images or not
@@ -138,18 +148,21 @@ namespace DetCommonNS
 
         /**
          * @brief set threshold
-         * Lambda is a photon-counting detector(like Pilatus). Depending on the opration mode @see GetOperationMode(), multiple thresholds(numbered 0-7) are possible. The nThresholdNo chooses which to change
+         * Lambda is a photon-counting detector(like Pilatus).
+         * Depending on the opration mode @see GetOperationMode(),
+         * multiple thresholds(numbered 0-7) are possible.
+         * The nThresholdNo chooses which to change
          * @param nThresholdNo threshold number
          * @param fEnergy energy value
          */
-        virtual void SetThreshold(int nThresholdNo, float fEnergy) = 0;
+        virtual void SetThreshold(int32 nThresholdNo, float fEnergy) = 0;
 
         /**
          * @brief get threshold
          * @param nThresholdNo chooses which to get
          * @return value of energy
          */
-        virtual float GetThreshold(int nThresholdNo) = 0;
+        virtual float GetThreshold(int32 nThresholdNo) = 0;
 
         /**
          * @brief set state
@@ -204,13 +217,13 @@ namespace DetCommonNS
          * @param bCompressionEnabled;true: use compression. false: do not compression
          * @param compression level
          */
-        virtual void SetCompressionEnabled(bool bCompressionEnabled,int nCompLevel) = 0;
+        virtual void SetCompressionEnabled(bool bCompressionEnabled,int32 nCompLevel) = 0;
 
         /* /\** */
         /*  * @brief set compression method */
         /*  * @param nCompresionMethod 0: deflate */
         /*  *\/ */
-        /* virtual void SetCompressionMethod(int nCompresionMethod) = 0; */
+        /* virtual void SetCompressionMethod(int32 nCompresionMethod) = 0; */
         virtual void GetCompressionEnabled(bool& bCompressionEnabled,int& nCompLevel) = 0;
         
         /**
@@ -218,13 +231,13 @@ namespace DetCommonNS
          * @return the method used
          *         0 : deflate 
          */
-        virtual int GetCompressionMethod() = 0;
+        virtual int32 GetCompressionMethod() = 0;
         
         /**
          * @brief get pixel mask
          * @return pixel mask array
          */
-        virtual vector<unsigned int> GetPixelMask() = 0;
+        virtual vector<uint32> GetPixelMask() = 0;
 
         /**
          * @brief distortion correction method
@@ -232,8 +245,8 @@ namespace DetCommonNS
          *        0 : no distortion correction
          *        1 : division
          */
-        virtual void SetDistortionCorrecttionMethod(int nMethod) = 0;
-        virtual int GetDistortionCorrecttionMethod() = 0;
+        virtual void SetDistortionCorrecttionMethod(int32 nMethod) = 0;
+        virtual int32 GetDistortionCorrecttionMethod() = 0;
         
         /**
          * @brief get image format
@@ -241,25 +254,30 @@ namespace DetCommonNS
          * @param nY size y
          * @param nImgDepth depth of image(12 or 24)
          */
-        virtual void GetImageFormat(int& nX, int& nY, int& nImgDepth) = 0;
+        virtual void GetImageFormat(int32& nX, int32& nY, int32& nImgDepth) = 0;
              
         /**
          * @brief get latest image No.
          * @return latest image No.
          */
-        virtual long GetLatestImageNo() = 0;
+        virtual int32 GetLatestImageNo() = 0;
 
         /**
          * @brief get the image numbers in the queue
          * @return image numbers
          */
-        virtual long GetQueueDepth() = 0;
-        
+        virtual int32 GetQueueDepth() = 0;
+
+        /**
+         * @brief get size of free buffer for raw images
+         * @return free buffer for raw images
+         */
+        virtual int32 GetFreeBufferSize() = 0;
         /**
          * @brief get the raw image
          * @return raw image data
          */
-        virtual void GetRawImage(char* ptrchRetImg, long& lFrameNo,short& shErrCode) = 0;
+        virtual void GetRawImage(char* ptrchRetImg, int32& lFrameNo,int16& shErrCode) = 0;
 
         /**
          * @brief get decoded image
@@ -267,7 +285,7 @@ namespace DetCommonNS
          * @param shErrCode error code
          * @return int*(24bit image)
          */
-        virtual int* GetDecodedImageInt(long& lFrameNo, short& shErrCode) = 0;
+        virtual int32* GetDecodedImageInt(int32& lFrameNo, int16& shErrCode) = 0;
 
         /**
          * @brief get decoded image
@@ -276,9 +294,9 @@ namespace DetCommonNS
          * @return short*(12bit image)
          */
 
-        virtual short* GetDecodedImageShort(long& lFrameNo, short& shErrCode) = 0;
+        virtual int16* GetDecodedImageShort(int32& lFrameNo, int16& shErrCode) = 0;
 
-        virtual int* GetCurrentImage(long& lFrameNo,short& shErrCode) = 0;
+        virtual int32* GetCurrentImage(int32& lFrameNo,int16& shErrCode) = 0;
         
         /**
          * @brief get compressed data
@@ -287,13 +305,13 @@ namespace DetCommonNS
          * @param data length
          * @return char*(8bit data)
          */
-        virtual char* GetCompressedData(long& lFrameNo,short& shErrCode,int& nDataLength) = 0;
+        virtual char* GetCompressedData(int32& lFrameNo,int16& shErrCode,int32& nDataLength) = 0;
 
         /**
          * @brief get no of subimages for each image taken (e.g. in multiple threshold modes)
          * @return int
          */
-	virtual int GetNSubimages() = 0;
+        virtual int32 GetNSubimages() = 0;
         
         /**
          * @brief destructor
@@ -306,5 +324,4 @@ namespace DetCommonNS
          */
         LambdaInterface(){};
     };///end of class LambdaInterface
-}///end of namespace DetCommonNS
-#endif
+}

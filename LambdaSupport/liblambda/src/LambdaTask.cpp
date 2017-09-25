@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -20,19 +20,13 @@
  */
 
 #include "LambdaTask.h"
-#include "MemUtils.h"
-#include "NetworkInterface.h"
-#include "NetworkImplementation.h"
 #include "LambdaModule.h"
 #include "ImageDecoder.h"
 #include "DistortionCorrector.h"
 #include "LambdaSysImpl.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
-{
-    
-    
+namespace DetLambdaNS
+{   
     //////////////////////////////////////////////////
     ///LambdaTask
     //////////////////////////////////////////////////
@@ -41,15 +35,19 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
     }
         
-    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<short>* _objMemPoolDecoded12,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator):
-        m_objSys(_objSys)
-        ,m_objNetInterface(_objNetInt)
-        ,m_objMemPoolRaw(_objMemPoolRaw)
-        ,m_objMemPoolDecodedShort(_objMemPoolDecoded12)
-        ,m_boostMtx(_bstMtx)
-        ,m_vCurrentChip(_vCurrentChip)
-        ,m_vNIndex(_vNIndex)
-        ,m_vNNominator(_vNNominator)
+    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int32 _nID,
+                           LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,
+                           MemPool<char>* _objMemPoolRaw,MemPool<int16>* _objMemPoolDecoded12,
+                           boost::mutex* _bstMtx,vector<int16> _vCurrentChip,
+                           vector<int32> _vNIndex,vector<int32> _vNNominator)
+        :m_objSys(_objSys),
+         m_objNetInterface(_objNetInt),
+         m_objMemPoolRaw(_objMemPoolRaw),
+         m_objMemPoolDecodedShort(_objMemPoolDecoded12),
+         m_boostMtx(_bstMtx),
+         m_vCurrentChip(_vCurrentChip),
+         m_vNIndex(_vNIndex),
+         m_vNNominator(_vNNominator)
     {
         LOG_TRACE(__FUNCTION__);
         
@@ -62,15 +60,19 @@ namespace DetCommonNS
         m_nDecodedImageSize = m_objMemPoolDecodedShort->GetElementSize();
     }
 
-    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<int>* _objMemPoolDecoded24,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator):
-        m_objSys(_objSys)
-        ,m_objNetInterface(_objNetInt)
-        ,m_objMemPoolRaw(_objMemPoolRaw)
-        ,m_objMemPoolDecodedInt(_objMemPoolDecoded24)
-        ,m_boostMtx(_bstMtx)
-        ,m_vCurrentChip(_vCurrentChip)
-        ,m_vNIndex(_vNIndex)
-        ,m_vNNominator(_vNNominator)
+    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int32 _nID,
+                           LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,
+                           MemPool<char>* _objMemPoolRaw,MemPool<int32>* _objMemPoolDecoded24,
+                           boost::mutex* _bstMtx,vector<int16> _vCurrentChip,
+                           vector<int32> _vNIndex,vector<int32> _vNNominator)
+        :m_objSys(_objSys),
+         m_objNetInterface(_objNetInt),
+         m_objMemPoolRaw(_objMemPoolRaw),
+         m_objMemPoolDecodedInt(_objMemPoolDecoded24),
+         m_boostMtx(_bstMtx),
+         m_vCurrentChip(_vCurrentChip),
+         m_vNIndex(_vNIndex),
+         m_vNNominator(_vNNominator)
     {
         LOG_TRACE(__FUNCTION__);
         
@@ -82,16 +84,20 @@ namespace DetCommonNS
         m_nDecodedImageSize = m_objMemPoolDecodedInt->GetElementSize();
     }
 
-    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<char>* _objMemPoolCompressed,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator,int _nDistortedImageSize):
-        m_objSys(_objSys)
-        ,m_objNetInterface(_objNetInt)
-        ,m_objMemPoolRaw(_objMemPoolRaw)
-        ,m_objMemPoolCompressed(_objMemPoolCompressed)
-        ,m_boostMtx(_bstMtx)
-        ,m_vCurrentChip(_vCurrentChip)
-        ,m_vNIndex(_vNIndex)
-        ,m_vNNominator(_vNNominator)
-        ,m_nDecodedImageSize(_nDistortedImageSize)
+    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int32 _nID,
+                           LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,
+                           MemPool<char>* _objMemPoolRaw,MemPool<char>* _objMemPoolCompressed,
+                           boost::mutex* _bstMtx,vector<int16> _vCurrentChip,
+                           vector<int32> _vNIndex,vector<int32> _vNNominator,int32 _nDistortedImageSize)
+        :m_objSys(_objSys),
+         m_objNetInterface(_objNetInt),
+         m_objMemPoolRaw(_objMemPoolRaw),
+         m_objMemPoolCompressed(_objMemPoolCompressed),
+         m_boostMtx(_bstMtx),
+         m_vCurrentChip(_vCurrentChip),
+         m_vNIndex(_vNIndex),
+         m_vNNominator(_vNNominator),
+         m_nDecodedImageSize(_nDistortedImageSize)
     {
         LOG_TRACE(__FUNCTION__);
         
@@ -138,9 +144,10 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
 
         boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
+        int32 lRequestedImgNo = m_objSys->GetNImages();
         bool bIsStart = m_objSys->GetAcquisitionStart();
-        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24) || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
+        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24)
+           || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
             lRequestedImgNo*=2;
         lock.unlock();
         //cout<<"listner thread starts"<<m_nID<<endl;
@@ -168,22 +175,23 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
 
         char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];    
-        int nPacketSize = UDP_PACKET_SIZE_NORMAL;
-        short shErrorCode = 0;
-        long lFrameNo = 0;
-        short shPacketSequenceNo = 0;
-        int nPos = 0;
+        szt nPacketSize = UDP_PACKET_SIZE_NORMAL;
+        int16 shErrorCode = 0;
+        int32 lFrameNo = 0;
+        int16 shPacketSequenceNo = 0;
+        int32 nPos = 0;
         m_objMemPoolRaw->AddTaskFrame(m_nID,-1);
         boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
+        int32 lRequestedImgNo = m_objSys->GetNImages();
         bool bIsStart = m_objSys->GetAcquisitionStart();
-        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24) || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
+        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24)
+           || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
             lRequestedImgNo*=2;
         lock.unlock();
-        int nCurrentFrame = -1;
+        //int32 nCurrentFrame = -1;
 
-        int nCount = 200;
-        int nNoDataTimes = 0;
+        int32 nCount = 200;
+        int32 nNoDataTimes = 0;
         
 
         //cout<<"listner thread starts"<<m_nID<<endl;
@@ -219,17 +227,18 @@ namespace DetCommonNS
             
             if(shErrorCode!=-1)
             {
-                lFrameNo = (unsigned char)ptrchPacket[5]
-                    +(unsigned char)ptrchPacket[4]*256
-                    +(unsigned char)ptrchPacket[3]*256*256;
+                lFrameNo = (uchar)ptrchPacket[5]
+                    +(uchar)ptrchPacket[4]*256
+                    +(uchar)ptrchPacket[3]*256*256;
 
                 
-                shPacketSequenceNo = (unsigned char)ptrchPacket[2];
+                shPacketSequenceNo = (uchar)ptrchPacket[2];
                 //if(shPacketSequenceNo == 1)
                 //    nPos = 0;
                 //else
                 nPos = (UDP_PACKET_SIZE_NORMAL-UDP_EXTRA_BYTES)*(shPacketSequenceNo-1);
-                m_objMemPoolRaw->SetPacket(ptrchPacket,nPos,nPacketSize,lFrameNo,shErrorCode,m_nID,shPacketSequenceNo);
+                m_objMemPoolRaw->SetPacket(ptrchPacket,nPos,nPacketSize,
+                                           lFrameNo,shErrorCode,m_nID,shPacketSequenceNo);
             }
             else
             {
@@ -253,23 +262,24 @@ namespace DetCommonNS
     {
         LOG_TRACE(__FUNCTION__);
         char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];    
-        int nPacketSize = UDP_PACKET_SIZE_NORMAL;
-        short shErrorCode = 0;
+        szt nPacketSize = UDP_PACKET_SIZE_NORMAL;
+        int16 shErrorCode = 0;
 	
         char* ptrchTmpImg = new char[m_nRawImageSize];
-        short nErrorCode = 0;
-        long lFrameNo = 0;
+        int16 nErrorCode = 0;
+        int32 lFrameNo = 0;
 
         boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
-        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24) || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
+        int32 lRequestedImgNo = m_objSys->GetNImages();
+        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24)
+           || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
             lRequestedImgNo*=2;
         bool bIsStart = m_objSys->GetAcquisitionStart();
-        bool bIsFull = m_objMemPoolRaw->IsFull();
+        //bool bIsFull = m_objMemPoolRaw->IsFull();
         lock.unlock();
 
-        int nCount = 200;
-        int nNoDataTimes = 0;
+        int32 nCount = 200;
+        int32 nNoDataTimes = 0;
         
         while(true)
         {
@@ -302,7 +312,7 @@ namespace DetCommonNS
             lFrameNo++;
 	    
             m_objMemPoolRaw->SetImage(ptrchTmpImg,lFrameNo,nErrorCode);	  
-            LOG_INFOS(("Arrived Frame No is:"+to_string(static_cast<long long>(lFrameNo))));
+            LOG_INFOS(("Arrived Frame No is:"+to_string(lFrameNo)));
             //cout<<"Arrived Frame No is:"<<to_string(static_cast<long long>(lFrameNo))<<endl;
         }
 
@@ -322,34 +332,36 @@ namespace DetCommonNS
     {
         //Acquisition with TCP
         //Firstly, need opportunity to break if acq cancelled
-        //Secondly, at high data rates packets from consecutive images may be combined - need to handle this carefully
+        //Secondly, at high data rates packets from consecutive
+        //images may be combined - need to handle this carefully
         LOG_TRACE(__FUNCTION__);
-        int nTCPPacketSize = 1500;
+        int32 nTCPPacketSize = 1500;
         char* ptrchPacket = new char[nTCPPacketSize];
 
-        int nCurrentPacketSize;
+        size_t nCurrentPacketSize;
 	
         char* ptrchTmpImg = new char[m_nRawImageSize];
-        long lFrameNo = 0;
+        int32 lFrameNo = 0;
 
-        int nErrorCode = 0;
-        int nPacketCode = 0;
-        int nReceivedData = 0;
-        int nRetVal = -1;
-        int nFrameLength = m_nRawImageSize;
-        int nBytesLeft = nFrameLength;
-        int nExcessBytes = 0;
+        int32 nErrorCode = 0;
+        int32 nPacketCode = 0;
+        int32 nReceivedData = 0;
+//        int32 nRetVal = -1;
+        int32 nFrameLength = m_nRawImageSize;
+        int32 nBytesLeft = nFrameLength;
+        int32 nExcessBytes = 0;
 
         boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
-        if(m_objSys->GetReadoutModeCode() == OPERATION_MODE_24)
+        int32 lRequestedImgNo = m_objSys->GetNImages();
+        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24)
+           || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
             lRequestedImgNo*=2;
         bool bIsStart = m_objSys->GetAcquisitionStart();
-        bool bIsFull = m_objMemPoolRaw->IsFull();
+        // bool bIsFull = m_objMemPoolRaw->IsFull();
         lock.unlock();
 
-        int nCount = 200;
-        int nNoDataTimes = 0;
+        int32 nCount = 200;
+        int32 nNoDataTimes = 0;
 
         while(true) // Loop over images
         {
@@ -386,9 +398,11 @@ namespace DetCommonNS
                 break;
             }
 
-            if(nExcessBytes > 0) // Special case where single packet contains data from 2 images
+            // Special case where single packet contains data from 2 images
+            if(nExcessBytes > 0) 
             {
-                std::copy(ptrchPacket+nCurrentPacketSize-nExcessBytes,ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
+                std::copy(ptrchPacket+nCurrentPacketSize-nExcessBytes,
+                          ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
                 nReceivedData += nExcessBytes;
                 nBytesLeft = nBytesLeft-nExcessBytes;
                 nExcessBytes = 0;
@@ -410,7 +424,7 @@ namespace DetCommonNS
                 {
                     // We have data 
                     nNoDataTimes = 0;
-                    if(nCurrentPacketSize > nBytesLeft)
+                    if(nCurrentPacketSize > static_cast<szt>(nBytesLeft))
                     {
                         //Bytes from next image are present in buffer - need to take note of this
                         std::copy(ptrchPacket,ptrchPacket+nBytesLeft,ptrchTmpImg+nReceivedData);
@@ -420,7 +434,8 @@ namespace DetCommonNS
                     }
                     else
                     {
-                        std::copy(ptrchPacket,ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
+                        std::copy(ptrchPacket,ptrchPacket+nCurrentPacketSize,
+                                  ptrchTmpImg+nReceivedData);
                         nReceivedData += nCurrentPacketSize;
                         nBytesLeft = nBytesLeft-(nCurrentPacketSize);
                     }
@@ -429,16 +444,18 @@ namespace DetCommonNS
                 if(nBytesLeft==0)
                 {
                     //first byte of the image should be 0xa0
-                    unsigned char uchByte = ptrchTmpImg[0];
+                    uchar uchByte = ptrchTmpImg[0];
                     if(uchByte!=0xa0)
                     {	
                         LOG_STREAM(__FUNCTION__,ERROR,"Image data is wrong!");
                         nErrorCode = 2;
                     }
                     else nErrorCode = 0;
-                    lFrameNo++; // Make first frame no 1, for consistency with multilink approach
+                    
+                    // Make first frame no 1, for consistency with multilink approach
+                    lFrameNo++; 
                     m_objMemPoolRaw->SetImage(ptrchTmpImg,lFrameNo,nErrorCode);	  
-                    LOG_INFOS(("Arrived Frame No is:"+to_string(static_cast<long long>(lFrameNo))));
+                    LOG_INFOS(("Arrived Frame No is:"+to_string(lFrameNo)));
                     // Reset some variables
                     nReceivedData = 0;
                     nBytesLeft = nFrameLength;
@@ -458,9 +475,7 @@ namespace DetCommonNS
         delete ptrchTmpImg;
         LOG_INFOS("Do acquisition thread exits");
     }
-
-
-  
+    
     void LambdaTask::DoDecodeImage()
     {
         LOG_TRACE(__FUNCTION__);
@@ -472,27 +487,30 @@ namespace DetCommonNS
         ImageDecoder* objDecoder = new ImageDecoder(m_vCurrentChip);
         ImageDecoder* objDecoder1 = new ImageDecoder(m_vCurrentChip);
 
-	int nXtemp;
-	int nYtemp;
-	objDecoder->GetDecodedImageSize(nXtemp, nYtemp);
+        int32 nXtemp;
+        int32 nYtemp;
+        objDecoder->GetDecodedImageSize(nXtemp, nYtemp);
 	
-	int nImageSizeBeforeDistCorr = nXtemp * nYtemp;
+        int32 nImageSizeBeforeDistCorr = nXtemp * nYtemp;
 
-        short* ptrshDecodedImg;
-        short* ptrshDecodedImg1;
-        int* ptrnDecodedImg = new int[nImageSizeBeforeDistCorr];
-        int* ptrnFinishedImg;
+        int16* ptrshDecodedImg;
+        int16* ptrshDecodedImg1;
+        int32* ptrnDecodedImg = new int32[nImageSizeBeforeDistCorr];
+        int32* ptrnFinishedImg;
 
-        DistortionCorrector<short> *objDC = new DistortionCorrector<short>(m_vNIndex,m_vNNominator,(int)pow(2,12));
-        DistortionCorrector<int> *objDC1 = new DistortionCorrector<int>(m_vNIndex,m_vNNominator,(int)pow(2,24));
+        DistortionCorrector<int16> *objDC
+            = new DistortionCorrector<int16>(m_vNIndex,m_vNNominator,((int)pow(2,12)-1));
+        DistortionCorrector<int32> *objDC1
+            = new DistortionCorrector<int32>(m_vNIndex,m_vNNominator,((int)pow(2,24)-1));
 
-        CompressionContext* objCompressionContext = new CompressionContext(unique_ptr<CompressionInterface>(new CompressionZlib()));
+        CompressionContext* objCompressionContext
+            = new CompressionContext(unique_ptr<CompressionInterface>(new CompressionZlib()));
 
 
         // Compression-related vectors, if needed
         // Try creating on the stack, for now; can change to heap if needed
-        vector<unsigned char> vuchData;
-        vector<unsigned char> vuchDstData;
+        vector<uchar> vuchData;
+        vector<uchar> vuchDstData;
          
 
         while(true)
@@ -502,10 +520,10 @@ namespace DetCommonNS
             boost::unique_lock<boost::mutex> lock(*m_boostMtx);
             bool bVal = m_objSys->SysExit();
             Enum_readout_mode enumOperationMode = m_objSys->GetReadoutModeCode();
-            int nDistortionCorr = m_objSys->GetDistortionCorrecttionMethod();
-            int nMethod = m_objSys->GetCompressionMethod();
+            int32 nDistortionCorr = m_objSys->GetDistortionCorrecttionMethod();
+            //int32 nMethod = m_objSys->GetCompressionMethod();
             bool bCompressionEnabled;
-            int nCompLevel;
+            int32 nCompLevel;
             m_objSys->GetCompressionEnabled(bCompressionEnabled,nCompLevel);
             lock.unlock();
 
@@ -519,7 +537,8 @@ namespace DetCommonNS
             }
 
             //continuousReadWrite or 2 x 12 bit
-            if((enumOperationMode == OPERATION_MODE_12) || (enumOperationMode == OPERATION_MODE_2x12))
+            if((enumOperationMode == OPERATION_MODE_12)
+               || (enumOperationMode == OPERATION_MODE_2x12))
             {
                 if(m_objMemPoolRaw->GetStoredImageNumbers() == 0)
                 {
@@ -545,9 +564,9 @@ namespace DetCommonNS
                 }
                 
 	
-                short shErrCode = 0;
-                long lFrameNo = 0;
-                int nDataLength;
+                int16 shErrCode = 0;
+                int32 lFrameNo = 0;
+                int32 nDataLength;
                 
                 if(m_objMemPoolRaw->GetImage(ptrchTmpImg,lFrameNo,shErrCode,nDataLength))
                 {
@@ -558,7 +577,7 @@ namespace DetCommonNS
                     if(nDistortionCorr == 1)
                     {
                         //distortion correction
-                        short* pShImgOut = objDC->RunDistortCorrect(ptrshDecodedImg);
+                        int16* pShImgOut = objDC->RunDistortCorrect(ptrshDecodedImg);
                         ptrshDecodedImg = pShImgOut;
                     }
 
@@ -567,7 +586,7 @@ namespace DetCommonNS
                         
                         if(m_objMemPoolDecodedShort->GetFirstFrameNo() == -1)
                         {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
                 
                             //if lFristFrame is -1, means it is single link version
                             if(lFristFrame!=-1)
@@ -578,7 +597,7 @@ namespace DetCommonNS
                     {    
                         if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
                         {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
                 
                             //if lFristFrame is -1, means it is single link version
                             if(lFristFrame!=-1)
@@ -603,7 +622,7 @@ namespace DetCommonNS
 
                     if(bCompressionEnabled)
                     {
-                        int nTotalSize = m_nDecodedImageSize*sizeof(short);
+                        int32 nTotalSize = m_nDecodedImageSize*sizeof(int16);
 
                         vuchData.resize(nTotalSize);
                         memmove(&vuchData[0],ptrshDecodedImg,nTotalSize);
@@ -640,16 +659,14 @@ namespace DetCommonNS
                             bool bIsAcq = m_objSys->GetAcquisitionStop();
                             if(bIsAcq)
                                 break;
-                            if(m_objMemPoolDecodedShort->SetImage(ptrshDecodedImg,lFrameNo,shErrCode,true) == true)
+                            if(m_objMemPoolDecodedShort->SetImage(
+                                   ptrshDecodedImg,lFrameNo,shErrCode,true) == true)
                             {
 			         
                                 break;
                             }
                             usleep(20); // Wait for next attempt
                         }
-                                      
-                            
-
                     }
 
                 }
@@ -680,12 +697,13 @@ namespace DetCommonNS
                         continue;
                     }
                 }
-                short shErrCode = 0;
-                long lFrameNo = 0;
-                short shErrCode1 = 0;
-                long lFrameNo1 = 0;
+                int16 shErrCode = 0;
+                int32 lFrameNo = 0;
+                int16 shErrCode1 = 0;
+                int32 lFrameNo1 = 0;
                 
-                if(m_objMemPoolRaw->Get2Image(ptrchTmpImg,lFrameNo,shErrCode,ptrchTmpImg1,lFrameNo1,shErrCode1))
+                if(m_objMemPoolRaw->Get2Image(ptrchTmpImg,lFrameNo,shErrCode,
+                                              ptrchTmpImg1,lFrameNo1,shErrCode1))
                 {
                 
                     objDecoder->SetRawImage(ptrchTmpImg);
@@ -694,8 +712,10 @@ namespace DetCommonNS
                     objDecoder1->SetRawImage(ptrchTmpImg1);
                     ptrshDecodedImg1 = objDecoder1->RunDecodingImg();
 
-                    for(int i=0;i<nImageSizeBeforeDistCorr;i++)
-                        ptrnDecodedImg[i] = ((int)ptrshDecodedImg[i])+(((int)ptrshDecodedImg1[i])*4096);
+                    for(int32 i=0;i<nImageSizeBeforeDistCorr;i++)
+                        ptrnDecodedImg[i] = ((int32)ptrshDecodedImg[i])
+                            +(((int32)ptrshDecodedImg1[i])*4096);
+                    
                     lFrameNo = lFrameNo1/2;
                     shErrCode = shErrCode<=shErrCode1?shErrCode:shErrCode1;
                     ptrnFinishedImg = ptrnDecodedImg;
@@ -703,7 +723,7 @@ namespace DetCommonNS
                     if(nDistortionCorr == 1)
                     {
                         //distortion correction
-                        int* pNImgOut = objDC1->RunDistortCorrect(ptrnDecodedImg);
+                        int32* pNImgOut = objDC1->RunDistortCorrect(ptrnDecodedImg);
                         ptrnFinishedImg = pNImgOut;
                     }
 
@@ -712,7 +732,7 @@ namespace DetCommonNS
                         
                         if(m_objMemPoolDecodedInt->GetFirstFrameNo() == -1)
                         {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
                 
                             //if lFristFrame is -1, means it is single link version
                             if(lFristFrame!=-1)
@@ -723,7 +743,7 @@ namespace DetCommonNS
                     {    
                         if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
                         {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
                 
                             //if lFristFrame is -1, means it is single link version
                             if(lFristFrame!=-1)
@@ -739,7 +759,7 @@ namespace DetCommonNS
                 
                     if(bCompressionEnabled)
                     {
-                        int nTotalSize = m_nDecodedImageSize*sizeof(int);
+                        int32 nTotalSize = m_nDecodedImageSize*sizeof(int32);
 
                         vuchData.resize(nTotalSize);
                         memmove(&vuchData[0],ptrnFinishedImg,nTotalSize);
@@ -756,10 +776,8 @@ namespace DetCommonNS
                             if(bIsAcq)
                                 break;
 
-                            if((m_objMemPoolCompressed->SetImage(ptrchData
-                                                                 ,lFrameNo,shErrCode
-                                                                 ,true
-                                                                 ,vuchDstData.size())) == true)
+                            if((m_objMemPoolCompressed->SetImage(
+                                    ptrchData,lFrameNo,shErrCode,true,vuchDstData.size())) == true)
                             {
                                 break;
                             }
@@ -774,17 +792,14 @@ namespace DetCommonNS
                             if(bIsAcq)
                                 break;
                             
-                            if(m_objMemPoolDecodedInt->SetImage(ptrnFinishedImg,lFrameNo,shErrCode,true) == true)
+                            if(m_objMemPoolDecodedInt->SetImage(
+                                   ptrnFinishedImg,lFrameNo,shErrCode,true) == true)
                                 break;
                             usleep(20); // Wait for next attempt
                         }
                     }
-
-                }
-                
+                }   
             }
-            
-            
         }///end loop
         
         delete objDecoder;
@@ -799,4 +814,4 @@ namespace DetCommonNS
 
         LOG_INFOS("Do decoding thread exits");	
     }
-}///end of namespace DetCommonNS
+}
