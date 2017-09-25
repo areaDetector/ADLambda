@@ -7,6 +7,7 @@ ifeq (windows-x64, $(findstring windows-x64, $(T_A)))
 USR_CPPFLAGS += -D__X64
 endif
 
+USR_CPPFLAGS += -fpermissive
 LIBRARY_IOC = ADLambda
 LIB_SRCS += ADLambda.cpp
 LIB_LIBS += lambda

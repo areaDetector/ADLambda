@@ -3,43 +3,56 @@ Installation instruction
 1. Prerequists
 -----------------
 1.1) Library dependencies
--> libcommon
-   This is part of the liblambda, compiling libcommon independently is unnecessary.
-   source(git): https://stash.desy.de/scm/fsdsdet/libcommon.git
+-> libfsdetcore >= 0.6
+   source(git): https://stash.desy.de/scm/fsdsdet/libfsdetcore.git
+   
+   make sure the fsdetcore.pc is in pkg-config path
+   If not
+   $ export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/path/to/fsdetcore.pc/"
 
--> boost >= 1.41
+-> boost >= 1.55
 
 1.2) Required build tool
--> gcc   >= 4.4.7
--> cmake >= 2.8.4
+-> gcc   >= 4.9.2
+-> cmake >= 3.0.2
 
 2. Build
 -----------------
-2.1) Create build directory
-Once the source code is retrived, create a seperate build directy OUT OF souce directory.
+2.1) Clone source
+Create new directory and clone source
 
-$ mkdir liblamda-build
+$ mkdir detsoftware
+$ cd detsoftware
+$ git clone https://stash.desy.de/scm/fsdsdet/liblambda.git
+
+2.2) Create build directory
+Once the source code is retrived, create a separate build directy OUT OF source directory.
+
+$ mkdir liblambda-build
 $ cd liblambda-build
 
-2.2) Run cmake in build directory
+2.3) Run cmake in build directory
 Run cmake in build directory with the path of source directory as the input argument.
 
-$ cmake /path/of/source/directory
+$ cmake /path/of/source/directory. Here : $ cmake ../liblambda
 
-The default value of the build type of the library is RELEASE. 
+The default value of the build type of the library is DEBUG. 
 The build type can be changed by using CMAKE_BUILD_TYPE. 
 The build type of this library can be either RELEASE or DEBUG. 
 
-$ cmake -DCMAKE_BUILD_TYPE=DEBUG /path/of/source/directory
+$ cmake -DCMAKE_BUILD_TYPE=RELEASE /path/of/source/directory
 
 The default value of CMAKE_INSTALL_PREFIX is /usr/local
 The install prefix could also be changed by using CMAKE_INSTALL_PREFIX. 
 
 $ cmake -DCMAKE_INSTALL_PREFIX=/user-defined/install/path /path/of/source/directory
 
-2.3) Run make
+2.4) Run make
 Once everything is configured successfully by cmake, run make and make install. 
 The install path depends on the variable CMAKE_INSTALL_PREFIX metioned before.
 
 $ make
 $ make install
+
+2.5) add pkg config path
+$ export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/path/to/pkgconfigfile"
