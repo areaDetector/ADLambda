@@ -10,11 +10,12 @@
  */
 #ifndef ADLAMBDA_H
 #define ADLAMBDA_H
-
-namespace DetCommonNS {
+#include <fsdetector/core/Globals.h>
+using namespace FSDetCoreNS;
+namespace DetLambdaNS {
 class LambdaSysImpl;
 class LambdaInterface;}
-using namespace DetCommonNS;
+using namespace DetLambdaNS;
 
 #include <epicsString.h>
 #include <epicsEvent.h>
@@ -38,8 +39,8 @@ public:
     void killImageHandlerThread();
     int getImageDepth();
 //    int getQueueDepth();
-    short* getDecodedImageShort(long& lFrameNo, short& shErrCode);
-    int* getDecodedImageInt(long& lFrameNo, short& shErrCode);
+    int16* getDecodedImageShort(int32& lFrameNo, int16& shErrCode);
+    int32* getDecodedImageInt(int32& lFrameNo, int16& shErrCode);
 //    void getImageFormat(int& nX, int& nY, int& nImgDepth);
     void handleNewImageTask(void);
     void report(FILE *fp, int details);
@@ -62,6 +63,7 @@ protected:
     int LAMBDA_OperatingMode;
     int LAMBDA_DetectorState;
     int LAMBDA_BadFrameCounter;
+    int LAMBDA_MedipixIDs;
     int LAMBDA_BadImage;
 #define LAMBDA_LAST_PARAM LAMBDA_BadImage
 
@@ -70,6 +72,7 @@ private:
     asynStatus acquireStart();
     asynStatus acquireStop();
     asynStatus initializeDetector();
+    asynStatus setSizeParams();
     LambdaSysImpl* lambdaInstance;
     int acquiredImages;
     int imageHeight;
@@ -93,6 +96,7 @@ private:
 #define LAMBDA_OperatingModeString          "LAMBDA_OPERATING_MODE"
 #define LAMBDA_DetectorStateString          "LAMBDA_DETECTOR_STATE"
 #define LAMBDA_BadFrameCounterString       "LAMBDA_BAD_FRAME_COUNTER"
+#define Lambda_MedipixIDsString             "LAMBDA_MEDIPIX_IDS"
 #define LAMBDA_BadImageString               "LAMBDA_BAD_IMAGE"
 
 
