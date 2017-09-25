@@ -12,7 +12,7 @@
 
 
 #include "ADLambda.h"
-#include <LambdaSysImpl.h>
+#include <fsdetector/lambda/LambdaSysImpl.h>
 
 static void lambdaHandleNewImageTaskC(void *drvPvt);
 //static void lambdaHandleNewImageTaskMultiC(void *drvPvt);
@@ -103,6 +103,8 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
             asynParamInt32, &LAMBDA_DetectorState);
     status |= ADDriver::createParam(LAMBDA_BadFrameCounterString,
             asynParamInt32, &LAMBDA_BadFrameCounter);
+    status |= ADDriver::createParam(Lambda_MedipixIDsString,
+            asynParamOctet, &LAMBDA_MedipixIDs);
     status |= ADDriver::createParam(LAMBDA_BadImageString,
             asynParamInt32, &LAMBDA_BadImage);
     status |= connect(pasynUserSelf);
@@ -191,7 +193,7 @@ asynStatus ADLambda::connect(asynUser* pasynUser){
             "%s:%s Enter %s\n", driverName, __FUNCTION__,
             configFileName);
 
-    lambdaInstance = new DetCommonNS::LambdaSysImpl(configFileName);
+    lambdaInstance = new DetLambdaNS::LambdaSysImpl(configFileName);
     printf("Done making instance");
     if (status != asynSuccess) {
         printf("%s:%s: Trouble initializing Lambda detector\n",
@@ -242,7 +244,7 @@ asynStatus ADLambda::disconnect(asynUser* pasynUser){
 
 
     killImageHandlerThread();
-    delete lambdaInstance;
+    //delete lambdaInstance;
 
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s Exit\n", driverName, __FUNCTION__);
@@ -264,7 +266,7 @@ void ADLambda::killImageHandlerThread(){
  *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to integer array representing the requested image.
  */
-int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
+int32* ADLambda::getDecodedImageInt(int32& lFrameNo, int16& shErrCode){
     return lambdaInstance->GetDecodedImageInt(lFrameNo, shErrCode);
 }
 
@@ -275,7 +277,7 @@ int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
  *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to short array representing the requested image.
  */
-short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
+int16* ADLambda::getDecodedImageShort(int32& lFrameNo, int16& shErrCode){
     return lambdaInstance->GetDecodedImageShort(lFrameNo, shErrCode);
 }
 
@@ -296,10 +298,10 @@ int ADLambda::getImageDepth(){
  */
 void ADLambda::handleNewImageTask() {
     long numBufferedImages;
-    short *shDecodedData;
-    int *decodedData;
+    int16 *shDecodedData;
+    int32 *decodedData;
     long currentFrameNumber;
-    short frameErrorCode;
+    int16 frameErrorCode;
     bool bRead;
     bool firstFrame;
     //long acquiredImages;
@@ -335,7 +337,7 @@ void ADLambda::handleNewImageTask() {
                     driverName, __FUNCTION__,
                     (int) numBufferedImages);
             if (getImageDepth() == TWELVE_BIT){
-                long newFrameNumber;
+                int32 newFrameNumber;
                 shDecodedData = lambdaInstance->GetDecodedImageShort(
                         newFrameNumber,
                         frameErrorCode);
@@ -525,7 +527,7 @@ void ADLambda::handleNewImageTask() {
 
             }
             else if (getImageDepth() == TWENTY_FOUR_BIT){
-                long newFrameNumber;
+                int32 newFrameNumber;
                 decodedData = lambdaInstance->GetDecodedImageInt(
                         newFrameNumber,
                         frameErrorCode);
@@ -767,6 +769,19 @@ asynStatus ADLambda::initializeDetector(){
     else if (imageDepth == TWENTY_FOUR_BIT) {
         setIntegerParam(NDDataType, NDUInt32);
     }
+    string manufacturer = "X-Spectrum GmbH";
+    setStringParam(ADManufacturer, manufacturer);
+    string model = "Lambda 750K";
+    string moduleID = lambdaInstance->GetModuleID();
+    setStringParam(ADSerialNumber, moduleID);
+    string sysInfo = lambdaInstance->GetSystemInfo();
+    string fwVers = "firmware version:";
+    int pos = sysInfo.find(fwVers);
+    string fwStr = sysInfo.substr(pos + fwVers.length());
+    setStringParam(ADFirmwareVersion, fwStr);
+    string version = LAMBDA_VERSION;
+    setStringParam(ADSDKVersion, version);
+
     callParamCallbacks();
 
 
@@ -797,6 +812,24 @@ asynStatus  ADLambda::readInt32 (asynUser *pasynUser, epicsInt32 *value){
     callParamCallbacks();
     return (asynStatus) status;
 }
+
+/**
+ * Method run to keep from adjusting the size of the detector.  So far,
+ * there is no resize on this detector so any attempt to change these
+ * values should just see them reset to the actual detector size.
+ */
+asynStatus ADLambda::setSizeParams(){
+    int status = asynSuccess;
+
+    lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
+    status |= setIntegerParam(ADMinX, 0);
+    status |= setIntegerParam(ADMinY, 0);
+    status |= setIntegerParam(ADSizeX, imageWidth);
+    status |= setIntegerParam(ADSizeY, imageHeight);
+    callParamCallbacks();
+    return (asynStatus)status;
+}
+
 /**
  * Override from super class to handle detector specific parameters.
  * If the parameter is from one of the super classes and is not handled
@@ -824,7 +857,7 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
         setDoubleParam(function, acquirePeriod);
     }
     else if (function == LAMBDA_EnergyThreshold){
-        lambdaInstance->SetThreshold((int)0, (float)value);
+        lambdaInstance->SetThreshold((int32)0, (float)value);
     }
     else {
         if (function < LAMBDA_FIRST_PARAM) {
@@ -872,7 +905,13 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
                 driverName,
                 __FUNCTION__,
                 value);
-        lambdaInstance->SetTriggerMode((short)value);
+        lambdaInstance->SetTriggerMode((int16)value);
+    }
+    else if ((function == ADSizeX) ||
+             (function == ADSizeY) ||
+             (function == ADMinX) ||
+             (function == ADMinY) ){
+       status = setSizeParams();
     }
     else if (function == LAMBDA_OperatingMode) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
@@ -916,6 +955,7 @@ asynStatus ADLambda::writeOctet(asynUser* pasynUser, const char *value,
     if (function < LAMBDA_FIRST_PARAM) {
         status = ADDriver::writeOctet(pasynUser, value, nChars, nActual);
     }
+    callParamCallbacks();
     return (asynStatus) status;
 }
 
@@ -949,6 +989,7 @@ asynStatus 	ADLambda::readOctet (asynUser *pasynUser, char *value,
         status = ADDriver::readOctet(pasynUser, value, maxChars, nActual,
                 eomReason);
     }
+    callParamCallbacks();
     return (asynStatus) status;
 
 }
