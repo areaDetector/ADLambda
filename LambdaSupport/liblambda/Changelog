@@ -1,0 +1,7 @@
+* [0.9]  <2017-09-27 Wed>
+** Added
+   - version info
+   - ChangeLog
+
+** Removed
+   - GetChipID method in LambdaSysImpl class
