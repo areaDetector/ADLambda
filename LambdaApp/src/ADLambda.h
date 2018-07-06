@@ -11,14 +11,16 @@
 #ifndef ADLAMBDA_H
 #define ADLAMBDA_H
 
-namespace DetCommonNS {
+namespace DetLambdaNS {
 class LambdaSysImpl;
 class LambdaInterface;}
-using namespace DetCommonNS;
+using namespace DetLambdaNS;
 
 #include <epicsString.h>
 #include <epicsEvent.h>
 #include <epicsThread.h>
+
+#include <LambdaSysImpl.h>
 
 #include "ADDriver.h"
 
@@ -38,8 +40,8 @@ public:
     void killImageHandlerThread();
     int getImageDepth();
 //    int getQueueDepth();
-    short* getDecodedImageShort(long& lFrameNo, short& shErrCode);
-    int* getDecodedImageInt(long& lFrameNo, short& shErrCode);
+    short* getDecodedImageShort(int32& lFrameNo, int16& shErrCode);
+    int* getDecodedImageInt(int32& lFrameNo, int16& shErrCode);
 //    void getImageFormat(int& nX, int& nY, int& nImgDepth);
     void handleNewImageTask(void);
     void report(FILE *fp, int details);

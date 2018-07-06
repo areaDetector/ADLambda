@@ -10,7 +10,8 @@
 #include <epicsExit.h>
 #include <epicsExport.h>
 
-
+#include <iostream>
+#include <string.h>
 #include "ADLambda.h"
 #include <LambdaSysImpl.h>
 
@@ -191,7 +192,7 @@ asynStatus ADLambda::connect(asynUser* pasynUser){
             "%s:%s Enter %s\n", driverName, __FUNCTION__,
             configFileName);
 
-    lambdaInstance = new DetCommonNS::LambdaSysImpl(configFileName);
+    lambdaInstance = new DetLambdaNS::LambdaSysImpl(configFileName);
     printf("Done making instance");
     if (status != asynSuccess) {
         printf("%s:%s: Trouble initializing Lambda detector\n",
@@ -264,8 +265,8 @@ void ADLambda::killImageHandlerThread(){
  *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to integer array representing the requested image.
  */
-int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
-    return lambdaInstance->GetDecodedImageInt(lFrameNo, shErrCode);
+int* ADLambda::getDecodedImageInt(int32& lFrameNo, int16& shErrCode){
+  return lambdaInstance->GetDecodedImageInt(lFrameNo, shErrCode);
 }
 
 /**
@@ -275,7 +276,7 @@ int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
  *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to short array representing the requested image.
  */
-short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
+short* ADLambda::getDecodedImageShort(int32& lFrameNo, int16& shErrCode){
     return lambdaInstance->GetDecodedImageShort(lFrameNo, shErrCode);
 }
 
@@ -299,7 +300,7 @@ void ADLambda::handleNewImageTask() {
     short *shDecodedData;
     int *decodedData;
     long currentFrameNumber;
-    short frameErrorCode;
+    int16 frameErrorCode;
     bool bRead;
     bool firstFrame;
     //long acquiredImages;
@@ -335,7 +336,7 @@ void ADLambda::handleNewImageTask() {
                     driverName, __FUNCTION__,
                     (int) numBufferedImages);
             if (getImageDepth() == TWELVE_BIT){
-                long newFrameNumber;
+                int32 newFrameNumber;
                 shDecodedData = lambdaInstance->GetDecodedImageShort(
                         newFrameNumber,
                         frameErrorCode);
@@ -525,7 +526,7 @@ void ADLambda::handleNewImageTask() {
 
             }
             else if (getImageDepth() == TWENTY_FOUR_BIT){
-                long newFrameNumber;
+                int32 newFrameNumber;
                 decodedData = lambdaInstance->GetDecodedImageInt(
                         newFrameNumber,
                         frameErrorCode);
