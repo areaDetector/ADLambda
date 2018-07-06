@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -22,118 +22,38 @@
 
 #include "ZlibWrapper.h"
 
-///namespace 
-namespace CompressionNS
+namespace DetLambdaNS
 {
     ZlibWrapper::ZlibWrapper()
         :m_stZS()
     {
     }
-    
+
     ZlibWrapper::~ZlibWrapper()
     {
     }
-    
-    void ZlibWrapper::SetNextIn(vector<unsigned char> vuchNextIn)
-    {
-        m_stZS.next_in = reinterpret_cast<unsigned char*>(&vuchNextIn[0]);;
-    }
-    
-    void ZlibWrapper::SetNextInBytes(unsigned int unAvailableInBytes)
-    {
-        m_stZS.avail_in = unAvailableInBytes;
-    }
-    
-    void ZlibWrapper::SetNextOut(vector<unsigned char> vuchNextOut)
-    {
-        m_stZS.next_out = reinterpret_cast<unsigned char*>(&vuchNextOut[0]);
-    }
-    
-    void ZlibWrapper::SetNextOutBytes(unsigned int unAvailableOutBytes)
-    {
-        m_stZS.avail_out = unAvailableOutBytes;
-    }
 
-    unsigned int ZlibWrapper::GetNextOutBytes() const
+    int32 ZlibWrapper::Compress(vector<uchar>& vuchSrcData,
+                              vector<uchar>& vuchDstData, szt nLevel)
     {
-        return m_stZS.avail_out;
-    }
-    
 
-    string ZlibWrapper::GetErrorMsg()
-    {
-        return string(m_stZS.msg);
-    }
-    
-    void ZlibWrapper::ResetZAlloc()
-    {
-        m_stZS.zalloc = NULL;
-    }
-    
-    void ZlibWrapper::ResetZFree()
-    {
-        m_stZS.zfree = NULL;
-    }
-    
-    void ZlibWrapper::ResetOpaque()
-    {
-        m_stZS.opaque = NULL;
-    }
-    
-    int ZlibWrapper::DeflateInit(int nLevel)
-    {
-        return deflateInit(&m_stZS,nLevel);
-    }
-    
-    int ZlibWrapper::Deflate(int nFlush)
-    {
-        //return deflate(&m_stZS,Z_NO_FLUSH);
-        return deflate(&m_stZS,nFlush);
-    }
-    
-    int ZlibWrapper::DeflateEnd()
-    {
-        return deflateEnd(&m_stZS);
-    }
-    
-    int ZlibWrapper::InflateInit()
-    {
-        return inflateInit(&m_stZS);
-    }
-    
-    int ZlibWrapper::Inflate()
-    {
-        return inflate(&m_stZS,Z_NO_FLUSH);
-    }
-    
-    int ZlibWrapper::InflateEnd()
-    {
-        return inflateEnd(&m_stZS);
-    }
-
-    int ZlibWrapper::Compress(vector<unsigned char>& vuchSrcData,vector<unsigned char>& vuchDstData, int nLevel)
-    {
-        
-        int nSrcSize = vuchSrcData.size();
-        int nDstSize = DeflateSizeAdjust(nSrcSize);
+        int32 nSrcSize = vuchSrcData.size();
+        int32 nDstSize = DeflateSizeAdjust(nSrcSize);
         uLongf ulfDstSize = (uLongf)nDstSize;
         vuchDstData.resize(nDstSize);
-        
-        unsigned char* uptrSrcData = reinterpret_cast<unsigned char*>(&vuchSrcData[0]);
-        unsigned char* uptrDstData = reinterpret_cast<unsigned char*>(&vuchDstData[0]);
 
-        int nRetVal = compress2(uptrDstData,&(ulfDstSize),uptrSrcData,nSrcSize,nLevel);
+        uchar* uptrSrcData = reinterpret_cast<uchar*>(&vuchSrcData[0]);
+        uchar* uptrDstData = reinterpret_cast<uchar*>(&vuchDstData[0]);
 
+        int32 nRetVal = compress2(uptrDstData,&(ulfDstSize),uptrSrcData,nSrcSize,nLevel);
         nDstSize = ulfDstSize;
-        
-        vuchDstData.resize(nDstSize);   
+
+        vuchDstData.resize(nDstSize);
         return nRetVal;
     }
 
-    int ZlibWrapper::DeflateSizeAdjust(int nSize)
+    int32 ZlibWrapper::DeflateSizeAdjust(int32 nSize)
     {
         return (ceil(((double)(nSize))*1.001)+12);
     }
-    
-    
-}///end of namespace
+}

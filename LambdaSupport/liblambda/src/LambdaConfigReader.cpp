@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -20,18 +20,15 @@
  */
 
 #include "LambdaConfigReader.h"
-#include "FilesOperation.h"
-#include "Utils.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
 
     LambdaConfigReader::LambdaConfigReader()
     {
         LOG_TRACE(__FUNCTION__);
     }
-    
+
     LambdaConfigReader::LambdaConfigReader(string _strConfigFilePath)
         :m_strConfigFilePath(_strConfigFilePath)
         ,m_strSystemConfigFile(SYSTEM_CONFIG_FILE)
@@ -44,17 +41,21 @@ namespace DetCommonNS
         ,m_nY(-1)
         ,m_nMaxRawImageNumbers(RAW_BUFFER_LENGTH)
         ,m_nMaxDecodedImageNumbers(DECODED_BUFFER_LENGTH)
-	,m_bSlaveModule(false) 
+        ,m_bSlaveModule(false)
+        ,m_strSystemType("standard")
+        ,m_nChunkIn(DEFAULT_COMPRESSION_CHUNK)
+        ,m_nChunkOut(DEFAULT_COMPRESSION_CHUNK)
+        ,m_nPostCode(0)
     {
         LOG_TRACE(__FUNCTION__);
 
         m_bMultilink = MULTI_LINK;
-	m_bBurstMode = true;
-        
+        m_bBurstMode = true;
+
         //TCP link config
         m_strTCPIPAddress = TCP_CONTROL_IP_ADDRESS;
         m_shTCPPortNo = TCP_CONTROL_PORT;
-        
+
         //destination IP for CH0
         m_vStrIP[0][0] = UDP_CONTROL_IP_ADDRESS;
         //destination IP for CH1
@@ -64,11 +65,15 @@ namespace DetCommonNS
         m_vUShPort[1] = UDP_PORT;
         m_vUShPort[2] = UDP_PORT_1;
 
-	m_vNDecodingThreads.resize(3,2);   
-        m_vNDecodingThreads[0] = 3; // Decoding threads with HIGH priority
-	m_vNDecodingThreads[1] = 3; // Threads with moderate NORMAL priority - run at lower frame rates
-        m_vNDecodingThreads[2] = 6; // Threads with LOW priority that only run after all images received
-	m_dCriticalShutterTime = 2.1; // Shutter time below which we should use fewer decoding threads while receiving
+        m_vNDecodingThreads.resize(3,2);
+        // Decoding threads with HIGH priority
+        m_vNDecodingThreads[0] = 3;
+        // Threads with moderate NORMAL priority - run at lower frame rates
+        m_vNDecodingThreads[1] = 3;
+        // Threads with LOW priority that only run after all images received
+        m_vNDecodingThreads[2] = 6;
+        // Shutter time below which we should use fewer decoding threads while receiving
+        m_dCriticalShutterTime = 2.1;
 
 
         m_objFileOp = new FileReader(m_strConfigFilePath);
@@ -78,7 +83,7 @@ namespace DetCommonNS
     LambdaConfigReader::~LambdaConfigReader()
     {
         LOG_TRACE(__FUNCTION__);
-         
+
         m_vStrMAC.clear();
         m_vStrIP.clear();
         m_vUShPort.clear();
@@ -93,9 +98,11 @@ namespace DetCommonNS
         m_vNIndex.clear();
         m_vNNominator.clear();
     }
-    
-   
-    void LambdaConfigReader::GetUDPConfig(vector<vector<string>>& vStrMAC, vector<vector<string>>& vStrIP, vector<unsigned short>& vUShPort)
+
+
+    void LambdaConfigReader::GetUDPConfig(vector<vector<string>>& vStrMAC,
+                                          vector<vector<string>>& vStrIP,
+                                          vector<uint16>& vUShPort)
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -103,14 +110,14 @@ namespace DetCommonNS
         vStrIP = m_vStrIP;
         vUShPort = m_vUShPort;
     }
-    
-    void LambdaConfigReader::GetTCPConfig(string& strTCPIPAddr,short& shTCPPort)
+
+    void LambdaConfigReader::GetTCPConfig(string& strTCPIPAddr,int16& shTCPPort)
     {
         LOG_TRACE(__FUNCTION__);
 
         strTCPIPAddr = m_strTCPIPAddress;
         shTCPPort = m_shTCPPortNo;
-    }  
+    }
 
     bool LambdaConfigReader::GetMultilink() const
     {
@@ -126,13 +133,14 @@ namespace DetCommonNS
         return m_bBurstMode;
     }
 
-    void LambdaConfigReader::GetChipConfig(vector<short>& vCurrentUsedChips,vector<stMedipixChipData>& vStCurrentChipData)
+    void LambdaConfigReader::GetChipConfig(vector<int16>& vCurrentUsedChips,
+                                           vector<stMedipixChipData>& vStCurrentChipData)
     {
         LOG_TRACE(__FUNCTION__);
 
         vCurrentUsedChips = m_vCurrentChip;
         vStCurrentChipData = m_vStCurrentChipData;
-    }  
+    }
 
     string LambdaConfigReader::GetOperationMode()
     {
@@ -140,21 +148,28 @@ namespace DetCommonNS
 
         return m_strOperationMode;
     }
-    
+
     string LambdaConfigReader::GetModuleName()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_strCurrentModuleName;
     }
-    
+
     stDetCfgData LambdaConfigReader::GetDetConfigData()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_stDetCfgData;
     }
-    
+
+    string LambdaConfigReader::GetSystemType()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_strSystemType;
+    }
+
     void LambdaConfigReader::LoadLocalConfig(bool bOpModeRunningSwitch,string strOpMode)
     {
         LOG_TRACE(__FUNCTION__);
@@ -167,13 +182,13 @@ namespace DetCommonNS
         //detector is already running.
         //in this case, the system config is not loaded again when operation mode is switched.
         if(!bOpModeRunningSwitch)
-        {    
+        {
             //read system config file
             GetDataFromSystemConfig();
         }
         else
             m_strOperationMode = strOpMode;
-        
+
         //read det config file
         GetDataFromDetConfig();
 
@@ -183,22 +198,22 @@ namespace DetCommonNS
         //read data from lookup folders for distortion correction
         GetDataFromLookupFolders();
     }
-  
-    vector<unsigned int> LambdaConfigReader::GetPixelMask()
-    {
-       LOG_TRACE(__FUNCTION__);
 
-       return m_vUnPixelMask;
+    vector<uint32> LambdaConfigReader::GetPixelMask()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_vUnPixelMask;
     }
-    
-    vector<int> LambdaConfigReader::GetIndexFile()
+
+    vector<int32> LambdaConfigReader::GetIndexFile()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_vNIndex;
     }
-    
-    vector<int> LambdaConfigReader::GetNominatorFile()
+
+    vector<int32> LambdaConfigReader::GetNominatorFile()
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -207,35 +222,35 @@ namespace DetCommonNS
 
     vector<float> LambdaConfigReader::GetPosition()
     {
-         LOG_TRACE(__FUNCTION__);
+        LOG_TRACE(__FUNCTION__);
 
-         return m_vfTranslation;
+        return m_vfTranslation;
     }
-    
 
-    void LambdaConfigReader::GetDistoredImageSize(int& nX,int& nY)
+
+    void LambdaConfigReader::GetDistoredImageSize(int32& nX,int32& nY)
     {
-         LOG_TRACE(__FUNCTION__);
+        LOG_TRACE(__FUNCTION__);
 
-         nX = m_nX;
-         nY = m_nY;
+        nX = m_nX;
+        nY = m_nY;
     }
 
-    int LambdaConfigReader::GetRawBufferLength()
+    int32 LambdaConfigReader::GetRawBufferLength()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_nMaxRawImageNumbers;
     }
 
-    int LambdaConfigReader::GetDecodedBufferLength()
+    int32 LambdaConfigReader::GetDecodedBufferLength()
     {
         LOG_TRACE(__FUNCTION__);
 
         return m_nMaxDecodedImageNumbers;
     }
 
-    vector<int> LambdaConfigReader::GetDecodingThreadNumbers()
+    vector<int32> LambdaConfigReader::GetDecodingThreadNumbers()
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -254,16 +269,22 @@ namespace DetCommonNS
         LOG_TRACE(__FUNCTION__);
 
         return m_bSlaveModule;
-    }  
-    
-    
+    }
+
+    void LambdaConfigReader::GetCompressionChunkConfig(int& nChunkIn,int& nChunkOut,int& nPostCode)
+    {
+        nChunkIn = m_nChunkIn;
+        nChunkOut = m_nChunkOut;
+        nPostCode = m_nPostCode;
+    }
+
     //////////////////////////////////////////////////
     ///Private Methods
     //////////////////////////////////////////////////
     void LambdaConfigReader::GetDataFromLookupFolders()
     {
         LOG_TRACE(__FUNCTION__);
-        
+
         string strFullPath = m_strConfigFilePath
             +"/"
             +m_strCurrentModuleName
@@ -286,11 +307,11 @@ namespace DetCommonNS
         if(vStrFiles.empty())
             LOG_STREAM(__FUNCTION__,ERROR,"There is no calibration file");
 
-        for(int i=0;i<vStrFiles.size();i++)
+        for(szt i=0;i<vStrFiles.size();i++)
         {
             string strPathTmp=string("");
-            
-            vector<int> vNData;
+
+            vector<int32> vNData;
 
             string strTmp = vStrFiles[i];
             //cout<<strTmp.substr(strTmp.length()-4,3)<<endl;
@@ -302,8 +323,12 @@ namespace DetCommonNS
                     vStrSplittedData.clear();
 
                 m_objStrUtil->StrSplit(strTmp,strDelimiter,vStrSplittedData);
-            
+
                 strPathTmp = strFullPath + "/" + strTmp;
+
+                //if file name cannot be splitted to correct size, skip
+                if(vStrSplittedData.size() < 4)
+                    continue;
 
                 //get data from binary file
                 if(m_objFileOp->FileExists(strPathTmp))
@@ -314,7 +339,7 @@ namespace DetCommonNS
                     vNData = m_objFileOp->ReadDataFromIntBinaryFile();
                     m_objFileOp->CloseFile();
                 }
-            
+
                 //check which file is actually read
                 if(vStrSplittedData[0] == strIndexPrefix)
                     m_vNIndex.assign(vNData.begin(),vNData.end());
@@ -322,17 +347,16 @@ namespace DetCommonNS
                     m_vNNominator.assign(vNData.begin(),vNData.end());
                 else if(vStrSplittedData[0] == strPixelMaskPrefix)
                     m_vUnPixelMask.assign(vNData.begin(),vNData.end());
-            
+
                 m_nX = atoi(vStrSplittedData[2].c_str());
                 m_nY = atoi(vStrSplittedData[3].c_str());
-            
-                if(vNData.size()!= m_nX*m_nY)
+
+                if(vNData.size()!= static_cast<szt>(m_nX*m_nY))
                     LOG_STREAM(__FUNCTION__,ERROR,"File size is not correct");
             }
-            
         }
     }
-    
+
     void LambdaConfigReader::GetDataFromSystemConfig()
     {
         LOG_TRACE(__FUNCTION__);
@@ -352,10 +376,11 @@ namespace DetCommonNS
     void LambdaConfigReader::GetDataFromDetConfig()
     {
         LOG_TRACE(__FUNCTION__);
-        
+
         //check if module name is empty
         if(m_strCurrentModuleName.empty())
-            LOG_STREAM(__FUNCTION__,ERROR,"cannot load detector config files, module name is empty!!!");
+            LOG_STREAM(__FUNCTION__,ERROR,
+                       "cannot load detector config files, module name is empty!!!");
         else
         {
             vector<string> vStrCfg;
@@ -388,18 +413,18 @@ namespace DetCommonNS
         //* means A or B
         string strChipTxtFileFormat = string("Chip#_DACsetting.txt");
         string strChipBinFileFormat = string("Chip#_TH*setting.bin");
-	string strChipMaskFileFormat = string("Chip#_mask.bin");
+        string strChipMaskFileFormat = string("Chip#_mask.bin");
         string strTxtFileNameTemp;
         string strBinFileNameTemp1;
         string strBinFileNameTemp2;
-	string strMaskFileNameTemp;
+        string strMaskFileNameTemp;
         //load configurations for each chip
-        for(int i=0;i<m_vCurrentChip.size();i++)
+        for(szt i=0;i<m_vCurrentChip.size();i++)
         {
             strTxtFileNameTemp = strChipTxtFileFormat;
             strBinFileNameTemp1 = strChipBinFileFormat;
             strBinFileNameTemp2 = strChipBinFileFormat;
-	    strMaskFileNameTemp = strChipMaskFileFormat;
+            strMaskFileNameTemp = strChipMaskFileFormat;
             m_objStrUtil->FindAndReplace(strTxtFileNameTemp,"#",to_string((long long int)m_vCurrentChip[i]));
             strFullPath =  m_strConfigFilePath+"/"
                 +m_strCurrentModuleName
@@ -410,7 +435,7 @@ namespace DetCommonNS
             if(m_objFileOp->FileExists(strFullPath))
             {
                 m_objFileOp->SetFilePath(strFullPath);
-            
+
                 //read data from Chip#_DACsetting.tx
                 m_objFileOp->OpenFile(false);
                 vStrCfg = m_objFileOp->ReadDataFromFile();
@@ -418,7 +443,7 @@ namespace DetCommonNS
                 ExtractDataFromChipConfig(vStrCfg,m_vCurrentChip[i]-1);
                 vStrCfg.clear();
             }
-            
+
 
 
             //read threshold adjust files (thresholds A and B)
@@ -434,14 +459,14 @@ namespace DetCommonNS
             if(m_objFileOp->FileExists(strFullPath))
             {
                 m_objFileOp->SetFilePath(strFullPath);
-            
+
                 //read from THAsetting.bin
                 m_objFileOp->OpenFile(true);
                 m_vStCurrentChipData[m_vCurrentChip[i]-1].vConfigTHA = m_objFileOp->ReadDataFromBinaryFile();
                 m_objFileOp->CloseFile();
             }
-            
-             
+
+
             m_objStrUtil->FindAndReplace(strBinFileNameTemp2,"#",to_string((long long int)m_vCurrentChip[i]));
             m_objStrUtil->FindAndReplace(strBinFileNameTemp2,"*","B");
             strFullPath =  m_strConfigFilePath+"/"
@@ -460,8 +485,8 @@ namespace DetCommonNS
                 m_objFileOp->CloseFile();
             }
 
-	    // Read pixel mask file - this will mask pixels in HARDWARE (i.e. pixel will return 0)
-	    m_objStrUtil->FindAndReplace(strMaskFileNameTemp,"#",to_string((long long int)m_vCurrentChip[i]));
+            // Read pixel mask file - this will mask pixels in HARDWARE (i.e. pixel will return 0)
+            m_objStrUtil->FindAndReplace(strMaskFileNameTemp,"#",to_string((long long int)m_vCurrentChip[i]));
             strFullPath =  m_strConfigFilePath+"/"
                 +m_strCurrentModuleName
                 +"/"
@@ -472,31 +497,31 @@ namespace DetCommonNS
             if(m_objFileOp->FileExists(strFullPath))
             {
                 m_objFileOp->SetFilePath(strFullPath);
-            
+
                 //read from THAsetting.bin
                 m_objFileOp->OpenFile(true);
                 m_vStCurrentChipData[m_vCurrentChip[i]-1].vMaskBit = m_objFileOp->ReadDataFromBinaryFile();
                 m_objFileOp->CloseFile();
             }
 
-             
+
         }
     }
-    
+
     void  LambdaConfigReader::ExtractDataFromSysConfig(vector<string> vStrSysCfg)
     {
         LOG_TRACE(__FUNCTION__);
-            
+
         if(vStrSysCfg.size()==0)
         {
             LOG_STREAM(__FUNCTION__,ERROR,"No data can be extract for system config!!!");
             return;
         }
-        
+
         vector<string> vSplittedVal;
         string strDelimiter = " ";
-            
-        for(int i=0;i<vStrSysCfg.size();i++)
+
+        for(szt i=0;i<vStrSysCfg.size();i++)
         {
             if(!vSplittedVal.empty())
                 vSplittedVal.clear();
@@ -506,7 +531,7 @@ namespace DetCommonNS
             //e.g. defineOperationMode TwentyFourBit 0 3 Twenty_four_bit_readout
             m_objStrUtil->StrSplit(vStrSysCfg[i],strDelimiter,vSplittedVal);
 
-            for(int j=0;j<vSplittedVal.size();j++)
+            for(szt j=0;j<vSplittedVal.size();j++)
             {
                 if(vSplittedVal[0] == "defineOperationMode")
                 {
@@ -516,21 +541,27 @@ namespace DetCommonNS
                     //vSplittedVal[1] operation mode name
                     //vSplittedVal[2] refers to CRW off/on(relevant for trigger mode)
                     //vSplittedVal[3] gives No of subimages (relevant for reading image data)
-                    //vSplittedVal[4] is a description of what the mode does. In this part, we need to replace underscore with space
-                        
-                    string strOpName = vSplittedVal[1];
+                    //vSplittedVal[4] is a description of what the mode does.
+                    //In this part, we need to replace underscore with space
+
+                    //string strOpName = vSplittedVal[1];
                     //m_stDetCfgData.bCRW = atoi(vSplittedVal[2].c_str());
 
-                    int nSubImgs = atoi(vSplittedVal[3].c_str());
+                    //int nSubImgs = atoi(vSplittedVal[3].c_str());
                     //this->SetSubImgNo(nSubImgs);
-                        
-                    string strOpTextMode = vSplittedVal[4];
-                    //FindAndReplace(strOpTextMode,"_"," ");    
+
+                    //string strOpTextMode = vSplittedVal[4];
+                    //FindAndReplace(strOpTextMode,"_"," ");
                 }
                 else if(vSplittedVal[0] == "modulesPresent")
                 {
                     //vSplittedVal[1] module name
                     m_strCurrentModuleName = vSplittedVal[1];
+                }
+	        else if(vSplittedVal[0] == "systemType")
+                {
+                    //vSplittedVal[1] module name
+                    m_strSystemType = vSplittedVal[1];
                 }
                 else if(vSplittedVal[0] == "modulesPosition")
                 {
@@ -554,11 +585,11 @@ namespace DetCommonNS
                 {
                     m_bMultilink = (atoi(vSplittedVal[1].c_str()) == 1);
                 }
-		else if(vSplittedVal[0] == "setSlaveModule")
+                else if(vSplittedVal[0] == "setSlaveModule")
                 {
                     m_bSlaveModule = (atoi(vSplittedVal[1].c_str()) == 1);
-		}
-		else if(vSplittedVal[0] == "setBurstMode")
+                }
+                else if(vSplittedVal[0] == "setBurstMode")
                 {
                     m_bBurstMode = (atoi(vSplittedVal[1].c_str()) != 0);
                 }
@@ -615,26 +646,46 @@ namespace DetCommonNS
                 {
                     m_nMaxDecodedImageNumbers = atoi(vSplittedVal[1].c_str());
                 }
-		else if(vSplittedVal[0] == "defineDecodingThreads")
+                else if(vSplittedVal[0] == "defineDecodingThreads")
                 {
-		    // Allows optimisation of number of decoding threads running under different circumstances
-		    // Aim - optimise speed and reliability when running on different computers
-		    if(vSplittedVal.size()==5) // Require correct number of parameters
-		    {
-			m_vNDecodingThreads[0] = atoi(vSplittedVal[1].c_str()); // Decoders that always run
-			m_vNDecodingThreads[1] = atoi(vSplittedVal[2].c_str()); // Decoders that run IF shutter time above critical value (see below), or image reception finished
-			m_vNDecodingThreads[2] = atoi(vSplittedVal[3].c_str()); // Decoders that run ONLY when image reception finished
-			m_dCriticalShutterTime = atof(vSplittedVal[4].c_str()); // Critical shutter time
-		    }
-		    else
-		    {
-			LOG_STREAM(__FUNCTION__,ERROR,"Wrong number of parameters for decoding threads!!!");
-		    }
+                    // Allows optimisation of number of decoding threads running
+                    // under different circumstances
+                    // Aim - optimise speed and reliability when running on different computers
+                    // Require correct number of parameters
+                    if(vSplittedVal.size()==5)
+                    {
+                        // Decoders that always run
+                        m_vNDecodingThreads[0] = atoi(vSplittedVal[1].c_str());
+                        // Decoders that run IF shutter time above critical value
+                        // (see below), or image reception finished
+                        m_vNDecodingThreads[1] = atoi(vSplittedVal[2].c_str());
+                        // Decoders that run ONLY when image reception finished
+                        m_vNDecodingThreads[2] = atoi(vSplittedVal[3].c_str());
+                        // Critical shutter time
+                        m_dCriticalShutterTime = atof(vSplittedVal[4].c_str());
+                    }
+                    else
+                    {
+                        LOG_STREAM(__FUNCTION__,ERROR,
+                                   "Wrong number of parameters for decoding threads!!!");
+                    }
+                }
+                else if(vSplittedVal[0]=="defineChunkIn")
+                {
+                    m_nChunkIn = atoi(vSplittedVal[1].c_str());
+                }
+                else if(vSplittedVal[0]=="defineChunkOut")
+                {
+                    m_nChunkOut = atoi(vSplittedVal[1].c_str());
+                }
+                else if(vSplittedVal[0]=="definePostCode")
+                {
+                    m_nPostCode = atoi(vSplittedVal[1].c_str());
                 }
             }
         }
     }
-    
+
     void LambdaConfigReader::ExtractDataFromDetConfig(vector<string> vStrDetCfg)
     {
         LOG_TRACE(__FUNCTION__);
@@ -644,34 +695,34 @@ namespace DetCommonNS
             LOG_STREAM(__FUNCTION__,ERROR,"No data can be extract for detector config!!!");
             return;
         }
-	    
+
         vector<string> vSplittedVal;
         string strDelimiter = " ";
 
         //check each string in data
-        for(int i=0;i<vStrDetCfg.size();i++)
+        for(szt i=0;i<vStrDetCfg.size();i++)
         {
             if(!vSplittedVal.empty())
                 vSplittedVal.clear();
 
             m_objStrUtil->StrSplit(vStrDetCfg[i],strDelimiter,vSplittedVal);
 
-            for(int j=0;j<vSplittedVal.size();j++)
+            for(szt j=0;j<vSplittedVal.size();j++)
             {
                 string strResult = vSplittedVal[0];
-		 
+
                 // skip comments line
                 if(strResult != "//")
                 {
                     if(strResult == "chipsPresent")
                     {
-                        for(int k=1;k<vSplittedVal.size();k++)
+                        for(szt k=1;k<vSplittedVal.size();k++)
                             m_vCurrentChip.push_back(atoi(vSplittedVal[k].c_str()));
                         break;
                     }
                     else if(strResult == "thresholdsToScan")
                     {
-                        for(int k=1;k<vSplittedVal.size();k++)
+                        for(szt k=1;k<vSplittedVal.size();k++)
                             m_stDetCfgData.vThresholdScan[k-1] = atoi(vSplittedVal[k].c_str());
                         break;
                     }
@@ -689,7 +740,7 @@ namespace DetCommonNS
                     }
                     else if(strResult == "equalise")
                     {
-                        m_stDetCfgData.bEqualise = (atoi(vSplittedVal[1].c_str())!=0); 
+                        m_stDetCfgData.bEqualise = (atoi(vSplittedVal[1].c_str())!=0);
                     }
                     else if(strResult == "colourMode")
                     {
@@ -735,9 +786,9 @@ namespace DetCommonNS
             }
         }
     }
-    
-  
-    void LambdaConfigReader::ExtractDataFromChipConfig(vector<string> vStrChipCfg,int nIdx)
+
+
+    void LambdaConfigReader::ExtractDataFromChipConfig(vector<string> vStrChipCfg,int32 nIdx)
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -746,18 +797,18 @@ namespace DetCommonNS
             LOG_STREAM(__FUNCTION__,ERROR,"No data can be extract for chip config!!!");
             return;
         }
-        
+
         vector<string> vSplittedVal;
         string strDelimiter = " ";
-            
-        for(int i=0;i<vStrChipCfg.size();i++)
+
+        for(szt i=0;i<vStrChipCfg.size();i++)
         {
             if(!vSplittedVal.empty())
                 vSplittedVal.clear();
 
             m_objStrUtil->StrSplit(vStrChipCfg[i],strDelimiter,vSplittedVal);
 
-            for(int j=0;j<vSplittedVal.size();j++)
+            for(szt j=0;j<vSplittedVal.size();j++)
             {
                 string strResult = vSplittedVal[0];
                 if(strResult == "senseDAC")
@@ -838,18 +889,19 @@ namespace DetCommonNS
                 }
                 else if(strResult == "keVtoThrSlopes")
                 {
-                    for(int k=1;k<vSplittedVal.size();k++)
-                        m_vStCurrentChipData[nIdx].vKeVToThrSlope[k-1] = atof(vSplittedVal[k].c_str());
+                    for(szt k=1;k<vSplittedVal.size();k++)
+                        m_vStCurrentChipData[nIdx].vKeVToThrSlope[k-1]
+                            = atof(vSplittedVal[k].c_str());
                     break;
                 }
                 else if(strResult == "thrBaselines")
                 {
-                    for(int k=1;k<vSplittedVal.size();k++)
-                        m_vStCurrentChipData[nIdx].vThrBaseline[k-1] = atof(vSplittedVal[k].c_str());
+                    for(szt k=1;k<vSplittedVal.size();k++)
+                        m_vStCurrentChipData[nIdx].vThrBaseline[k-1]
+                            = atof(vSplittedVal[k].c_str());
                     break;
                 }
             }
         }
     }
-}///end of namespace DetCommonNS
-
+}
