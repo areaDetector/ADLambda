@@ -1,0 +1,82 @@
+lambda@LAMBDADETECTOR:~/Documents/lambda$ startlambda.sh
+ConfigFilePath:/localdata/config/
+[ERROR] (GetFileList): cannot open directory!
+[ERROR] (GetDataFromLookupFolders): There is no calibration file
+Detector response 1
+Detector response 1
+Detector response 1
+Detector response 1
+module id is:504G10
+firmware version:unknown
+libfsdetcore version:0.9
+liblambda version:0.9
+Updating parameters
+Camera is ready!!!
+Ready to accept request
+
+jive
+listener task starts
+Listerner task ends
+Acquisition Finished!!!
+Already acquired images: 1
+================================
+File Name is: test_00001
+This acquisition step costs: 2seconds
+Compression Mode is enabled.
+Compression shuffle is:0
+Compression Ratio is:2
+Image size :256 X 256
+ShutterTime is:2000
+Frames needs to be Acquired is:1
+Frames actually Acquired is: 1
+Frames Loss is: 0
+================================
+Updating parameters
+ConfigFilePath:/localdata/config/
+[ERROR] (GetFileList): cannot open directory!
+[ERROR] (GetDataFromLookupFolders): There is no calibration file
+Detector response 1
+Detector response 1
+Detector response 1
+Detector response 1
+module id is:504G10
+firmware version:unknown
+libfsdetcore version:0.9
+liblambda version:0.9
+Updating parameters
+Camera is ready!!!
+listener task starts
+Listerner task ends
+Acquisition Finished!!!
+Already acquired images: 1
+================================
+File Name is: test_00001
+This acquisition step costs: 2seconds
+Compression Mode is enabled.
+Compression shuffle is:0
+Compression Ratio is:2
+Image size :256 X 256
+ShutterTime is:2000
+Frames needs to be Acquired is:1
+Frames actually Acquired is: 1
+Frames Loss is: 0
+================================
+Updating parameters
+listener task starts
+Listerner task ends
+Acquisition Finished!!!
+Already acquired images: 1
+================================
+File Name is: test_00002
+This acquisition step costs: 2seconds
+Compression Mode is enabled.
+Compression shuffle is:0
+Compression Ratio is:2
+Image size :256 X 256
+ShutterTime is:2000
+Frames needs to be Acquired is:1
+Frames actually Acquired is: 1
+Frames Loss is: 0
+================================
+Updating parameters
+

@@ -1,0 +1,456 @@
+lambda@LAMBDADETECTOR:/epics/support/areaDetector-3-3/ADLambda/iocs/LambdaIOC/iocBoot/iocLambda$ ./startEPICS.sh
+errlogInit(20000)
+< envPaths
+epicsEnvSet("IOC","iocLambda")
+epicsEnvSet("TOP","/epics/support/areaDetector-3-3/ADLambda/iocs/LambdaIOC")
+epicsEnvSet("ADLAMBDA","/epics/support/areaDetector-3-3/ADLambda")
+epicsEnvSet("SUPPORT","/epics/support")
+epicsEnvSet("ASYN","/epics/support/asyn")
+epicsEnvSet("AREA_DETECTOR","/epics/support/areaDetector-3-3")
+epicsEnvSet("ADSUPPORT","/epics/support/areaDetector-3-3/ADSupport")
+epicsEnvSet("ADCORE","/epics/support/areaDetector-3-3/ADCore")
+epicsEnvSet("AUTOSAVE","/epics/support/autosave")
+epicsEnvSet("BUSY","/epics/support/busy")
+epicsEnvSet("CALC","/epics/support/calc")
+epicsEnvSet("SNCSEQ","/epics/support/seq-2-2-5")
+epicsEnvSet("SSCAN","/epics/support/sscan")
+epicsEnvSet("DEVIOCSTATS","/epics/support/iocStats")
+epicsEnvSet("EPICS_BASE","/epics/base-7-0-1-1")
+#epicsThreadSleep(20)
+dbLoadDatabase("/epics/support/areaDetector-3-3/ADLambda/iocs/LambdaIOC/dbd/LambdaApp.dbd")
+LambdaApp_registerRecordDeviceDriver(pdbbase) 
+# Prefix for all records
+epicsEnvSet("PREFIX", "XF:10IDC-BI{Lambda-Cam:1}")
+# The port name for the detector
+epicsEnvSet("PORT",   "LAMBDA1")
+# The queue size for all plugins
+epicsEnvSet("QSIZE",  "30")
+# The maximim image width; used for row profiles in the NDPluginStats plugin
+epicsEnvSet("XSIZE",  "256")
+# The maximim image height; used for column profiles in the NDPluginStats plugin
+epicsEnvSet("YSIZE",  "256")
+# The maximum number of time seried points in the NDPluginStats plugin
+epicsEnvSet("NCHANS", "2048")
+# The maximum number of frames buffered in the NDPluginCircularBuff plugin
+epicsEnvSet("CBUFFS", "500")
+# The search path for database files
+epicsEnvSet("EPICS_DB_INCLUDE_PATH", "/epics/support/areaDetector-3-3/ADCore/db")
+#epicsThreadSleep(15)
+# Create a PICam driver
+# LambdaConfig(const char *portName, const char * configPath, IDType, IDValue, maxBuffers, size_t maxMemory, int priority, int stackSize)
+# This is for a
+#/** Configuration command for Lambda driver; creates a new ADLambda object.
+# * \param[in] portName The name of the asyn port driver to be created.
+# * \param[in] configPath to the config files.
+# * \param[in] maxBuffers The maximum number of NDArray buffers that the
+# *            NDArrayPool for this driver is
+# *            allowed to allocate. Set this to -1 to allow an unlimited number
+# *            of buffers.
+# * \param[in] maxMemory The maximum amount of memory that the NDArrayPool for
+# *            this driver is allowed to allocate. Set this to -1 to allow an
+# *            unlimited amount of memory.
+# * \param[in] priority The thread priority for the asyn port driver thread if
+# *            ASYN_CANBLOCK is set in asynFlags.
+# * \param[in] stackSize The stack size for the asyn port driver thread if
+# *            ASYN_CANBLOCK is set in asynFlags.
+# */
+# config directory contains IP addresses, gains, and Medapix3 chip parameters
+#int LambdaConfig(const char *portName, const char* configPath, int maxBuffers, size_t maxMemory, int priority, int stackSize) {
+LambdaConfig("LAMBDA1", "config",  0, 0, 0, 0)
+2018/07/05 22:31:36.249 Lambda:connect Enter config
+[ERROR] (GetFileList): cannot open directory!
+[ERROR] (GetDataFromLookupFolders): There is no calibration file
+Detector response 1
+Detector response 1
+Detector response 1
+Detector response 1
+2018/07/05 22:32:16.584 Lambda:connect Leaving
+2018/07/05 22:32:16.584 Lambda:initializeDetector imageHeight 0, imageWidth0
+Done making instanceepicsThreadSleep(2)
+asynSetTraceIOMask(LAMBDA1, 0, 2)
+#asynSetTraceMask($(PORT),0,0xff)
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/ADBase.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=cam1:,PORT=LAMBDA1,ADDR=0,TIMEOUT=1")
+dbLoadRecords("/epics/support/areaDetector-3-3/ADLambda/db/ADLambda.template","P=XF:10IDC-BI{Lambda-Cam:1},R=cam1:,PORT=LAMBDA1,ADDR=0,TIMEOUT=1")
+#
+# Create a standard arrays plugin, set it to get data from Driver.
+#int NDStdArraysConfigure(const char *portName, int queueSize, int blockingCallbacks, const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
+#                          int priority, int stackSize, int maxThreads)
+NDStdArraysConfigure("Image1", 3, 0, "LAMBDA1", 0)
+#dbLoadRecords("$(ADCORE)/db/NDPluginBase.template","P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),NDARRAY_ADDR=0")
+#dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,TYPE=Int16,SIZE=16,FTVL=SHORT,NELEMENTS=802896")
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/NDStdArrays.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,TYPE=Int16,FTVL=SHORT,NELEMENTS=65536")
+macLib: macro NDARRAY_PORT is undefined (expanding string     field(VAL,  "$(NDARRAY_PORT)")
+)
+Warning: 'NDPluginBase.template' line 31 has undefined macros
+XF:10IDC-BI{Lambda-Cam:1}image1:NDArrayPort.VAL Has unexpanded macro
+Can't set "XF:10IDC-BI{Lambda-Cam:1}image1:NDArrayPort.VAL" to "$(NDARRAY_PORT,undefined)" Error (512,512)
+Error at or before ")" in path "/epics/support/areaDetector-3-3/ADCore/db"  file "NDPluginBase.template" line 31
+ in file "/epics/support/areaDetector-3-3/ADCore/db/NDStdArrays.template" line 7
+#
+# Load all other plugins using commonPlugins.cmd
+< /epics/support/areaDetector-3-3/ADCore/iocBoot/commonPlugins.cmd
+# This is an example file for creating plugins
+# It uses the following environment variable macros
+# Many of the parameters defined in this file are also in commonPlugins_settings.req so if autosave is being
+# use the autosave value will replace the value passed to this file.
+# $(PREFIX)      Prefix for all records
+# $(PORT)        The port name for the detector.  In autosave.
+# $(QSIZE)       The queue size for all plugins.  In autosave.
+# $(XSIZE)       The maximum image width; used to set the maximum size for row profiles in the NDPluginStats plugin and 1-D FFT
+#                   profiles in NDPluginFFT.
+# $(YSIZE)       The maximum image height; used to set the maximum size for column profiles in the NDPluginStats plugin
+# $(NCHANS)      The maximum number of time series points in the NDPluginStats, NDPluginROIStats, and NDPluginAttribute plugins
+# $(CBUFFS)      The maximum number of frames buffered in the NDPluginCircularBuff plugin
+# $(MAX_THREADS) The maximum number of threads for plugins which can run in multiple threads. Defaults to 5.
+# Create a netCDF file saving plugin
+NDFileNetCDFConfigure("FileNetCDF1", 30, 0, "LAMBDA1", 0)
+dbLoadRecords("NDFileNetCDF.template","P=XF:10IDC-BI{Lambda-Cam:1},R=netCDF1:,PORT=FileNetCDF1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a TIFF file saving plugin
+NDFileTIFFConfigure("FileTIFF1", 30, 0, "LAMBDA1", 0)
+dbLoadRecords("NDFileTIFF.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=TIFF1:,PORT=FileTIFF1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a JPEG file saving plugin
+NDFileJPEGConfigure("FileJPEG1", 30, 0, "LAMBDA1", 0)
+dbLoadRecords("NDFileJPEG.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=JPEG1:,PORT=FileJPEG1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a NeXus file saving plugin
+NDFileNexusConfigure("FileNexus1", 30, 0, "LAMBDA1", 0)
+dbLoadRecords("NDFileNexus.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Nexus1:,PORT=FileNexus1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create an HDF5 file saving plugin
+NDFileHDF5Configure("FileHDF1", 30, 0, "LAMBDA1", 0)
+dbLoadRecords("NDFileHDF5.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=HDF1:,PORT=FileHDF1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a Magick file saving plugin
+#NDFileMagickConfigure("FileMagick1", $(QSIZE), 0, "$(PORT)", 0)
+#dbLoadRecords("NDFileMagick.template","P=$(PREFIX),R=Magick1:,PORT=FileMagick1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
+# Create 4 ROI plugins
+NDROIConfigure("ROI1", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDROI.template",       "P=XF:10IDC-BI{Lambda-Cam:1},R=ROI1:,  PORT=ROI1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+NDROIConfigure("ROI2", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDROI.template",       "P=XF:10IDC-BI{Lambda-Cam:1},R=ROI2:,  PORT=ROI2,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+NDROIConfigure("ROI3", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDROI.template",       "P=XF:10IDC-BI{Lambda-Cam:1},R=ROI3:,  PORT=ROI3,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+NDROIConfigure("ROI4", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDROI.template",       "P=XF:10IDC-BI{Lambda-Cam:1},R=ROI4:,  PORT=ROI4,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create 8 ROIStat plugins
+NDROIStatConfigure("ROISTAT1", 30, 0, "LAMBDA1", 0, 8, 0, 0, 0, 0, 5)
+dbLoadRecords("NDROIStat.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:  ,PORT=ROISTAT1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:1:,PORT=ROISTAT1,ADDR=0,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:2:,PORT=ROISTAT1,ADDR=1,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:3:,PORT=ROISTAT1,ADDR=2,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:4:,PORT=ROISTAT1,ADDR=3,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:5:,PORT=ROISTAT1,ADDR=4,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:6:,PORT=ROISTAT1,ADDR=5,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:7:,PORT=ROISTAT1,ADDR=6,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDROIStatN.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=ROIStat1:8:,PORT=ROISTAT1,ADDR=7,TIMEOUT=1,NCHANS=2048")
+# Create a processing plugin
+NDProcessConfigure("PROC1", 30, 0, "LAMBDA1", 0, 0, 0)
+dbLoadRecords("NDProcess.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Proc1:,  PORT=PROC1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a TIFF file plugin to read dark and flatfield images into the processing plugin
+NDFileTIFFConfigure("PROC1TIFF", 30, 0, "LAMBDA1", 0)
+dbLoadRecords("NDFileTIFF.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Proc1:TIFF:,PORT=PROC1TIFF,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a scatter plugin
+NDScatterConfigure("SCATTER1", 30, 0, "LAMBDA1", 0, 0, 0)
+dbLoadRecords("NDScatter.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Scatter1:,  PORT=SCATTER1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a gather plugin with 8 ports
+NDGatherConfigure("GATHER1", 30, 0, 8, 0, 0)
+dbLoadRecords("NDGather.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, PORT=GATHER1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=1, PORT=GATHER1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=2, PORT=GATHER1,ADDR=1,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=3, PORT=GATHER1,ADDR=2,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=4, PORT=GATHER1,ADDR=3,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=5, PORT=GATHER1,ADDR=4,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=6, PORT=GATHER1,ADDR=5,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=7, PORT=GATHER1,ADDR=6,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDGatherN.template",   "P=XF:10IDC-BI{Lambda-Cam:1},R=Gather1:, N=8, PORT=GATHER1,ADDR=7,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create 5 statistics plugins
+NDStatsConfigure("STATS1", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDStats.template",     "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats1:,  PORT=STATS1,ADDR=0,TIMEOUT=1,HIST_SIZE=256,XSIZE=256,YSIZE=256,NCHANS=2048,NDARRAY_PORT=LAMBDA1")
+NDTimeSeriesConfigure("STATS1_TS", 30, 0, "STATS1", 1, 23)
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/NDTimeSeries.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats1:TS:, PORT=STATS1_TS,ADDR=0,TIMEOUT=1,NDARRAY_PORT=STATS1,NDARRAY_ADDR=1,NCHANS=2048,ENABLED=1")
+NDStatsConfigure("STATS2", 30, 0, "ROI1",    0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDStats.template",     "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats2:,  PORT=STATS2,ADDR=0,TIMEOUT=1,HIST_SIZE=256,XSIZE=256,YSIZE=256,NCHANS=2048,NDARRAY_PORT=LAMBDA1")
+NDTimeSeriesConfigure("STATS2_TS", 30, 0, "STATS2", 1, 23)
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/NDTimeSeries.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats2:TS:, PORT=STATS2_TS,ADDR=0,TIMEOUT=1,NDARRAY_PORT=STATS2,NDARRAY_ADDR=1,NCHANS=2048,ENABLED=1")
+NDStatsConfigure("STATS3", 30, 0, "ROI2",    0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDStats.template",     "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats3:,  PORT=STATS3,ADDR=0,TIMEOUT=1,HIST_SIZE=256,XSIZE=256,YSIZE=256,NCHANS=2048,NDARRAY_PORT=LAMBDA1")
+NDTimeSeriesConfigure("STATS3_TS", 30, 0, "STATS3", 1, 23)
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/NDTimeSeries.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats3:TS:, PORT=STATS3_TS,ADDR=0,TIMEOUT=1,NDARRAY_PORT=STATS3,NDARRAY_ADDR=1,NCHANS=2048,ENABLED=1")
+NDStatsConfigure("STATS4", 30, 0, "ROI3",    0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDStats.template",     "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats4:,  PORT=STATS4,ADDR=0,TIMEOUT=1,HIST_SIZE=256,XSIZE=256,YSIZE=256,NCHANS=2048,NDARRAY_PORT=LAMBDA1")
+NDTimeSeriesConfigure("STATS4_TS", 30, 0, "STATS4", 1, 23)
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/NDTimeSeries.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats4:TS:, PORT=STATS4_TS,ADDR=0,TIMEOUT=1,NDARRAY_PORT=STATS4,NDARRAY_ADDR=1,NCHANS=2048,ENABLED=1")
+NDStatsConfigure("STATS5", 30, 0, "ROI4",    0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDStats.template",     "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats5:,  PORT=STATS5,ADDR=0,TIMEOUT=1,HIST_SIZE=256,XSIZE=256,YSIZE=256,NCHANS=2048,NDARRAY_PORT=LAMBDA1")
+NDTimeSeriesConfigure("STATS5_TS", 30, 0, "STATS5", 1, 23)
+dbLoadRecords("/epics/support/areaDetector-3-3/ADCore/db/NDTimeSeries.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Stats5:TS:, PORT=STATS5_TS,ADDR=0,TIMEOUT=1,NDARRAY_PORT=STATS5,NDARRAY_ADDR=1,NCHANS=2048,ENABLED=1")
+# Create a transform plugin
+NDTransformConfigure("TRANS1", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDTransform.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Trans1:,  PORT=TRANS1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create an overlay plugin with 8 overlays
+NDOverlayConfigure("OVER1", 30, 0, "LAMBDA1", 0, 8, 0, 0, 0, 0, 5)
+dbLoadRecords("NDOverlay.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:, PORT=OVER1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:1:,NAME=ROI1,   SHAPE=1,O=Over1:,XPOS=XF:10IDC-BI{Lambda-Cam:1}ROI1:MinX_RBV,YPOS=XF:10IDC-BI{Lambda-Cam:1}ROI1:MinY_RBV,XSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI1:SizeX_RBV,YSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI1:SizeY_RBV,PORT=OVER1,ADDR=0,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:2:,NAME=ROI2,   SHAPE=1,O=Over1:,XPOS=XF:10IDC-BI{Lambda-Cam:1}ROI2:MinX_RBV,YPOS=XF:10IDC-BI{Lambda-Cam:1}ROI2:MinY_RBV,XSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI2:SizeX_RBV,YSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI2:SizeY_RBV,PORT=OVER1,ADDR=1,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:3:,NAME=ROI3,   SHAPE=1,O=Over1:,XPOS=XF:10IDC-BI{Lambda-Cam:1}ROI3:MinX_RBV,YPOS=XF:10IDC-BI{Lambda-Cam:1}ROI3:MinY_RBV,XSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI3:SizeX_RBV,YSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI3:SizeY_RBV,PORT=OVER1,ADDR=2,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:4:,NAME=ROI4,   SHAPE=1,O=Over1:,XPOS=XF:10IDC-BI{Lambda-Cam:1}ROI4:MinX_RBV,YPOS=XF:10IDC-BI{Lambda-Cam:1}ROI4:MinY_RBV,XSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI4:SizeX_RBV,YSIZE=XF:10IDC-BI{Lambda-Cam:1}ROI4:SizeY_RBV,PORT=OVER1,ADDR=3,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:5:,NAME=Cursor1,SHAPE=1,O=Over1:,XPOS=junk,                  YPOS=junk,                  XSIZE=junk,                   YSIZE=junk,                   PORT=OVER1,ADDR=4,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:6:,NAME=Cursor2,SHAPE=1,O=Over1:,XPOS=junk,                  YPOS=junk,                  XSIZE=junk,                   YSIZE=junk,                   PORT=OVER1,ADDR=5,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:7:,NAME=Box1,   SHAPE=1,O=Over1:,XPOS=junk,                  YPOS=junk,                  XSIZE=junk,                   YSIZE=junk,                   PORT=OVER1,ADDR=6,TIMEOUT=1")
+dbLoadRecords("NDOverlayN.template","P=XF:10IDC-BI{Lambda-Cam:1},R=Over1:8:,NAME=Box2,   SHAPE=1,O=Over1:,XPOS=junk,                  YPOS=junk,                  XSIZE=junk,                   YSIZE=junk,                   PORT=OVER1,ADDR=7,TIMEOUT=1")
+# Create 2 color conversion plugins
+NDColorConvertConfigure("CC1", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDColorConvert.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=CC1:,  PORT=CC1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+NDColorConvertConfigure("CC2", 30, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDColorConvert.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=CC2:,  PORT=CC2,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create a circular buffer plugin
+NDCircularBuffConfigure("CB1", 30, 0, "LAMBDA1", 0, 500, 0)
+dbLoadRecords("NDCircularBuff.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=CB1:,  PORT=CB1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Create an NDAttribute plugin with 8 attributes
+NDAttrConfigure("ATTR1", 30, 0, "LAMBDA1", 0, 8, 0, 0, 0)
+dbLoadRecords("NDAttribute.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:,    PORT=ATTR1,ADDR=0,TIMEOUT=1,NCHANS=2048,NDARRAY_PORT=LAMBDA1")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:1:,  PORT=ATTR1,ADDR=0,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:2:,  PORT=ATTR1,ADDR=1,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:3:,  PORT=ATTR1,ADDR=2,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:4:,  PORT=ATTR1,ADDR=3,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:5:,  PORT=ATTR1,ADDR=4,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:6:,  PORT=ATTR1,ADDR=5,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:7:,  PORT=ATTR1,ADDR=6,TIMEOUT=1,NCHANS=2048")
+dbLoadRecords("NDAttributeN.template", "P=XF:10IDC-BI{Lambda-Cam:1},R=Attr1:8:,  PORT=ATTR1,ADDR=7,TIMEOUT=1,NCHANS=2048")
+# Create an FFT plugin
+NDFFTConfigure("FFT1", 3, 0, "LAMBDA1", 0, 0, 0, 0, 0, 5)
+dbLoadRecords("NDFFT.template", "P=XF:10IDC-BI{Lambda-Cam:1}, R=FFT1:, PORT=FFT1, ADDR=0, TIMEOUT=1, NDARRAY_PORT=LAMBDA1, NAME=FFT1, NCHANS=256")
+set_requestfile_path("./")
+set_requestfile_path("/epics/support/areaDetector-3-3/ADCore/ADApp/Db")
+set_requestfile_path("/epics/support/areaDetector-3-3/ADCore/iocBoot")
+set_savefile_path("./autosave")
+set_pass0_restoreFile("auto_settings.sav")
+set_pass1_restoreFile("auto_settings.sav")
+save_restoreSet_status_prefix("XF:10IDC-BI{Lambda-Cam:1}")
+dbLoadRecords("/epics/support/autosave/asApp/Db/save_restoreStatus.db", "P=XF:10IDC-BI{Lambda-Cam:1}")
+# Optional: load NDPluginPva plugin
+NDPvaConfigure("PVA1", 30, 0, "LAMBDA1", 0, XF:10IDC-BI{Lambda-Cam:1}Pva1:Image, 0, 0, 0)
+dbLoadRecords("NDPva.template",  "P=XF:10IDC-BI{Lambda-Cam:1},R=Pva1:, PORT=PVA1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=LAMBDA1")
+# Must start PVA server if this is enabled
+startPVAServer
+# Optional: load NDPluginEdge plugin
+#NDEdgeConfigure("EDGE1", $(QSIZE), 0, "$(PORT)", 0, 0, 0, 0)
+#dbLoadRecords("$(ADPLUGINEDGE)/db/NDEdge.template",  "P=$(PREFIX),R=Edge1:, PORT=EDGE1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
+#set_requestfile_path("$(ADPLUGINEDGE)/edgeApp/Db")
+# Optional: load scan records
+#dbLoadRecords("$(SSCAN)/sscanApp/Db/scan.db", "P=$(PREFIX),MAXPTS1=2000,MAXPTS2=200,MAXPTS3=20,MAXPTS4=10,MAXPTSH=10")
+#set_requestfile_path("$(SSCAN)/sscanApp/Db")
+# Optional: load sseq record for acquisition sequence
+#dbLoadRecords("$(CALC)/calcApp/Db/sseqRecord.db", "P=$(PREFIX), S=AcquireSequence")
+#set_requestfile_path("$(CALC)/calcApp/Db")
+# Optional: load devIocStats records (requires DEVIOCSTATS module)
+#dbLoadRecords("$(DEVIOCSTATS)/db/iocAdminSoft.db", "IOC=$(PREFIX)")
+# Optional: load alive record (requires ALIVE module)
+#dbLoadRecords("$(ALIVE)/aliveApp/Db/alive.db", "P=$(PREFIX),RHOST=192.168.1.254")
+#
+#Note mpi control pipe out & in reversed.  Names are from the view of the MPI program.
+#NDPipeWriterConfigure("PipeWriter1", 15000, 0, "$(PORT)", "/local/xpcscmdout", "/local/xpcscmdin", 0, 0, 0, 0,0)
+#dbLoadRecords("$(ADCORE)/db/NDPluginPipeWriter.template", "P=$(PREFIX),R=PW1:,  PORT=PipeWriter1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),CMD_IN_PORT=PW_CMD_IN,CMD_OUT_PORT=PW_CMD_OUT")
+#Note Local plugin to run the IMM plugin writer
+#NDFileIMMConfigure("IMM1", 15000, 0, "$(PORT)",  0, 0, 0)
+#dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM1:,PORT=IMM1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
+set_requestfile_path("/epics/support/areaDetector-3-3/ADLambda/LambdaApp/Db")
+#set_requestfile_path("$(NDPLUGINPIPEWRITER)/PipeWriterApp/Db")
+#set_requestfile_path("$(NDPLUGINFILEIMM)/NDFileIMMApp/Db")
+#asynSetTraceMask($(PORT),0,0x09)
+#asynSetTraceMask($(PORT),0,0x11)
+iocInit()
+Starting iocInit
+############################################################################
+## EPICS R7.0.1.1
+## EPICS Base built Jul  2 2018
+############################################################################
+reboot_restore: entry for file 'auto_settings.sav'
+reboot_restore: Found filename 'auto_settings.sav' in restoreFileList.
+*** restoring from './autosave/auto_settings.sav' at initHookState 6 (before record/device init) ***
+121 PVs had no saved value.
+reboot_restore: done with file 'auto_settings.sav'
+
+reboot_restore: entry for file 'auto_settings.sav'
+reboot_restore: Found filename 'auto_settings.sav' in restoreFileList.
+*** restoring from './autosave/auto_settings.sav' at initHookState 7 (after record/device init) ***
+121 PVs had no saved value.
+reboot_restore: done with file 'auto_settings.sav'
+
+2018/07/05 22:32:19.209 NDPluginDriver::connectToArrayPort Error calling pasynManager->connectDevice to array port  address 0, status=3, error=asynManager:connectDevice port  not found
+2018/07/05 22:32:19.210 NDPluginDriver::connectToArrayPort Error calling pasynManager->connectDevice to array port  address 0, status=3, error=asynManager:connectDevice port  not found
+2018/07/05 22:32:19.210 NDPluginDriver::writeInt32 ERROR, status=3, function=51, value=0, connectedToArrayPort_=0
+2018/07/05 22:32:19.210 XF:10IDC-BI{Lambda-Cam:1}image1:NDArrayAddress devAsynInt32::processCallbackOutput process error 
+2018/07/05 22:32:19.218 Lambda:readOctet  /epics/support/areaDetector-3-3/ADLambda/iocs/LambdaIOC/iocBoot/iocLambda/config
+2018/07/05 22:32:19.218 Entering Lambda:writeFloat64
+2018/07/05 22:32:19.218 Entering Lambda:writeFloat64
+Setting Acquire Period
+2018/07/05 22:32:19.218 Entering Lambda:writeFloat64
+2018/07/05 22:32:19.218 Entering Lambda:writeFloat64
+2018/07/05 22:32:19.218 Entering Lambda:writeFloat64
+2018/07/05 22:32:19.218 Entering Lambda:writeFloat64
+2018/07/05 22:32:19.218 Lambda:writeInt32 Setting TriggerMode 0
+2018/07/05 22:32:19.218 Lambda:writeInt32 Setting TriggerMode 0
+iocRun: All initialization complete
+# save things every thirty seconds
+create_monitor_set("auto_settings.req", 30, "P=XF:10IDC-BI{Lambda-Cam:1}")
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file sseq_settings.req. Exiting.
+save_restore:readReqFile: unable to open file NDPluginPipeWriter_settings.req. Exiting.
+save_restore:readReqFile: unable to open file NDFileIMM_settings.req. Exiting.
+**** The executable "caRepeater" couldn't be located
+**** because of errno = "No such file or directory".
+**** You may need to modify your PATH environment variable.
+**** Unable to start "CA Repeater" process.
+epics> save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:Quality'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:CompressType'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:BitDepth'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:FilePath'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:FileName'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:FileNumber'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:AutoIncrement'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:FileTemplate'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:AutoSave'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:FileFormat'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:FileWriteMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:NumCapture'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:DeleteDriverFile'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:CreateDirectory'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:LazyOpen'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:TempSuffix'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:NDArrayPort'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:NDArrayAddress'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:EnableCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:MinCallbackTime'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:BlockingCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:QueueSize'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:NumThreads'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:SortTime'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:SortMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:SortSize'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:DataType'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:ColorMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:ArrayCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:NDAttributesFile'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:NDAttributesMacros'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}Magick1:PoolUsedMem.SCAN'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:FilePath'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:FileName'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:FileNumber'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:AutoIncrement'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:FileTemplate'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:AutoSave'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:FileFormat'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:FileWriteMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:NumCapture'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:DeleteDriverFile'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:CreateDirectory'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:LazyOpen'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:TempSuffix'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:NDArrayPort'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:NDArrayAddress'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:EnableCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:MinCallbackTime'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:BlockingCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:QueueSize'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:NumThreads'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:SortTime'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:SortMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:SortSize'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:DataType'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:ColorMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:ArrayCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:NDAttributesFile'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:NDAttributesMacros'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}PW1:PoolUsedMem.SCAN'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:FilePath'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:FileName'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:FileNumber'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:AutoIncrement'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:FileTemplate'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:AutoSave'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:FileFormat'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:FileWriteMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:NumCapture'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:DeleteDriverFile'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:CreateDirectory'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:LazyOpen'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:TempSuffix'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:NDArrayPort'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:NDArrayAddress'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:EnableCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:MinCallbackTime'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:BlockingCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:QueueSize'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:NumThreads'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:SortTime'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:SortMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:SortSize'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:DataType'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:ColorMode'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:ArrayCallbacks'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:NDAttributesFile'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:NDAttributesMacros'
+save_restore: connect failed for channel 'XF:10IDC-BI{Lambda-Cam:1}IMM1:PoolUsedMem.SCAN'
+auto_settings.sav: 1154 of 1244 PV's connected
+**** The executable "caRepeater" couldn't be located
+**** because of errno = "No such file or directory".
+**** You may need to modify your PATH environment variable.
+**** Unable to start "CA Repeater" process.
+[ERROR] (ReceiveData): Image data is wrong!
+[ERROR] (ReceiveData): Image data is out of bound
+2018/07/05 22:33:15.979 Lambda:acquireStop Enter
+2018/07/05 22:33:15.980 Lambda:acquireStop Exit
+CA client library is unable to contact CA repeater after 50 tries.
+Silence this message by starting a CA repeater daemon
+or by calling ca_pend_event() and or ca_poll() more often.
+CA client library is unable to contact CA repeater after 50 tries.
+Silence this message by starting a CA repeater daemon
+or by calling ca_pend_event() and or ca_poll() more often.
+[ERROR] (ReceiveData): Image data is wrong!
+[ERROR] (ReceiveData): Image data is out of bound
+2018/07/05 22:33:51.208 Lambda:handleNewImageTask shDecodedData 0x1ad7ea0, Current Frame Number 1, frameErrorCode 6 equals last image
+2018/07/05 22:33:51.208 Lambda:handleNewImageTask  missing 2 Frames starting at  Frame Number0
+2018/07/05 22:33:51.208 Lambda:acquireStop Enter
+2018/07/05 22:33:51.209 Lambda:acquireStop Exit
+[ERROR] (ReceiveData): Image data is wrong!
+[ERROR] (ReceiveData): Image data is out of bound
+2018/07/05 22:35:38.168 Lambda:handleNewImageTask shDecodedData 0x1ad7ea0, Current Frame Number 1, frameErrorCode 6 equals last image
+2018/07/05 22:35:38.168 Lambda:handleNewImageTask  missing 2 Frames starting at  Frame Number0
+2018/07/05 22:35:38.168 Lambda:acquireStop Enter
+2018/07/05 22:35:38.169 Lambda:acquireStop Exit
+[ERROR] (ReceiveData): Image data is wrong!
+[ERROR] (ReceiveData): Image data is out of bound
+2018/07/05 22:36:01.730 Lambda:handleNewImageTask shDecodedData 0x1ad7ea0, Current Frame Number 1, frameErrorCode 6 equals last image
+2018/07/05 22:36:01.730 Lambda:handleNewImageTask  missing 2 Frames starting at  Frame Number0
+2018/07/05 22:36:01.730 Lambda:acquireStop Enter
+2018/07/05 22:36:01.732 Lambda:acquireStop Exit
+2018/07/05 22:41:34.041 NDPluginDriver::connectToArrayPort Error calling pasynManager->connectDevice to array port LAMBDA! address 0, status=3, error=asynManager:connectDevice port LAMBDA! not found
+[ERROR] (ReceiveData): Image data is wrong!
+[ERROR] (ReceiveData): Image data is out of bound
+2018/07/05 22:41:57.379 Lambda:handleNewImageTask shDecodedData 0x1ad7ea0, Current Frame Number 1, frameErrorCode 6 equals last image
+2018/07/05 22:41:57.379 Lambda:handleNewImageTask  missing 2 Frames starting at  Frame Number0
+2018/07/05 22:41:57.380 NDArrayPool:convert: ERROR, invalid output dimension, size=0, binning=1
+2018/07/05 22:41:57.380 NDPluginStdArrays::arrayInterruptCallback: error allocating array in convert()
+2018/07/05 22:41:57.380 Lambda:acquireStop Enter
+2018/07/05 22:41:57.381 Lambda:acquireStop Exit
+[ERROR] (ReceiveData): Image data is wrong!
+[ERROR] (ReceiveData): Image data is out of bound
+2018/07/05 22:42:10.511 Lambda:handleNewImageTask shDecodedData 0x1ad7ea0, Current Frame Number 1, frameErrorCode 6 equals last image
+2018/07/05 22:42:10.512 Lambda:handleNewImageTask  missing 2 Frames starting at  Frame Number0
+2018/07/05 22:42:10.512 NDArrayPool:convert: ERROR, invalid output dimension, size=0, binning=1
+2018/07/05 22:42:10.512 NDPluginStdArrays::arrayInterruptCallback: error allocating array in convert()
+2018/07/05 22:42:10.512 Lambda:acquireStop Enter
+2018/07/05 22:42:10.513 Lambda:acquireStop Exit
+
+epics> 
