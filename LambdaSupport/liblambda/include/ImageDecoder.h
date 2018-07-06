@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,14 +19,12 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __IMAGE_DECODER_H__
-#define __IMAGE_DECODER_H__
+#pragma once
 
 #include "LambdaGlobals.h"
-#include <stdalign.h> 
+#include <stdalign.h>
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
     /**
      * @brief class ImageDecoder
@@ -39,7 +37,7 @@ namespace DetCommonNS
          * @brief constructor
          * @param _vCurrentChips current used chips
          */
-        ImageDecoder(vector<short> _vCurrentChips);
+        ImageDecoder(vector<int16> _vCurrentChips);
 
         /**
          * @brief destructor
@@ -56,13 +54,14 @@ namespace DetCommonNS
          * @brief decode image
          * @return pointer to decoded image (within decoder)
          */
-        short* RunDecodingImg();
+        int16* RunDecodingImg();
 
-       /**
-         * @brief Check the dimensions of a decoded image (determined by chip layout - doesn't include any subsequent distortion correction)
+        /**
+         * @brief Check the dimensions of a decoded image
+         * (determined by chip layout - doesn't include any subsequent distortion correction)
          * @param Pass by reference - returns x and y size of decoded image in pixels
          */
-	void GetDecodedImageSize(int& nX, int& nY);
+        void GetDecodedImageSize(int32& nX, int32& nY);
         
       private:
         /**
@@ -119,9 +118,14 @@ namespace DetCommonNS
          *    2.1. Get 8 bits of the byte
          *    2.2. From start pos Each bit is put into each pixel as specific bit.
          *         e.g. For first byte from start pos 0, it can fill every first bit of pixel 1-8
-         *    2.3. Go on reading by byte, until every first bit of pixels of row 0 (256pixels) is filled
-         *    2.4. Go back to start pos metioned in 2.2. Fill the every second bit of all pixels of row 0
-         *    2.5. depth of the pixel is 12bit, so once all the pixel bits are filled in the row 0(256*256*12/8 Byte). Increase row number to row 1, start pos becomes row*pixels_in_row(256).Go back to step 2.1
+         *    2.3. Go on reading by byte, until every first bit of pixels
+         *    of row 0 (256pixels) is filled
+         *    2.4. Go back to start pos metioned in 2.2.
+         *    Fill the every second bit of all pixels of row 0
+         *    2.5. depth of the pixel is 12bit,
+         *    so once all the pixel bits are filled in the row 0(256*256*12/8 Byte).
+         *    Increase row number to row 1,
+         *    start pos becomes row*pixels_in_row(256).Go back to step 2.1
          *    @endparblock
          */
         void ReshuffleBitsInRawData();
@@ -159,41 +163,38 @@ namespace DetCommonNS
          * @brief generate 12bit lookup table. Take from old version library
          * @return lookup table
          */
-        vector<unsigned short> Generate12BitTable();
+        vector<uint16> Generate12BitTable();
 
         /**
          * @brief generate lookup table for doing fast bit reshuffling.
          * @return lookup table
          */
-        vector<unsigned long long> GenerateReshuffleLUT();
+        vector<uint64> GenerateReshuffleLUT();
             
       private:
         char* m_ptrchRawImg;
-        unsigned char* m_ptrchReorderedData;
-        unsigned short* m_ptrshReshuffledData;
-        short* m_ptrshFullImg;
-        unsigned short* m_ptrshDecodedImg;
+        uchar* m_ptrchReorderedData;
+        uint16* m_ptrshReshuffledData;
+        int16* m_ptrshFullImg;
+        uint16* m_ptrshDecodedImg;
 
-	int m_nChipHeaderLength;
-        int m_nTotalImgLength;
-        int m_nImgLength;
+        int32 m_nChipHeaderLength;
+        int32 m_nTotalImgLength;
+        int32 m_nImgLength;
            
 	    //without header
-        int m_nImgDataLength;
-        int m_nModuleSizeX;
-        int m_nModuleSizeY;
-        int m_nChipNumbers;
+        int32 m_nImgDataLength;
+        int32 m_nModuleSizeX;
+        int32 m_nModuleSizeY;
+        int32 m_nChipNumbers;
 
-        vector<short> m_vCurrentUsedChips;
-        vector<short> m_vChipRotated;
-        vector<short> m_vXstartPos;
-        vector<short> m_vYstartPos;
-        vector<short> m_vFullImg;
-        vector<unsigned short> m_vLookuptable;
+        vector<int16> m_vCurrentUsedChips;
+        vector<int16> m_vChipRotated;
+        vector<int16> m_vXstartPos;
+        vector<int16> m_vYstartPos;
+        vector<int16> m_vFullImg;
+        vector<uint16> m_vLookuptable;
 
-        vector<unsigned long long> m_vReshuffleLUT;
-
-    };///end of class ImageDecoder
-}///end of namespace DetCommonNS
-
-#endif 
+        vector<uint64> m_vReshuffleLUT;
+    };
+}

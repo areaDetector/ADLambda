@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,17 +19,18 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __LAMBDA_MODULE_H__
-#define __LAMBDA_MODULE_H__
+#pragma once
 
 #include "LambdaGlobals.h"
+#include "LambdaConfigReader.h"
+#include <fsdetector/core/NetworkInterface.h>
+#include <fsdetector/core/NetworkImplementation.h>
+#include <fsdetector/core/Utils.h>
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
-    class NetworkInterface;
-    class StringUtils;
-        
+    using namespace FSDetCoreNS;
+    
     class LambdaModule
     {
       public:
@@ -39,15 +40,21 @@ namespace DetCommonNS
         LambdaModule();
 
         /**
-         * @brief contructor
-         * @param _strModuleID module id
-         * @param _objNetIn TCP network interface for controlling command
-         * @param _bMultilink multlink or not
-         * @param _vCurrentChips current used chips
-         * @param _stDetCfg detector config data
-         * @param _vStChipData for all current used chip data
+         * @brief init all module parameters
          */
-        LambdaModule(string _strModuleID, NetworkInterface* _objNetIn,bool _bMultilink, vector<short> _vCurrentChips, stDetCfgData _stDetCfg, vector<stMedipixChipData> _vStChipData, bool _bSlaveModule);
+
+        bool InitModule(NetworkInterface* objTCP,LambdaConfigReader& objConfig);
+
+        /**
+         * @brief config data link
+         */
+        void ConfigDataLink();
+        
+        /**
+         * @brief get firmware version
+         * @return firmware version. Default: unknown
+         */
+        string GetFirmwareVersion();
 
         /**
          * @brief set shutter time
@@ -65,25 +72,25 @@ namespace DetCommonNS
          * @brief set trigger mode
          * @param shTriggerMode trigger mode
          */
-        void WriteTriggerMode(short shTriggerMode);
+        void WriteTriggerMode(int16 shTriggerMode);
             
         /**
          * @brief set image numbers which need to be acquired
          */
-        void WriteImageNumbers(long lImgNo);
+        void WriteImageNumbers(int32 lImgNo);
 
         /**
          * @brief set engergy threshold
          * @param nThresholdNo from 0-7
          * @param fEnergy energy val
          */
-        void WriteEnergyThreshold(int nThresholdNo, float fEnergy);
+        void WriteEnergyThreshold(int32 nThresholdNo, float fEnergy);
             
         /**
          * @brief set network mode
          * @param nMode 10GE mode, 0:1GE mode
          */
-        void WriteNetworkMode(int nMode);
+        void WriteNetworkMode(int32 nMode);
 
         /**
          * @brief send MAC address  to detector
@@ -92,7 +99,7 @@ namespace DetCommonNS
          *        0:destination MAC address
          *        1:source MAC address
          */
-        void WriteUDPMACAddress(int nCH,vector<string> vStrMAC);
+        void WriteUDPMACAddress(int32 nCH,vector<string> vStrMAC);
 
         /**
          * @brief send UP address configuration to detector
@@ -101,7 +108,7 @@ namespace DetCommonNS
          *        0:destination IP address
          *        1:source IP address
          */
-        void WriteUDPIP(int nCH,vector<string> vStrIP);
+        void WriteUDPIP(int32 nCH,vector<string> vStrIP);
         
         /**
          * @brief send udp ports to detector
@@ -111,14 +118,13 @@ namespace DetCommonNS
          *        1:destination port 0;\n
          *        2:destination port 1;
          */
-        void WriteUDPPorts(int nCH,vector<unsigned short> vUShPort);
+        void WriteUDPPorts(int32 nCH,vector<uint16> vUShPort);
         
-       
         /**
          * @brief set read out mode
          * @param nMode mode
          */
-        void WriteReadOutMode(int nMode);
+        void WriteReadOutMode(int32 nMode);
 
         /**
          * @brief setup detector for fast image
@@ -127,12 +133,18 @@ namespace DetCommonNS
 
 
         /**
-         * @brief Prepare detector for next image series - should be done (A) after changing threshold / matrix config, and (B) after finishing an image series. 
+         * @brief Prepare detector for next image series -
+         * should be done (A) after changing threshold / matrix config,
+         * and (B) after finishing an image series. 
          */
         void PrepNextImaging();
 	
         /**
-         * @brief  This will automatically start taking a series of images. In the current version, this software takes control. In the future, this should be changed so that the image taking is controlled by the Lambda module, and this function simply sends a command to start the process.
+         * @brief  This will automatically start taking a series of images.
+         * In the current version, this software takes control.
+         * In the future, this should be changed
+         * so that the image taking is controlled by the Lambda module,
+         * and this function simply sends a command to start the process.
          */
 
         void StartFastImaging();
@@ -147,7 +159,7 @@ namespace DetCommonNS
          * @brief set DAC
          * @param nChipNo chip No (from 1-12)
          */
-        void SetDAC(int nChipNo);
+        void SetDAC(int32 nChipNo);
 
         void SetAllDACs();
        
@@ -155,27 +167,31 @@ namespace DetCommonNS
          * @brief update DAC string
          * @param nChipNo chip No
          */
-        void UpdateDACString(int nChipNo);
+        void UpdateDACString(int32 nChipNo);
      
         /**
          * @brief update config string
          * @param nChipNo chip No
          */
-        void UpdateConfigStrings(int nChipNo);
+        void UpdateConfigStrings(int32 nChipNo);
 
         /**
          * @brief config all matrices
          */
         void ConfigAllMatrices();
         
-        bool LoadMatrixConfigRXHack(int nChipNo,vector<unsigned char> vStrConfigData,int nCounterNo);
+        bool LoadMatrixConfigRXHack(int32 nChipNo,
+                                    vector<uchar> vStrConfigData,
+                                    int32 nCounterNo);
                       
-        void CreateMatrixConfig1(int nChipNo);
+        void CreateMatrixConfig1(int32 nChipNo);
 
         /**
-         * @brief  To tell a chip to monitor or override a certain DAC, we need to insert a corresponding 5-bit code into the OMR string. This converts the DAC name as a string to the code value.
+         * @brief  To tell a chip to monitor or override a certain DAC,
+         * we need to insert a corresponding 5-bit code into the OMR string.
+         * This converts the DAC name as a string to the code value.
          */
-        short FindDACCode(string strDACname);
+        int16 FindDACCode(string strDACname);
 
         /**
          * @brief get one specific bit from data
@@ -183,79 +199,87 @@ namespace DetCommonNS
          * @param nBit position
          * @return the value of the bit
          */
-        unsigned char Grabbit(short shData,int nBit);
-
-        /**
-         * @brief get module id
-         * @return module name
-         */
-        string GetModuleID() const;
-
-        /**
-         * @brief set module id
-         * @param strModuleID module ID
-         */
-        void SetModuleID(const string strModuleID);
+        uchar Grabbit(int16 shData,int32 nBit);
             
         /**
          * @brief update OMR string
          * @param nChipNo chip No
          */
-        void UpdateOMRString(int nChipNo);
+        void UpdateOMRString(int32 nChipNo);
 
         /**
          * @brief load and check matrix config
          */
-        void LoadAndCheckMatrixConfig(int nChipNo);
+        void LoadAndCheckMatrixConfig(int32 nChipNo);
 
         /**
          * @brief matrix fast clear
          */
         void MatrixFastClear();
 
-       /**
-         * @brief Read back OMR string from detector; this makes it possible to extract chip ID
+        /**
+         * @brief Read back OMR string from detector;
+         * this makes it possible to extract chip ID
          */
-        vector<char> ReadOMR(int nChipNo);
+        vector<char> ReadOMR(int32 nChipNo);
+
+        /**
+         * @brief get chip id
+         * @param chip_no chip No.
+         * @return chip id
+         */
+
+        string GetChipID(int32 chip_no);
+
+         /*            
+         * @brief Wait for response from detector after command
+         * This should help timing issues and check if commands executed OK
+         * @return Response -1 for timeout, 0 for failure, 1 for success
+         */
+
+        int CheckResponse();
         
         /**
          * @brief destructor
          */
-        virtual ~LambdaModule();
+         ~LambdaModule();
 
       private:
-        /**
-         * @brief init all module parameters
-         */
-        void InitModule();
             
         /**
          * @brief enable chip
          * @param chip no
          */
-        void EnableChip(int nChipNo);
+        void EnableChip(int32 nChipNo);
 
       private:
-        vector<stMedipixChipData> m_vStChips;
+        string m_strModuleID;
+        string m_strSystemType;
+
+        NetworkInterface* m_objNetTCPInterface;
 
         // used chips in current operation mode
         // e.g. 6 chips are used in some operation modes
         // these values can be read from local config file
-        vector<short> m_vCurrentUsedChips;
+        vector<int16> m_vCurrentUsedChips;
         stDetCfgData m_stDetCfg;
-        string m_strModuleID;
-        NetworkInterface* m_objNetTCPInterface;
-        double m_dShutterTime;
-        short m_shTriggerMode;
-        long m_lImageNo;
-        int m_nThresholdToScan;
-        char* m_ptrchExeString;
-        vector<unsigned char> m_vExeCmd;
-        int m_nChips;
-        StringUtils* m_objStrUtil;
-        bool m_bMultilink;
-	bool m_bSlaveModule;
+        vector<stMedipixChipData> m_vStChips;
+        bool m_bSlaveModule;
         
+        double m_dShutterTime;
+        int16 m_shTriggerMode;
+        int32 m_lImageNo;
+        int32 m_nThresholdToScan;
+        char* m_ptrchExeString;
+        vector<uchar> m_vExeCmd;
+        int32 m_nChips;
+        StringUtils* m_objStrUtil;
+        string m_strTCPIPAddress;
+        int16 m_shTCPPortNo;
+        
+        // data receiver IPs and ports
+        vector< vector<string> > m_vStrMACs;
+        vector<vector<string>> m_vStrIPs;
+        vector<uint16> m_usPorts;
     };///end of class LambdaModule
-}///end of namespace DetCommonNS
-#endif
+}

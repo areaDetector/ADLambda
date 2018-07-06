@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2017 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -19,23 +19,22 @@
  *     Author: Yuelong Yu <yuelong.yu@desy.de>
  */
 
-#ifndef __LAMBDA_GLOBALS_H__
-#define __LAMBDA_GLOBALS_H__
+#pragma once
 
-#include "Globals.h"
+#include <fsdetector/core/Globals.h>
+#include "Version.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
-//    using namespace DetCommonNS;
-    
+    using namespace FSDetCoreNS;
+
     ///lambda control ip address for TCP control socket
     const string TCP_CONTROL_IP_ADDRESS = "169.254.1.1";
-    
+
     ///lambda udp sockets ip address
     const string UDP_CONTROL_IP_ADDRESS = "196.254.1.4";
     const string UDP_CONTROL_IP_ADDRESS_1 = "196.254.3.7";
-    
+
     ///lambda control  port
     const short TCP_CONTROL_PORT = 4321;
 
@@ -50,7 +49,7 @@ namespace DetCommonNS
     ///image buffer length(unit:image numbers)
     const int RAW_BUFFER_LENGTH = 100100;
     const int DECODED_BUFFER_LENGTH = 200;
-    
+
     ///configuration files
     const string SYSTEM_CONFIG_FILE = "SystemConfig.txt";
     const string DETECTOR_CONFIG_FILE = "LambdaConfig.txt";
@@ -66,11 +65,11 @@ namespace DetCommonNS
     const int STANDARD_CHIP_NUMBERS = 12;
 
     const int BLOCK_SIZE_IN_BYTES = 32;
-    
+
     const int CHIP_SIZE = 256;
-    
+
     const int PIXELS_IN_CHIP = CHIP_SIZE*CHIP_SIZE;
-    
+
     ///each pixel has 12bit so the bytes size is PIXELS_IN_CHIP*12/8
     const int BYTES_IN_CHIP = PIXELS_IN_CHIP*3/2;
 
@@ -82,6 +81,8 @@ namespace DetCommonNS
 
     const int CHIP_HEADER_SIZE = 32; //bytes
 
+    const int DEFAULT_COMPRESSION_CHUNK = 131072;
+
     enum Enum_readout_mode
     {
         OPERATION_MODE_12,                    /**< enum value 0 */
@@ -90,7 +91,7 @@ namespace DetCommonNS
         OPERATION_MODE_UNKNOWN
     };
 
-    
+
     ///////////////////////////////////////////////////////////////////////////
     ///Medipix chip data
     ///////////////////////////////////////////////////////////////////////////
@@ -120,7 +121,7 @@ namespace DetCommonNS
         short shTPREFA;
 
         short shTPREFB;
-       
+
         string strSenseDAC;
         string strExtDAC;
 
@@ -129,12 +130,12 @@ namespace DetCommonNS
         vector<unsigned char> vStrDAC;
         vector<unsigned char> vStrOMR;
         vector<short> vThreshold;
-        
+
         vector<short> vTestBit;
         vector<short> vMaskBit;
         vector<short> vConfigTHA; //size is PIXELS_IN_CHIP
         vector<short> vConfigTHB; //Ssize is PIXELS_IN_CHIP
-        
+
         vector<short> vLatestChipImage;
         /// used to convert keV threshold values given to the chip to THL settings
         vector<float> vKeVToThrSlope;
@@ -143,9 +144,25 @@ namespace DetCommonNS
         vector<float> vThrBaseline;
 
     stMedipixChipData()
-    :shPreamp(100),shIkrum(20),shShaper(150),shDisc(150),shDiscLS(200),shDACDiscL(0),shDACDiscH(0)
-            ,shDelay(128),shTPBufferIn(50),shTPBufferOut(128),shRPZ(255),shGND(100),shTPREF(0),shFBK(100)
-            ,shCAS(140),shTPREFA(511),shTPREFB(255),strSenseDAC("none"),strExtDAC("none")
+    :shPreamp(100),
+            shIkrum(20),
+            shShaper(150),
+            shDisc(150),
+            shDiscLS(200),
+            shDACDiscL(0),
+            shDACDiscH(0),
+            shDelay(128),
+            shTPBufferIn(50),
+            shTPBufferOut(128),
+            shRPZ(255),
+            shGND(100),
+            shTPREF(0),
+            shFBK(100),
+            shCAS(140),
+            shTPREFA(511),
+            shTPREFB(255),
+            strSenseDAC("none"),
+            strExtDAC("none")
             {
                 int nPhysicalCounterSize = 12;
                 int nThresholds = 8;
@@ -160,7 +177,7 @@ namespace DetCommonNS
                 vConfigTHB.resize(PIXELS_IN_CHIP,0);
                 vLatestChipImage.resize(PIXELS_IN_CHIP);
                 vKeVToThrSlope.resize(nThresholds,0);
-                vThrBaseline.resize(nThresholds,10.);        
+                vThrBaseline.resize(nThresholds,10.);
             }
     };
 
@@ -176,7 +193,7 @@ namespace DetCommonNS
         short shTriggerMode;
         short shRowBlockSel;
         short shGainMode;
-        
+
         bool bCRW;
         bool bPolarity;
         bool bEnableTP;
@@ -186,22 +203,29 @@ namespace DetCommonNS
         bool bOMRHeader;
         bool bColorMode;
         bool bChargeSum;
-        
+
         short shDataOutLines;
 
     stDetCfgData()
-    :nCounterMode(0),shCounterBitDepth(12),shTriggerMode(0),shRowBlockSel(0)
-            ,shGainMode(0),bCRW(false),bPolarity(true),bEnableTP(false),bEqualise(false),bDiscSPMCSM(false)
-            ,bColorMode(false),bChargeSum(false),shDataOutLines(0)
+    :nCounterMode(0),
+            shCounterBitDepth(12),
+            shTriggerMode(0),
+            shRowBlockSel(0),
+            shGainMode(0),
+            bCRW(false),
+            bPolarity(true),
+            bEnableTP(false),
+            bEqualise(false),
+            bDiscSPMCSM(false),
+            bColorMode(false),
+            bChargeSum(false),
+            shDataOutLines(0)
             {
                 vThresholdScan.resize(1,0);
             }
     };
+
     ///////////////////////////////////////////////////////////////////////////
     ///end of Medipix chip data
-    ///////////////////////////////////////////////////////////////////////////        
-
-}///end of namespace DetCommonNS
-
-
-#endif
+    ///////////////////////////////////////////////////////////////////////////
+}
