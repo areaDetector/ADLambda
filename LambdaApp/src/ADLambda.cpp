@@ -85,10 +85,10 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
     latestImageNumberRead(0)
     {
 
-    int status = asynSuccess;
+      int status = asynSuccess;
 
-    for (unsigned int i=0; i<= strlen(configPath); i++){
-        configFileName[i] = configPath[i];
+      for (unsigned int i=0; i<= strlen(configPath); i++){
+          configFileName[i] = configPath[i];
     }
     status |= ADDriver::createParam(LAMBDA_VersionNumberString,
             asynParamOctet, &LAMBDA_VersionNumber);
@@ -132,7 +132,7 @@ ADLambda::~ADLambda() {
  * acquisition.
  */
 asynStatus ADLambda::acquireStart(){
-    int sizeX, sizeY, imageDepth;
+    int32 sizeX, sizeY, imageDepth;
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s Enter\n", driverName, __FUNCTION__);
     int status = asynSuccess;
@@ -193,7 +193,10 @@ asynStatus ADLambda::connect(asynUser* pasynUser){
             configFileName);
 
     lambdaInstance = new DetLambdaNS::LambdaSysImpl(configFileName);
-    printf("Done making instance");
+    int32 height, width, depth;
+    lambdaInstance->GetImageFormat(width, height, depth);
+    //setIntegerParam(NDArraySizeX, width);
+    //setIntegerParam(NDArraySizeY, height);
     if (status != asynSuccess) {
         printf("%s:%s: Trouble initializing Lambda detector\n",
                 driverName,
@@ -286,6 +289,8 @@ short* ADLambda::getDecodedImageShort(int32& lFrameNo, int16& shErrCode){
 int ADLambda::getImageDepth(){
     int nX, nY, nImgDepth;
     lambdaInstance->GetImageFormat(nX, nY, nImgDepth);
+    setIntegerParam(NDArraySizeX, nX);
+    setIntegerParam(NDArraySizeY, nY);
     return nImgDepth;
 }
 
@@ -306,7 +311,7 @@ void ADLambda::handleNewImageTask() {
     //long acquiredImages;
     long startFrame;
     long lossFrames;
-    long currentFrameNo;
+    int32 currentFrameNo;
     int imageCounter;
     int arrayCounter;
     int arrayCallbacks;
@@ -478,8 +483,8 @@ void ADLambda::handleNewImageTask() {
                                    std::copy(first, last, result);
                                }
                                break;
-                        case NDFloat32:
-                            case NDFloat64:
+			       //case NDFloat32:
+			       //case NDFloat64:
                             default:
                                 {
                                 asynPrint (pasynUserSelf, ASYN_TRACE_ERROR,
@@ -748,11 +753,11 @@ void ADLambda::handleNewImageTask() {
  */
 asynStatus ADLambda::initializeDetector(){
     int status = asynSuccess;
-    lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s imageHeight %d, imageWidth%d\n",
-            driverName, __FUNCTION__,
-            imageHeight, imageWidth);
+    int32 tempW, tempH, tempD;
+    //lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
+    lambdaInstance->GetImageFormat(tempW, tempH, tempD);
+    //asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s imageHeight %d, imageWidth %d\n", driverName, __FUNCTION__, imageHeight, imageWidth);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s::%s h %d, w %d d %d\n", driverName, __FUNCTION__, tempH, tempW, tempD);
     setIntegerParam(ADMaxSizeX, imageWidth);
     setIntegerParam(ADMaxSizeY, imageHeight);
     setIntegerParam(ADMinX, 0);

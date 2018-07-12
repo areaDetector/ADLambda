@@ -38,6 +38,7 @@ public:
     virtual asynStatus connect(asynUser* pasynUser);
     asynStatus createImageHandlerThread();
     void killImageHandlerThread();
+    //void getDetectorInformation(DetLambdaNS::LambdaSysImpl *lambdaInstance);
     int getImageDepth();
 //    int getQueueDepth();
     short* getDecodedImageShort(int32& lFrameNo, int16& shErrCode);

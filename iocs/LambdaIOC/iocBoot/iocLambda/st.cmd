@@ -43,7 +43,7 @@ epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db")
 # */
 # config directory contains configuration files defined Globals.h, IP addresses, gains, and Medapix3 chip parameters
 #int LambdaConfig(const char *portName, const char* configPath, int maxBuffers, size_t maxMemory, int priority, int stackSize) {
-LambdaConfig("$(PORT)", "config",  0, 0, 0, 0)
+LambdaConfig("$(PORT)", "/localdata/config",  0, 0, 0, 0)
 epicsThreadSleep(2)
 
 asynSetTraceIOMask($(PORT), 0, 2)
@@ -58,7 +58,7 @@ dbLoadRecords("$(ADLAMBDA)/db/ADLambda.template","P=$(PREFIX),R=cam1:,PORT=$(POR
 NDStdArraysConfigure("Image1", 3, 0, "$(PORT)", 0)
 #dbLoadRecords("$(ADCORE)/db/NDPluginBase.template","P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),NDARRAY_ADDR=0")
 #dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,TYPE=Int16,SIZE=16,FTVL=SHORT,NELEMENTS=802896")
-dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,NDARRAY_PORT=$(PORT),TIMEOUT=1,TYPE=Int16,FTVL=SHORT,NELEMENTS=65536")
+dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,NDARRAY_PORT=$(PORT),TIMEOUT=1,TYPE=Int16,FTVL=SHORT,NELEMENTS=1000000")
 #
 # Load all other plugins using commonPlugins.cmd
 < $(ADCORE)/iocBoot/commonPlugins.cmd
