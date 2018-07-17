@@ -15,6 +15,10 @@
 #include "ADLambda.h"
 #include <LambdaSysImpl.h>
 
+#define DRIVER_VERSION 1
+#define DRIVER_REVISION 0
+#define DRIVER_MODIFICATION 0
+
 static void lambdaHandleNewImageTaskC(void *drvPvt);
 //static void lambdaHandleNewImageTaskMultiC(void *drvPvt);
 
@@ -94,8 +98,10 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
             asynParamOctet, &LAMBDA_VersionNumber);
     status |= ADDriver::createParam(LAMBDA_ConfigFilePathString,
             asynParamOctet, &LAMBDA_ConfigFilePath);
-    status |= ADDriver::createParam(LAMBDA_EnergyThresholdString,
-            asynParamFloat64, &LAMBDA_EnergyThreshold);
+    status |= ADDriver::createParam(LAMBDA_HighEnergyThresholdString,
+            asynParamFloat64, &LAMBDA_HighEnergyThreshold);
+    status |= ADDriver::createParam(LAMBDA_LowEnergyThresholdString,
+            asynParamFloat64, &LAMBDA_LowEnergyThreshold);
     status |= ADDriver::createParam(LAMBDA_DecodedQueueDepthString,
             asynParamInt32, &LAMBDA_DecodedQueueDepth);
     status |= ADDriver::createParam(LAMBDA_OperatingModeString,
@@ -107,7 +113,7 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
     status |= ADDriver::createParam(LAMBDA_BadImageString,
             asynParamInt32, &LAMBDA_BadImage);
     status |= connect(pasynUserSelf);
-
+    
     status |= initializeDetector();
 
     epicsAtExit(exitCallbackC, this);
@@ -752,12 +758,21 @@ void ADLambda::handleNewImageTask() {
  * parameters.
  */
 asynStatus ADLambda::initializeDetector(){
+    char versionString[20];
     int status = asynSuccess;
     int32 tempW, tempH, tempD;
     //lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
     lambdaInstance->GetImageFormat(tempW, tempH, tempD);
     //asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s imageHeight %d, imageWidth %d\n", driverName, __FUNCTION__, imageHeight, imageWidth);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s::%s h %d, w %d d %d\n", driverName, __FUNCTION__, tempH, tempW, tempD);
+    string lambda_version = lambdaInstance->GetLibLambdaVersion();
+    string firmware_version = lambdaInstance->GetFirmwareVersion();
+    setStringParam(ADManufacturer, "X-Spectrum Desy");
+    setStringParam(ADModel, "Lambda 60K");
+    setStringParam(ADFirmwareVersion, firmware_version);
+    setStringParam(ADSDKVersion, lambda_version);
+    epicsSnprintf(versionString, sizeof(versionString), "%d.%d.%d", DRIVER_VERSION, DRIVER_REVISION, DRIVER_MODIFICATION);
+    setStringParam(NDDriverVersion, versionString);
     setIntegerParam(ADMaxSizeX, imageWidth);
     setIntegerParam(ADMaxSizeY, imageHeight);
     setIntegerParam(ADMinX, 0);
@@ -829,7 +844,10 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
         lambdaInstance->SetDelayTime(acquirePeriod);
         setDoubleParam(function, acquirePeriod);
     }
-    else if (function == LAMBDA_EnergyThreshold){
+    else if (function == LAMBDA_HighEnergyThreshold){
+        lambdaInstance->SetThreshold((int)1, (float)value);
+    }
+    else if (function == LAMBDA_LowEnergyThreshold){
         lambdaInstance->SetThreshold((int)0, (float)value);
     }
     else {
