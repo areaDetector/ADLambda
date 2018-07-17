@@ -1,0 +1,11 @@
+prefix = /epics/support/areaDetector-3-3/ADLambda/LambdaSupport/liblambda-linux-x86_64
+includedir = ${prefix}/include
+libdir = ${prefix}/lib
+
+Name: lambda
+Description:
+URL:
+Version: 1.0
+Requires: fsdetcore
+Libs: -L${libdir}  -llambda -lboost_system -lboost_thread -lpthread -lz
+Cflags: -I${includedir}

@@ -10,9 +10,14 @@
 #include <epicsExit.h>
 #include <epicsExport.h>
 
-
+#include <iostream>
+#include <string.h>
 #include "ADLambda.h"
 #include <LambdaSysImpl.h>
+
+#define DRIVER_VERSION 1
+#define DRIVER_REVISION 0
+#define DRIVER_MODIFICATION 0
 
 static void lambdaHandleNewImageTaskC(void *drvPvt);
 //static void lambdaHandleNewImageTaskMultiC(void *drvPvt);
@@ -84,17 +89,19 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
     latestImageNumberRead(0)
     {
 
-    int status = asynSuccess;
+      int status = asynSuccess;
 
-    for (unsigned int i=0; i<= strlen(configPath); i++){
-        configFileName[i] = configPath[i];
+      for (unsigned int i=0; i<= strlen(configPath); i++){
+          configFileName[i] = configPath[i];
     }
     status |= ADDriver::createParam(LAMBDA_VersionNumberString,
             asynParamOctet, &LAMBDA_VersionNumber);
     status |= ADDriver::createParam(LAMBDA_ConfigFilePathString,
             asynParamOctet, &LAMBDA_ConfigFilePath);
-    status |= ADDriver::createParam(LAMBDA_EnergyThresholdString,
-            asynParamFloat64, &LAMBDA_EnergyThreshold);
+    status |= ADDriver::createParam(LAMBDA_HighEnergyThresholdString,
+            asynParamFloat64, &LAMBDA_HighEnergyThreshold);
+    status |= ADDriver::createParam(LAMBDA_LowEnergyThresholdString,
+            asynParamFloat64, &LAMBDA_LowEnergyThreshold);
     status |= ADDriver::createParam(LAMBDA_DecodedQueueDepthString,
             asynParamInt32, &LAMBDA_DecodedQueueDepth);
     status |= ADDriver::createParam(LAMBDA_OperatingModeString,
@@ -106,7 +113,7 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
     status |= ADDriver::createParam(LAMBDA_BadImageString,
             asynParamInt32, &LAMBDA_BadImage);
     status |= connect(pasynUserSelf);
-
+    
     status |= initializeDetector();
 
     epicsAtExit(exitCallbackC, this);
@@ -131,7 +138,7 @@ ADLambda::~ADLambda() {
  * acquisition.
  */
 asynStatus ADLambda::acquireStart(){
-    int sizeX, sizeY, imageDepth;
+    int32 sizeX, sizeY, imageDepth;
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s Enter\n", driverName, __FUNCTION__);
     int status = asynSuccess;
@@ -191,8 +198,11 @@ asynStatus ADLambda::connect(asynUser* pasynUser){
             "%s:%s Enter %s\n", driverName, __FUNCTION__,
             configFileName);
 
-    lambdaInstance = new DetCommonNS::LambdaSysImpl(configFileName);
-    printf("Done making instance");
+    lambdaInstance = new DetLambdaNS::LambdaSysImpl(configFileName);
+    int32 height, width, depth;
+    lambdaInstance->GetImageFormat(width, height, depth);
+    //setIntegerParam(NDArraySizeX, width);
+    //setIntegerParam(NDArraySizeY, height);
     if (status != asynSuccess) {
         printf("%s:%s: Trouble initializing Lambda detector\n",
                 driverName,
@@ -264,8 +274,8 @@ void ADLambda::killImageHandlerThread(){
  *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to integer array representing the requested image.
  */
-int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
-    return lambdaInstance->GetDecodedImageInt(lFrameNo, shErrCode);
+int* ADLambda::getDecodedImageInt(int32& lFrameNo, int16& shErrCode){
+  return lambdaInstance->GetDecodedImageInt(lFrameNo, shErrCode);
 }
 
 /**
@@ -275,7 +285,7 @@ int* ADLambda::getDecodedImageInt(long& lFrameNo, short& shErrCode){
  *  \param[out] shErrCode Error code for returned image.
  *  \return A pointer to short array representing the requested image.
  */
-short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
+short* ADLambda::getDecodedImageShort(int32& lFrameNo, int16& shErrCode){
     return lambdaInstance->GetDecodedImageShort(lFrameNo, shErrCode);
 }
 
@@ -285,6 +295,8 @@ short* ADLambda::getDecodedImageShort(long& lFrameNo, short& shErrCode){
 int ADLambda::getImageDepth(){
     int nX, nY, nImgDepth;
     lambdaInstance->GetImageFormat(nX, nY, nImgDepth);
+    setIntegerParam(NDArraySizeX, nX);
+    setIntegerParam(NDArraySizeY, nY);
     return nImgDepth;
 }
 
@@ -299,13 +311,13 @@ void ADLambda::handleNewImageTask() {
     short *shDecodedData;
     int *decodedData;
     long currentFrameNumber;
-    short frameErrorCode;
+    int16 frameErrorCode;
     bool bRead;
     bool firstFrame;
     //long acquiredImages;
     long startFrame;
     long lossFrames;
-    long currentFrameNo;
+    int32 currentFrameNo;
     int imageCounter;
     int arrayCounter;
     int arrayCallbacks;
@@ -335,7 +347,7 @@ void ADLambda::handleNewImageTask() {
                     driverName, __FUNCTION__,
                     (int) numBufferedImages);
             if (getImageDepth() == TWELVE_BIT){
-                long newFrameNumber;
+                int32 newFrameNumber;
                 shDecodedData = lambdaInstance->GetDecodedImageShort(
                         newFrameNumber,
                         frameErrorCode);
@@ -477,8 +489,8 @@ void ADLambda::handleNewImageTask() {
                                    std::copy(first, last, result);
                                }
                                break;
-                        case NDFloat32:
-                            case NDFloat64:
+			       //case NDFloat32:
+			       //case NDFloat64:
                             default:
                                 {
                                 asynPrint (pasynUserSelf, ASYN_TRACE_ERROR,
@@ -525,7 +537,7 @@ void ADLambda::handleNewImageTask() {
 
             }
             else if (getImageDepth() == TWENTY_FOUR_BIT){
-                long newFrameNumber;
+                int32 newFrameNumber;
                 decodedData = lambdaInstance->GetDecodedImageInt(
                         newFrameNumber,
                         frameErrorCode);
@@ -746,12 +758,21 @@ void ADLambda::handleNewImageTask() {
  * parameters.
  */
 asynStatus ADLambda::initializeDetector(){
+    char versionString[20];
     int status = asynSuccess;
-    lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s imageHeight %d, imageWidth%d\n",
-            driverName, __FUNCTION__,
-            imageHeight, imageWidth);
+    int32 tempW, tempH, tempD;
+    //lambdaInstance->GetImageFormat(imageWidth, imageHeight, imageDepth);
+    lambdaInstance->GetImageFormat(tempW, tempH, tempD);
+    //asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s imageHeight %d, imageWidth %d\n", driverName, __FUNCTION__, imageHeight, imageWidth);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s::%s h %d, w %d d %d\n", driverName, __FUNCTION__, tempH, tempW, tempD);
+    string lambda_version = lambdaInstance->GetLibLambdaVersion();
+    string firmware_version = lambdaInstance->GetFirmwareVersion();
+    setStringParam(ADManufacturer, "X-Spectrum Desy");
+    setStringParam(ADModel, "Lambda 60K");
+    setStringParam(ADFirmwareVersion, firmware_version);
+    setStringParam(ADSDKVersion, lambda_version);
+    epicsSnprintf(versionString, sizeof(versionString), "%d.%d.%d", DRIVER_VERSION, DRIVER_REVISION, DRIVER_MODIFICATION);
+    setStringParam(NDDriverVersion, versionString);
     setIntegerParam(ADMaxSizeX, imageWidth);
     setIntegerParam(ADMaxSizeY, imageHeight);
     setIntegerParam(ADMinX, 0);
@@ -823,7 +844,10 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
         lambdaInstance->SetDelayTime(acquirePeriod);
         setDoubleParam(function, acquirePeriod);
     }
-    else if (function == LAMBDA_EnergyThreshold){
+    else if (function == LAMBDA_HighEnergyThreshold){
+        lambdaInstance->SetThreshold((int)1, (float)value);
+    }
+    else if (function == LAMBDA_LowEnergyThreshold){
         lambdaInstance->SetThreshold((int)0, (float)value);
     }
     else {

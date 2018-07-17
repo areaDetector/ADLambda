@@ -11,14 +11,16 @@
 #ifndef ADLAMBDA_H
 #define ADLAMBDA_H
 
-namespace DetCommonNS {
+namespace DetLambdaNS {
 class LambdaSysImpl;
 class LambdaInterface;}
-using namespace DetCommonNS;
+using namespace DetLambdaNS;
 
 #include <epicsString.h>
 #include <epicsEvent.h>
 #include <epicsThread.h>
+
+#include <LambdaSysImpl.h>
 
 #include "ADDriver.h"
 
@@ -36,10 +38,11 @@ public:
     virtual asynStatus connect(asynUser* pasynUser);
     asynStatus createImageHandlerThread();
     void killImageHandlerThread();
+    //void getDetectorInformation(DetLambdaNS::LambdaSysImpl *lambdaInstance);
     int getImageDepth();
 //    int getQueueDepth();
-    short* getDecodedImageShort(long& lFrameNo, short& shErrCode);
-    int* getDecodedImageInt(long& lFrameNo, short& shErrCode);
+    short* getDecodedImageShort(int32& lFrameNo, int16& shErrCode);
+    int* getDecodedImageInt(int32& lFrameNo, int16& shErrCode);
 //    void getImageFormat(int& nX, int& nY, int& nImgDepth);
     void handleNewImageTask(void);
     void report(FILE *fp, int details);
@@ -57,7 +60,8 @@ protected:
 #define LAMBDA_FIRST_PARAM LAMBDA_VersionNumber
 
     int LAMBDA_ConfigFilePath;
-    int LAMBDA_EnergyThreshold;
+    int LAMBDA_HighEnergyThreshold;
+    int LAMBDA_LowEnergyThreshold;
     int LAMBDA_DecodedQueueDepth;
     int LAMBDA_OperatingMode;
     int LAMBDA_DetectorState;
@@ -88,7 +92,8 @@ private:
 
 #define LAMBDA_VersionNumberString          "LAMBDA_VERSION_NUMBER"
 #define LAMBDA_ConfigFilePathString         "LAMBDA_CONFIG_FILE_PATH"
-#define LAMBDA_EnergyThresholdString        "LAMBDA_ENERGY_THRESHOLD"
+#define LAMBDA_HighEnergyThresholdString        "LAMBDA_HIGH_ENERGY_THRESHOLD"
+#define LAMBDA_LowEnergyThresholdString        "LAMBDA_LOW_ENERGY_THRESHOLD"
 #define LAMBDA_DecodedQueueDepthString      "LAMBDA_DECODED_QUEUE_DEPTH"
 #define LAMBDA_OperatingModeString          "LAMBDA_OPERATING_MODE"
 #define LAMBDA_DetectorStateString          "LAMBDA_DETECTOR_STATE"

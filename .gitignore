@@ -1,4 +1,7 @@
+*.bin
 bin
+liblambda-build
+libfsdetcore-build
 lib
 include
 db
@@ -17,3 +20,6 @@ O.*/
 .settings
 .cproject
 external/
+*.txt
+!SystemConfig.txt
+!CMakeLists.txt

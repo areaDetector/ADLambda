@@ -1,0 +1,11 @@
+prefix = /epics/support/areaDetector-3-3/ADLambda/LambdaSupport/libfsdetcore-linux-x86_64
+includedir = ${prefix}/include
+libdir = ${prefix}/lib
+
+Name: fsdetcore
+Description:
+URL:
+Version: 0.9
+Requires:
+Libs: -L${libdir} -lfsdetcore -lboost_system -lboost_thread -lpthread
+Cflags: -I${includedir}

@@ -1,67 +1,94 @@
 cmake_minimum_required(VERSION 2.8)
 project(lambda)
+enable_testing()
 
-set(MAJOR_VERSION 0)
-set(MINOR_VERSION 5)
-set(SO_VERSION 1)
+
+set(MAJOR_VERSION 1)
+set(MINOR_VERSION 0)
 set(LIBRARY_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}")
+set(SO_VERSION ${LIBRARY_VERSION})
 
+# configure path
+#binary output path
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/bin")
+message(STATUS "executable output path is:${EXECUTABLE_OUTPUT_PATH}")
+
+#lib output path
+set(LIBRARY_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/bin")
+message(STATUS "library output path is:${LIBRARY_OUTPUT_PATH}")
+
+#install path
+set(CMAKE_INSTALL_LIB_PATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_INC_PATH "${CMAKE_INSTALL_PREFIX}/include/fsdetector/lambda")
+message(STATUS "install path is:${CMAKE_INSTALL_PREFIX}")
 
 #add module
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-message(STATUS "path is:${CMAKE_MODULE_PATH}")
+message(STATUS "module path is:${CMAKE_MODULE_PATH}")
 
 #find necessary packages
-find_package(LibCommon)
+find_package(LibFSDETCore)
 find_package(LibBoost)
 find_package(Zlib)
 
+#for hardware compression
+find_package(AHA)
 
 include_directories("${PROJECT_SOURCE_DIR}/include/"
-                    ${BOOST_INCLUDE_DIRS}
-                    ${Z_INC_DIRS}
-					${COMMON_INCLUDE})
+                     ${Boost_INCLUDE_DIRS}
+                     ${Z_INC_DIRS}
+					 ${FSDETCORE_LIB_INCLUDE_DIRS}
+                     ${AHA_INC_DIRS})
 
+link_directories(${FSDETCORE_LIB_LIBRARY_DIRS})
 
-#set install path
-#set(CMAKE_INSTALL_PREFIX "${SOURCE_PARENT_DIR}/install")
-message(STATUS "Install directory is: ${CMAKE_INSTALL_PREFIX}")
-
-set(EXECUTABLE_OUTPUT_PATH "${SOURCE_PARENT_DIR}/bin")
-set(LIBRARY_OUTPUT_PATH "${SOURCE_PARENT_DIR}/bin")
-set(CMAKE_INSTALL_LIB_PATH "${CMAKE_INSTALL_PREFIX}/lib")
-set(CMAKE_INSTALL_INC_PATH "${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}")
-
-#check compiler ID
+# check compiler ID
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	#message(${CMAKE_CXX_COMPILER_ID})
-	#message(${CMAKE_CXX_COMPILER_VERSION})
-    #require at least gcc 4.4
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4)
-       message(FATAL_ERROR "GCC version must be at least 4.4!")
+    #require at least gcc 4.9
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
+      message(FATAL_ERROR "GCC version must be at least 4.9!")
     endif()
 else()
-	message(FATAL_ERROR "The script is only tested under GNU g++ compiler")
+    message(FATAL_ERROR "Unsupported compiler")
 endif()
 
+if(NOT AHA_LIB_FOUND)
+  # add common flags
+  add_definitions("-Wall -std=c++11 -fPIC -pthread -D_REENTRANT")
+  message(STATUS "HW compression is disabled")
+else(NOT AHA_LIB_FOUND)
+  # add common flags
+  add_definitions("-Wall -std=c++11 -fPIC -pthread -D_REENTRANT -DENABLEHWCOMPRESSION")
+  message(STATUS "HW compression is enabled")
+endif(NOT AHA_LIB_FOUND)
 
-#define build type, by default is release
-if (NOT CMAKE_BUILD_TYPE)
-		message(STATUS "No build type selected, default to RELEASE")
-		set(CMAKE_BUILD_TYPE "RELEASE")
+# define build type, by default is release
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
+        message(STATUS "Setting build type to DEBUG")
+		set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g")
+		set(CMAKE_BUILD_TYPE "DEBUG")
+else()
+        set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+        set(CMAKE_BUILD_TYPE "RELEASE")
+
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+#add shared linker flags
+set(SHARED_LINKER_FLAGS
+  ${Boost_LIBRARIES}
+  ${FSDETCORE_LIB_LIBRARIES}
+  ${AHA_LIB_DIRS}
+  ${Z_LIBRARIES}
+  pthread)
 
-#set gcc flags
-if(CMAKE_COMPILER_IS_GNUCXX)
-	if("${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x -fPIC -pthread -D_REENTRANT -DLDEBUG")
-	elseif("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")		
-		 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=c++0x -fPIC -pthread -D_REENTRANT -DLDEBUG")		
-	endif()
-endif()
+set(PKG_LIBS "-lboost_system -lboost_thread -lpthread -lz")
 
+if(AHA_LIB_FOUND)
+  set(PKG_LIBS "${PKG_LIBS} -laha3xxahagz_api64")
+endif(AHA_LIB_FOUND)
+
+#src
 add_subdirectory("include")
 add_subdirectory("src")
-#add_subdirectory("test")
+add_subdirectory("test")

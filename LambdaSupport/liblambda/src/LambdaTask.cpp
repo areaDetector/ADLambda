@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014-2015 DESY, Yuelong Yu <yuelong.yu@desy.de>
+ * (c) Copyright 2014-2018 DESY, Yuelong Yu <yuelong.yu@desy.de>
  *
  * This file is part of FS-DS detector library.
  *
@@ -20,379 +20,361 @@
  */
 
 #include "LambdaTask.h"
-#include "MemUtils.h"
-#include "NetworkInterface.h"
-#include "NetworkImplementation.h"
-#include "LambdaModule.h"
 #include "ImageDecoder.h"
 #include "DistortionCorrector.h"
-#include "LambdaSysImpl.h"
 
-///namespace DetCommonNS
-namespace DetCommonNS
+namespace DetLambdaNS
 {
-    
-    
     //////////////////////////////////////////////////
-    ///LambdaTask
+    /// LambdaMultiLinkUDPRecv
     //////////////////////////////////////////////////
-    LambdaTask::LambdaTask()
+    LambdaTaskMultiLinkUDPRecv::LambdaTaskMultiLinkUDPRecv(string strTaskName,
+                                                           Enum_priority Epriority,
+                                                           int32 nID,
+                                                           NetworkInterface* objNetInt,
+                                                           MemPool<char>* objMemPoolRaw)
+        :m_objNetInterface(objNetInt),
+         m_objMemPoolRaw(objMemPoolRaw)
     {
         LOG_TRACE(__FUNCTION__);
-    }
-        
-    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<short>* _objMemPoolDecoded12,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator):
-        m_objSys(_objSys)
-        ,m_objNetInterface(_objNetInt)
-        ,m_objMemPoolRaw(_objMemPoolRaw)
-        ,m_objMemPoolDecodedShort(_objMemPoolDecoded12)
-        ,m_boostMtx(_bstMtx)
-        ,m_vCurrentChip(_vCurrentChip)
-        ,m_vNIndex(_vNIndex)
-        ,m_vNNominator(_vNNominator)
-    {
-        LOG_TRACE(__FUNCTION__);
-        
-        m_strTaskName = _strTaskName;
-        m_enumPriority = _Epriority;
-        m_nID = _nID;
+
+        m_strTaskName = strTaskName;
+        m_enumPriority = Epriority;
+        m_nID = nID;
         m_enumTargetPriority = &m_enumPriority; // Default behaviour will ignore priority
-        
+        m_fStart = false;
+
+
         m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
-        m_nDecodedImageSize = m_objMemPoolDecodedShort->GetElementSize();
     }
 
-    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<int>* _objMemPoolDecoded24,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator):
-        m_objSys(_objSys)
-        ,m_objNetInterface(_objNetInt)
-        ,m_objMemPoolRaw(_objMemPoolRaw)
-        ,m_objMemPoolDecodedInt(_objMemPoolDecoded24)
-        ,m_boostMtx(_bstMtx)
-        ,m_vCurrentChip(_vCurrentChip)
-        ,m_vNIndex(_vNIndex)
-        ,m_vNNominator(_vNNominator)
-    {
-        LOG_TRACE(__FUNCTION__);
-        
-        m_strTaskName = _strTaskName;
-        m_enumPriority = _Epriority;
-        m_nID = _nID;
-        
-        m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
-        m_nDecodedImageSize = m_objMemPoolDecodedInt->GetElementSize();
-    }
-
-    LambdaTask::LambdaTask(string _strTaskName, Enum_priority _Epriority, int _nID, LambdaSysImpl* _objSys,NetworkInterface* _objNetInt,MemPool<char>* _objMemPoolRaw,MemPool<char>* _objMemPoolCompressed,boost::mutex* _bstMtx,vector<short> _vCurrentChip,vector<int> _vNIndex,vector<int> _vNNominator,int _nDistortedImageSize):
-        m_objSys(_objSys)
-        ,m_objNetInterface(_objNetInt)
-        ,m_objMemPoolRaw(_objMemPoolRaw)
-        ,m_objMemPoolCompressed(_objMemPoolCompressed)
-        ,m_boostMtx(_bstMtx)
-        ,m_vCurrentChip(_vCurrentChip)
-        ,m_vNIndex(_vNIndex)
-        ,m_vNNominator(_vNNominator)
-        ,m_nDecodedImageSize(_nDistortedImageSize)
-    {
-        LOG_TRACE(__FUNCTION__);
-        
-        m_strTaskName = _strTaskName;
-        m_enumPriority = _Epriority;
-        m_nID = _nID;
-        
-        m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
-        //m_nDecodedImageSize = m_objMemPoolCompressed->GetElementSize();
-    }
-    
-    LambdaTask::~LambdaTask()
-    {
-        LOG_TRACE(__FUNCTION__);
-    }
-
-
-    void LambdaTask::SetCompressedBuffer(MemPool<char>* objMemPoolCompressed)
-    {
-        LOG_TRACE(__FUNCTION__);
-        m_objMemPoolCompressed = objMemPoolCompressed;
-    }
-    
-    void LambdaTask::DoTaskAction()
+    void LambdaTaskMultiLinkUDPRecv::SetRequestedImages(int32 nImgNo)
     {
         LOG_TRACE(__FUNCTION__);
 
-        if(m_strTaskName == "StartAcquisition")
-            DoAcquisition();
-        if(m_strTaskName == "StartAcquisitionTCP")
-            DoAcquisitionTCP();
-        else if(m_strTaskName == "DecodeImage")       
-            DoDecodeImage();
-        else if(m_strTaskName == "MultiLink")
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_nRequestedImageNo = nImgNo;
+    }
+
+    void LambdaTaskMultiLinkUDPRecv::DoTaskAction()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        if(m_strTaskName == "MultiLink")
             DoAcquisitionWithMultiLink();
         else if(m_strTaskName == "MonitorTask")
             DoMonitorListener();
-        m_objSys->GetState(); // When task exits, useful to check state.
 
+        // m_objSys->GetState(); // When task exits, useful to check state.
     }
-    
-    void LambdaTask::DoMonitorListener()
+
+    void LambdaTaskMultiLinkUDPRecv::DoMonitorListener()
+    {
+        LOG_INFOS("listner thread starts" + to_string(m_nID));
+
+        while(true)
+        {
+            usleep(100);
+
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart)
+                m_bstCond.wait(lock);
+
+            if(m_fExit)
+                break;
+
+            lock.unlock();
+
+            if(m_objMemPoolRaw->GetTotalReceivedFrames() >= m_nRequestedImageNo)
+            {
+                Stop();
+                continue;
+            }
+
+            m_objMemPoolRaw->IsImageFinished();
+
+        }
+        LOG_INFOS("listner thread exits" + to_string(m_nID));
+    }
+
+    void LambdaTaskMultiLinkUDPRecv::DoAcquisitionWithMultiLink()
     {
         LOG_TRACE(__FUNCTION__);
 
-        boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
-        bool bIsStart = m_objSys->GetAcquisitionStart();
-        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24) || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
-            lRequestedImgNo*=2;
-        lock.unlock();
-        //cout<<"listner thread starts"<<m_nID<<endl;
-        
-        while(true)
-        {   
-            //while(m_objMemPoolRaw->GetTotalReceivedPackets()<(lRequestedImgNo*133*0.8))
-            //    usleep(1000);
-            usleep(200);
-            
-            if(m_objMemPoolRaw->GetTotalReceivedFrames()>=lRequestedImgNo || (!bIsStart))
-                break;
-	     
-            m_objMemPoolRaw->IsImageFinished();
-	     
-            lock.lock();
-            bIsStart = m_objSys->GetAcquisitionStart();
-            lock.unlock();
-        }
-        //cout<<"listner thread exits"<<m_nID<<endl;
-    }
-    
-    void LambdaTask::DoAcquisitionWithMultiLink()
-    {    
-        LOG_TRACE(__FUNCTION__);
-
-        char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];    
-        int nPacketSize = UDP_PACKET_SIZE_NORMAL;
-        short shErrorCode = 0;
-        long lFrameNo = 0;
-        short shPacketSequenceNo = 0;
-        int nPos = 0;
+        char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];
+        szt nPacketSize = UDP_PACKET_SIZE_NORMAL;
+        int16 shErrorCode = 0;
+        int32 lFrameNo = 0;
+        int16 shPacketSequenceNo = 0;
+        int32 nPos = 0;
         m_objMemPoolRaw->AddTaskFrame(m_nID,-1);
-        boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
-        bool bIsStart = m_objSys->GetAcquisitionStart();
-        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24) || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
-            lRequestedImgNo*=2;
-        lock.unlock();
-        int nCurrentFrame = -1;
 
-        int nCount = 200;
-        int nNoDataTimes = 0;
-        
+        bool bRollover = false; // Flag for detecting rollover
+        int32 nMaxFrameNo = pow(2,24)-1; // Rollover occurs at end of 24-bit counter
+        //cout << "Rollover test value" << nMaxFrameNo;
 
-        //cout<<"listner thread starts"<<m_nID<<endl;
+        LOG_INFOS("multi link udp recv starts" + to_string(m_nID));
         while(true)
         {
-            if(m_objMemPoolRaw->GetTotalReceivedFrames()>=lRequestedImgNo)
-            {		
-                break;
-            }
-            else if(!bIsStart)
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart)
             {
-                //m_objNetInterface->ReceiveData(ptrchTmpImg,m_nRawImageSize);
-                while(true)
-                {
-                    shErrorCode = m_objNetInterface->ReceivePacket(ptrchPacket,nPacketSize);
-                    if(shErrorCode==-1)
-                    {
-                        nNoDataTimes++;
-                        //cout << "Timeouttest ";
-                        if(nNoDataTimes==nCount)
-                            break;
-                    }
-                    else 
-                    {
-                        nNoDataTimes = 0;
-                        //cout << "Extrapacket ";
-                    }
-                }
+                //int32 nCount = 200;
+                //int32 nNoDataTimes = 0;
+
+                //read remain data in socket buffer
+                m_objNetInterface->ClearDataInSocket();
+
+                m_bstCond.wait(lock);
+
+                shErrorCode = 0;
+                lFrameNo = 0;
+                shPacketSequenceNo = 0;
+                nPos = 0;
+                m_objMemPoolRaw->AddTaskFrame(m_nID,-1);
+            }
+
+            if(m_fExit)
                 break;
+
+            lock.unlock();
+
+            if(m_objMemPoolRaw->GetTotalReceivedFrames() >= m_nRequestedImageNo)
+            {
+                Stop();
+                continue;
             }
 
             shErrorCode = m_objNetInterface->ReceivePacket(ptrchPacket,nPacketSize);
-            
+
             if(shErrorCode!=-1)
             {
-                lFrameNo = (unsigned char)ptrchPacket[5]
-                    +(unsigned char)ptrchPacket[4]*256
-                    +(unsigned char)ptrchPacket[3]*256*256;
+                lFrameNo = (uchar)ptrchPacket[5]
+                    +(uchar)ptrchPacket[4]*256
+                    +(uchar)ptrchPacket[3]*256*256;
 
-                
-                shPacketSequenceNo = (unsigned char)ptrchPacket[2];
-                //if(shPacketSequenceNo == 1)
-                //    nPos = 0;
-                //else
+                if(lFrameNo == nMaxFrameNo)
+                {
+                    bRollover = true;
+                    //cout << "Rollover detected";
+                }
+
+                if(bRollover && (lFrameNo < nMaxFrameNo))
+                {
+                    // In special case of rollover, subsequent images
+                    // should have their number increased
+                    lFrameNo += (nMaxFrameNo+1);
+                }
+
+                shPacketSequenceNo = (uchar)ptrchPacket[2];
+
+                //cout<<"threads recv:"<<m_nID<<"-"<<lFrameNo<<"-"<<shPacketSequenceNo<<endl;
+
                 nPos = (UDP_PACKET_SIZE_NORMAL-UDP_EXTRA_BYTES)*(shPacketSequenceNo-1);
-                m_objMemPoolRaw->SetPacket(ptrchPacket,nPos,nPacketSize,lFrameNo,shErrorCode,m_nID,shPacketSequenceNo);
+                m_objMemPoolRaw->SetPacket(ptrchPacket,nPos,nPacketSize,
+                                           lFrameNo,shErrorCode,m_nID,shPacketSequenceNo);
             }
             else
-            {
-                usleep(10); // Avoid hitting socket and mutexes too much if no packets available 
-            }
-            
-            lock.lock();
-            bIsStart = m_objSys->GetAcquisitionStart();
-            lock.unlock();
+                usleep(10); // Avoid hitting socket and mutexes too much if no packets available
         }
-        
-        lock.lock();
-        m_objSys->SetAcquisitionStart(false);
-        // m_objSys->SetState(ON);
-        lock.unlock();
-        //cout<<"listner thread exits"<<m_nID<<endl;
-        delete ptrchPacket;
+
+        delete[] ptrchPacket;
+        LOG_INFOS("multi link udp recv exits" + to_string(m_nID));
     }
-  
-    void LambdaTask::DoAcquisition()
+
+    //////////////////////////////////////////////////
+    /// LambdaSingleLinkUDPRecv
+    //////////////////////////////////////////////////
+    LambdaTaskSingleLinkUDPRecv::LambdaTaskSingleLinkUDPRecv(string strTaskName,
+                                                           Enum_priority Epriority,
+                                                           int32 nID,
+                                                           NetworkInterface* objNetInt,
+                                                           MemPool<char>* objMemPoolRaw)
+        :m_objNetInterface(objNetInt),
+         m_objMemPoolRaw(objMemPoolRaw)
     {
         LOG_TRACE(__FUNCTION__);
-        char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];    
-        int nPacketSize = UDP_PACKET_SIZE_NORMAL;
-        short shErrorCode = 0;
-	
-        char* ptrchTmpImg = new char[m_nRawImageSize];
-        short nErrorCode = 0;
-        long lFrameNo = 0;
-
-        boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
-        if((m_objSys->GetReadoutModeCode() == OPERATION_MODE_24) || (m_objSys->GetReadoutModeCode() == OPERATION_MODE_2x12))
-            lRequestedImgNo*=2;
-        bool bIsStart = m_objSys->GetAcquisitionStart();
-        bool bIsFull = m_objMemPoolRaw->IsFull();
-        lock.unlock();
-
-        int nCount = 200;
-        int nNoDataTimes = 0;
         
+        m_strTaskName = strTaskName;
+        m_enumPriority = Epriority;
+        m_nID = nID;
+        m_enumTargetPriority = &m_enumPriority; // Default behaviour will ignore priority
+
+
+        m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
+    }
+
+    void LambdaTaskSingleLinkUDPRecv::SetRequestedImages(int32 nImgNo)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_nRequestedImageNo = nImgNo;
+    }
+
+    void LambdaTaskSingleLinkUDPRecv::DoTaskAction()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        DoAcquisitionWithSingleLink();
+
+        // m_objSys->GetState(); // When task exits, useful to check state.
+    }
+
+    void LambdaTaskSingleLinkUDPRecv::DoAcquisitionWithSingleLink()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        char* ptrchTmpImg = new char[m_nRawImageSize];
+        int16 shErrorCode = 0;
+        int32 nFrameNo = 0;
+
+        LOG_INFOS("single link udp recv starts" + to_string(m_nID));
         while(true)
         {
-
-            if(lFrameNo>=lRequestedImgNo)
-            {		
-                break;
-            }
-            else if(!bIsStart)
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart)
             {
-                //If acquisition stopped, empty any excess data from buffer before breaking
-                while(true)
-                {
-                    shErrorCode = m_objNetInterface->ReceivePacket(ptrchPacket,nPacketSize);
-                    if(shErrorCode==-1)
-                    {
-                        nNoDataTimes++;
-                        if(nNoDataTimes==nCount)
-                            break;
-                    }
-                    else 
-                    {
-                        nNoDataTimes = 0;
-                    }
-                }
-                break;
+                //read remain data in socket buffer
+                m_objNetInterface->ClearDataInSocket();
+
+                m_bstCond.wait(lock);
+
+                shErrorCode = 0;
+                nFrameNo = 0;
             }
-			
-            nErrorCode = m_objNetInterface->ReceiveData(ptrchTmpImg,m_nRawImageSize);
-            lFrameNo++;
-	    
-            m_objMemPoolRaw->SetImage(ptrchTmpImg,lFrameNo,nErrorCode);	  
-            LOG_INFOS(("Arrived Frame No is:"+to_string(static_cast<long long>(lFrameNo))));
-            //cout<<"Arrived Frame No is:"<<to_string(static_cast<long long>(lFrameNo))<<endl;
+
+            if(m_fExit)
+                break;
+
+            lock.unlock();
+
+            if(nFrameNo >= m_nRequestedImageNo)
+            {
+                Stop();
+                continue;
+            }
+
+            shErrorCode = m_objNetInterface->ReceiveData(ptrchTmpImg,m_nRawImageSize);
+            nFrameNo++;
+
+            m_objMemPoolRaw->SetImage(ptrchTmpImg,nFrameNo,shErrorCode);
+            LOG_INFOS(("Arrived Frame No is:"+to_string(nFrameNo)));
         }
 
-        lock.lock();
-        m_objSys->SetAcquisitionStart(false);
-        lock.unlock();
+        delete[] ptrchTmpImg;
+        LOG_INFOS("single link udp recv exits" + to_string(m_nID));
 
-        delete ptrchPacket;
-        delete ptrchTmpImg;
-        
-        LOG_INFOS("Do acquisition thread exits");
+    }
+
+    //////////////////////////////////////////////////
+    /// LambdaSingleLinkTCPRecv
+    //////////////////////////////////////////////////
+    LambdaTaskSingleLinkTCPRecv::LambdaTaskSingleLinkTCPRecv(string strTaskName,
+                                                           Enum_priority Epriority,
+                                                           int32 nID,
+                                                           NetworkInterface* objNetInt,
+                                                           MemPool<char>* objMemPoolRaw)
+        :m_objNetInterface(objNetInt),
+         m_objMemPoolRaw(objMemPoolRaw)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        m_strTaskName = strTaskName;
+        m_enumPriority = Epriority;
+        m_nID = nID;
+        m_enumTargetPriority = &m_enumPriority; // Default behaviour will ignore priority
+
+        m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
+    }
+
+    void LambdaTaskSingleLinkTCPRecv::SetRequestedImages(int32 nImgNo)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_nRequestedImageNo = nImgNo;
     }
 
 
-
-    void LambdaTask::DoAcquisitionTCP()
+    void LambdaTaskSingleLinkTCPRecv::DoTaskAction()
     {
+        LOG_TRACE(__FUNCTION__);
+
+        DoAcquisitionWithSingleLink();
+
+        // m_objSys->GetState(); // When task exits, useful to check state.
+    }
+
+    void LambdaTaskSingleLinkTCPRecv::DoAcquisitionWithSingleLink()
+    {
+        LOG_TRACE(__FUNCTION__);
+
         //Acquisition with TCP
         //Firstly, need opportunity to break if acq cancelled
-        //Secondly, at high data rates packets from consecutive images may be combined - need to handle this carefully
+        //Secondly, at high data rates packets from consecutive
+        //images may be combined - need to handle this carefully
         LOG_TRACE(__FUNCTION__);
-        int nTCPPacketSize = 1500;
+        int32 nTCPPacketSize = 1500;
         char* ptrchPacket = new char[nTCPPacketSize];
 
-        int nCurrentPacketSize;
-	
+        size_t nCurrentPacketSize;
+
         char* ptrchTmpImg = new char[m_nRawImageSize];
-        long lFrameNo = 0;
+        int32 nFrameNo = 0;
 
-        int nErrorCode = 0;
-        int nPacketCode = 0;
-        int nReceivedData = 0;
-        int nRetVal = -1;
-        int nFrameLength = m_nRawImageSize;
-        int nBytesLeft = nFrameLength;
-        int nExcessBytes = 0;
+        int32 shErrorCode = 0;
+        int32 nPacketCode = 0;
+        int32 nReceivedData = 0;
+        int32 nFrameLength = m_nRawImageSize;
+        int32 nBytesLeft = nFrameLength;
+        int32 nExcessBytes = 0;
 
-        boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-        long lRequestedImgNo = m_objSys->GetNImages();
-        if(m_objSys->GetReadoutModeCode() == OPERATION_MODE_24)
-            lRequestedImgNo*=2;
-        bool bIsStart = m_objSys->GetAcquisitionStart();
-        bool bIsFull = m_objMemPoolRaw->IsFull();
-        lock.unlock();
+        int32 nCount = 200;
+        int32 nNoDataTimes = 0;
 
-        int nCount = 200;
-        int nNoDataTimes = 0;
+        LOG_INFOS("single link tcp recv starts" + to_string(m_nID));
 
         while(true) // Loop over images
         {
-            //Test conditions for exiting acquisition loop
-            if(lFrameNo>=lRequestedImgNo)
-            {		
-                break;
-            }
-	    
-            lock.lock();
-            bIsStart = m_objSys->GetAcquisitionStart();
-            lock.unlock();
-	    
-            if(!bIsStart)
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart)
             {
-                //If acq stopped, empty any remaining packets from buffer
-                while(true)
-                {
-                    nPacketCode = m_objNetInterface->ReceivePacket(ptrchPacket,nCurrentPacketSize);
-                    if(nPacketCode==-1)
-                    {
-                        nNoDataTimes++;
-                        if(nNoDataTimes>=nCount)
-                        {
-                            nNoDataTimes = 0;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        nNoDataTimes = 0;
-                    }
-                }
-                break;
+                //read remain data in socket buffer
+                m_objNetInterface->ClearDataInSocket();
+
+                m_bstCond.wait(lock);
+
+                shErrorCode = 0;
+                nFrameNo = 0;
+                nPacketCode = 0;
+                nReceivedData = 0;
+                nFrameLength = m_nRawImageSize;
+                nBytesLeft = nFrameLength;
+                nExcessBytes = 0;
             }
 
-            if(nExcessBytes > 0) // Special case where single packet contains data from 2 images
+            if(m_fExit)
+                break;
+
+            lock.unlock();
+
+            if(nFrameNo >= m_nRequestedImageNo)
             {
-                std::copy(ptrchPacket+nCurrentPacketSize-nExcessBytes,ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
+                Stop();
+                continue;
+            }
+
+            // Special case where single packet contains data from 2 images
+            if(nExcessBytes > 0)
+            {
+                std::copy(ptrchPacket+nCurrentPacketSize-nExcessBytes,
+                          ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
                 nReceivedData += nExcessBytes;
                 nBytesLeft = nBytesLeft-nExcessBytes;
                 nExcessBytes = 0;
             }
+
             //NOTE that in theory we might exit this loop mid-image
             while(true)
             {
@@ -408,9 +390,9 @@ namespace DetCommonNS
                 }
                 else
                 {
-                    // We have data 
+                    // We have data
                     nNoDataTimes = 0;
-                    if(nCurrentPacketSize > nBytesLeft)
+                    if(nCurrentPacketSize > static_cast<szt>(nBytesLeft))
                     {
                         //Bytes from next image are present in buffer - need to take note of this
                         std::copy(ptrchPacket,ptrchPacket+nBytesLeft,ptrchTmpImg+nReceivedData);
@@ -420,7 +402,8 @@ namespace DetCommonNS
                     }
                     else
                     {
-                        std::copy(ptrchPacket,ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
+                        std::copy(ptrchPacket,ptrchPacket+nCurrentPacketSize,
+                                  ptrchTmpImg+nReceivedData);
                         nReceivedData += nCurrentPacketSize;
                         nBytesLeft = nBytesLeft-(nCurrentPacketSize);
                     }
@@ -429,374 +412,647 @@ namespace DetCommonNS
                 if(nBytesLeft==0)
                 {
                     //first byte of the image should be 0xa0
-                    unsigned char uchByte = ptrchTmpImg[0];
+                    uchar uchByte = ptrchTmpImg[0];
                     if(uchByte!=0xa0)
-                    {	
+                    {
                         LOG_STREAM(__FUNCTION__,ERROR,"Image data is wrong!");
-                        nErrorCode = 2;
+                        shErrorCode = 2;
                     }
-                    else nErrorCode = 0;
-                    lFrameNo++; // Make first frame no 1, for consistency with multilink approach
-                    m_objMemPoolRaw->SetImage(ptrchTmpImg,lFrameNo,nErrorCode);	  
-                    LOG_INFOS(("Arrived Frame No is:"+to_string(static_cast<long long>(lFrameNo))));
+                    else
+                        shErrorCode = 0;
+
+                    // Make first frame no 1, for consistency with multilink approach
+                    nFrameNo++;
+                    m_objMemPoolRaw->SetImage(ptrchTmpImg,nFrameNo,shErrorCode);
+                    LOG_INFOS(("Arrived Frame No is:"+to_string(nFrameNo)));
+
                     // Reset some variables
                     nReceivedData = 0;
                     nBytesLeft = nFrameLength;
-                    nErrorCode = 0;
+                    shErrorCode = 0;
                     break;
                 }
             }
 
         }///end of loop
 
-        lock.lock();
-        m_objSys->SetAcquisitionStart(false);
-        //m_objSys->SetState(ON);
-        lock.unlock();
-
         delete ptrchPacket;
         delete ptrchTmpImg;
-        LOG_INFOS("Do acquisition thread exits");
+
+        LOG_INFOS("single link tcp recv exits" + to_string(m_nID));
     }
-
-
-  
-    void LambdaTask::DoDecodeImage()
+    //////////////////////////////////////////////////
+    /// LambdaTaskDecodeImage
+    //////////////////////////////////////////////////
+    LambdaTaskDecodeImage::LambdaTaskDecodeImage()
+    :m_pCompressor(nullptr),
+     m_fDCEnabled(false),
+     m_fCompressionEnabled(false)
     {
         LOG_TRACE(__FUNCTION__);
-       
-        char* ptrchTmpImg;
-        char* ptrchTmpImg1;
-        ptrchTmpImg = 0; // Null pointer initially
-        ptrchTmpImg1 = 0;
-        ImageDecoder* objDecoder = new ImageDecoder(m_vCurrentChip);
-        ImageDecoder* objDecoder1 = new ImageDecoder(m_vCurrentChip);
+    }
 
-	int nXtemp;
-	int nYtemp;
-	objDecoder->GetDecodedImageSize(nXtemp, nYtemp);
+    LambdaTaskDecodeImage::~LambdaTaskDecodeImage()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        if(m_pCompressor)
+            m_pCompressor.reset();
+    }
+
+    void LambdaTaskDecodeImage::EnableCompression(int16 nType,int16 nCompressionLevel)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        if(m_pCompressor)
+            m_pCompressor.reset();
+
+        switch(nType)
+        {
+            case 1: //defalte
+                m_pCompressor
+                    = uptr_Compressor(new CompressionContext(
+                                          unique_ptr<CompressionInterface>(
+                                              new CompressionZlib())));
+                m_nCompressionLevel = 2;
+
+                break;
+        };
+
+        m_fCompressionEnabled = true;
+    }
+    void LambdaTaskDecodeImage::EnableCompression(int32 nChunkIn,int32 nChunkOut,int32 nPostCode)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        if(m_pCompressor)
+            m_pCompressor.reset();
+#ifdef ENABLEHWCOMPRESSION
+	LOG_INFOS("HW compression is enabled");
+        m_pCompressor = uptr_Compressor(new CompressionContext(
+                                          unique_ptr<CompressionInterface>(
+                                              new CompressionHWAHA(nChunkIn,
+                                                                   nChunkOut,
+                                                                   static_cast<uint8>(5), // use zlib RFC 1950
+                                                                   nPostCode))));
 	
-	int nImageSizeBeforeDistCorr = nXtemp * nYtemp;
+#else
+	 LOG_STREAM(__FUNCTION__,ERROR,"hw compression cannot be enabled,sw compression is enabled instead");
+	 EnableCompression(1,2);
+#endif
+	 m_fCompressionEnabled = true;
+       
+    }
 
-        short* ptrshDecodedImg;
-        short* ptrshDecodedImg1;
-        int* ptrnDecodedImg = new int[nImageSizeBeforeDistCorr];
-        int* ptrnFinishedImg;
+    void LambdaTaskDecodeImage::DisableCompression()
+    {
+        LOG_TRACE(__FUNCTION__);
 
-        DistortionCorrector<short> *objDC = new DistortionCorrector<short>(m_vNIndex,m_vNNominator,(int)pow(2,12));
-        DistortionCorrector<int> *objDC1 = new DistortionCorrector<int>(m_vNIndex,m_vNNominator,(int)pow(2,24));
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_pCompressor.reset();
 
-        CompressionContext* objCompressionContext = new CompressionContext(unique_ptr<CompressionInterface>(new CompressionZlib()));
+        m_fCompressionEnabled = false;
+    }
 
-
-        // Compression-related vectors, if needed
-        // Try creating on the stack, for now; can change to heap if needed
-        vector<unsigned char> vuchData;
-        vector<unsigned char> vuchDstData;
-         
+    void LambdaTaskDecodeImage::DoTaskAction()
+    {
+        LOG_TRACE(__FUNCTION__);
 
         while(true)
         {
             usleep(10);
 
-            boost::unique_lock<boost::mutex> lock(*m_boostMtx);
-            bool bVal = m_objSys->SysExit();
-            Enum_readout_mode enumOperationMode = m_objSys->GetReadoutModeCode();
-            int nDistortionCorr = m_objSys->GetDistortionCorrecttionMethod();
-            int nMethod = m_objSys->GetCompressionMethod();
-            bool bCompressionEnabled;
-            int nCompLevel;
-            m_objSys->GetCompressionEnabled(bCompressionEnabled,nCompLevel);
-            lock.unlock();
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart)
+                m_bstCond.wait(lock);
 
-            if(bVal)
+            if(m_fExit)
                 break;
 
-            if(*m_enumTargetPriority > m_enumPriority) // If priority lower, throttle back task
+            lock.unlock();
+
+            if(*m_enumTargetPriority > m_enumPriority)
             {
                 usleep(10000);
                 continue;
             }
 
-            //continuousReadWrite or 2 x 12 bit
-            if((enumOperationMode == OPERATION_MODE_12) || (enumOperationMode == OPERATION_MODE_2x12))
+            if(!DoDecodeImage())
             {
-                if(m_objMemPoolRaw->GetStoredImageNumbers() == 0)
-                {
-                    usleep(50);
-                    continue;
-                }	  
-
-                if(!bCompressionEnabled)
-                {    
-                    if(m_objMemPoolDecodedShort->IsFull())
-                    {
-                        usleep(50);
-                        continue;
-                    }
-                }
-                else
-                {
-                    if(m_objMemPoolCompressed->IsFull())
-                    {
-                        usleep(50);
-                        continue;
-                    }
-                }
-                
-	
-                short shErrCode = 0;
-                long lFrameNo = 0;
-                int nDataLength;
-                
-                if(m_objMemPoolRaw->GetImage(ptrchTmpImg,lFrameNo,shErrCode,nDataLength))
-                {
-                    objDecoder->SetRawImage(ptrchTmpImg);
-                    ptrshDecodedImg = objDecoder->RunDecodingImg();
-
-
-                    if(nDistortionCorr == 1)
-                    {
-                        //distortion correction
-                        short* pShImgOut = objDC->RunDistortCorrect(ptrshDecodedImg);
-                        ptrshDecodedImg = pShImgOut;
-                    }
-
-                    if(!bCompressionEnabled)
-                    {
-                        
-                        if(m_objMemPoolDecodedShort->GetFirstFrameNo() == -1)
-                        {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
-                
-                            //if lFristFrame is -1, means it is single link version
-                            if(lFristFrame!=-1)
-                                m_objMemPoolDecodedShort->SetFirstFrameNo(lFristFrame);
-                        }
-                    }
-                    else
-                    {    
-                        if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
-                        {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
-                
-                            //if lFristFrame is -1, means it is single link version
-                            if(lFristFrame!=-1)
-                                m_objMemPoolCompressed->SetFirstFrameNo(lFristFrame);
-                        }
-                    }
-                    
-                    //cout<<lFrameNo<<":is taken for decoding"<<endl;
-
-                    //Avoid repeated iteration here!
-
-                    
-                    //usleep(20);
-
-                    lock.lock();
-                    
-
-                    //upate live data
-                    m_objSys->SetCurrentImage(ptrshDecodedImg,lFrameNo,shErrCode);
-                    lock.unlock();
-
-
-                    if(bCompressionEnabled)
-                    {
-                        int nTotalSize = m_nDecodedImageSize*sizeof(short);
-
-                        vuchData.resize(nTotalSize);
-                        memmove(&vuchData[0],ptrshDecodedImg,nTotalSize);
-
-                        if(!objCompressionContext->CompressData(vuchData,vuchDstData,nCompLevel))
-                            cout<<objCompressionContext->GetErrorMessage()<<endl;
-
-                        
-                        
-                        char* ptrchData = reinterpret_cast<char*>(&vuchDstData[0]);
-                        // Loop where we try to stick image into buffer
-                        while(true)
-                        {
-                            bool bIsAcq = m_objSys->GetAcquisitionStop();
-                            if(bIsAcq)
-                                break;
-
-                            if((m_objMemPoolCompressed->SetImage(ptrchData
-                            
-                                                                 ,lFrameNo,shErrCode
-                                                                 ,true
-                                                                 ,vuchDstData.size())) == true)
-                            {
-                                break;
-                            }
-                            usleep(20); // Wait for next attempt
-                        }
-                    }
-                    else    
-                    {
-                                   
-                        while(true)
-                        {
-                            bool bIsAcq = m_objSys->GetAcquisitionStop();
-                            if(bIsAcq)
-                                break;
-                            if(m_objMemPoolDecodedShort->SetImage(ptrshDecodedImg,lFrameNo,shErrCode,true) == true)
-                            {
-			         
-                                break;
-                            }
-                            usleep(20); // Wait for next attempt
-                        }
-                                      
-                            
-
-                    }
-
-                }
-                
+                usleep(100);
+                continue;
             }
-            else if(enumOperationMode == OPERATION_MODE_24)
-            {
-                if(m_objMemPoolRaw->GetStoredImageNumbers() < 2)
-                {
-                    usleep(50);
-                    continue;
-                }	  
 
+            if(m_fDCEnabled)
+                DoDistortionCorrection();
 
-                if(!bCompressionEnabled)
-                {    
-                    if(m_objMemPoolDecodedInt->IsFull())
-                    {
-                        usleep(50);
-                        continue;
-                    }
-                }
-                else
-                {
-                    if(m_objMemPoolCompressed->IsFull())
-                    {
-                        usleep(50);
-                        continue;
-                    }
-                }
-                short shErrCode = 0;
-                long lFrameNo = 0;
-                short shErrCode1 = 0;
-                long lFrameNo1 = 0;
-                
-                if(m_objMemPoolRaw->Get2Image(ptrchTmpImg,lFrameNo,shErrCode,ptrchTmpImg1,lFrameNo1,shErrCode1))
-                {
-                
-                    objDecoder->SetRawImage(ptrchTmpImg);
-                    ptrshDecodedImg = objDecoder->RunDecodingImg();
+            SetFirstFrameNo();
 
-                    objDecoder1->SetRawImage(ptrchTmpImg1);
-                    ptrshDecodedImg1 = objDecoder1->RunDecodingImg();
+            if(m_fCompressionEnabled)
+                DoCompression();
 
-                    for(int i=0;i<nImageSizeBeforeDistCorr;i++)
-                        ptrnDecodedImg[i] = ((int)ptrshDecodedImg[i])+(((int)ptrshDecodedImg1[i])*4096);
-                    lFrameNo = lFrameNo1/2;
-                    shErrCode = shErrCode<=shErrCode1?shErrCode:shErrCode1;
-                    ptrnFinishedImg = ptrnDecodedImg;
-                
-                    if(nDistortionCorr == 1)
-                    {
-                        //distortion correction
-                        int* pNImgOut = objDC1->RunDistortCorrect(ptrnDecodedImg);
-                        ptrnFinishedImg = pNImgOut;
-                    }
-
-                    if(!bCompressionEnabled)
-                    {
-                        
-                        if(m_objMemPoolDecodedInt->GetFirstFrameNo() == -1)
-                        {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
-                
-                            //if lFristFrame is -1, means it is single link version
-                            if(lFristFrame!=-1)
-                                m_objMemPoolDecodedInt->SetFirstFrameNo((lFristFrame+1)/2);
-                        }
-                    }
-                    else
-                    {    
-                        if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
-                        {
-                            long lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
-                
-                            //if lFristFrame is -1, means it is single link version
-                            if(lFristFrame!=-1)
-                                m_objMemPoolCompressed->SetFirstFrameNo((lFristFrame+1)/2);
-                        }
-                    }
-                    //usleep(20);
-
-                    lock.lock();
-                    //upate live data
-                    m_objSys->SetCurrentImage(ptrnFinishedImg,lFrameNo,shErrCode);
-                    lock.unlock();
-                
-                    if(bCompressionEnabled)
-                    {
-                        int nTotalSize = m_nDecodedImageSize*sizeof(int);
-
-                        vuchData.resize(nTotalSize);
-                        memmove(&vuchData[0],ptrnFinishedImg,nTotalSize);
-			 
-
-                        if(!objCompressionContext->CompressData(vuchData,vuchDstData,nCompLevel))
-                            cout<<objCompressionContext->GetErrorMessage()<<endl;
-                        char* ptrchData = reinterpret_cast<char*>(&vuchDstData[0]);
-
-                        // Loop where we try to stick image into buffer
-                        while(true)
-                        {
-                            bool bIsAcq = m_objSys->GetAcquisitionStop();
-                            if(bIsAcq)
-                                break;
-
-                            if((m_objMemPoolCompressed->SetImage(ptrchData
-                                                                 ,lFrameNo,shErrCode
-                                                                 ,true
-                                                                 ,vuchDstData.size())) == true)
-                            {
-                                break;
-                            }
-                            usleep(20); // Wait for next attempt
-                        }
-                    }
-                    else
-                    {
-                        while(true)
-                        {
-                            bool bIsAcq = m_objSys->GetAcquisitionStop();
-                            if(bIsAcq)
-                                break;
-                            
-                            if(m_objMemPoolDecodedInt->SetImage(ptrnFinishedImg,lFrameNo,shErrCode,true) == true)
-                                break;
-                            usleep(20); // Wait for next attempt
-                        }
-                    }
-
-                }
-                
-            }
-            
-            
-        }///end loop
-        
-        delete objDecoder;
-        delete objDecoder1;
-        delete[] ptrnDecodedImg;
-
-        delete objDC;
-
-        delete objDC1;
-
-        delete objCompressionContext;
-
-        LOG_INFOS("Do decoding thread exits");	
+            WriteData();
+            UpdateLiveImage();
+        }
     }
-}///end of namespace DetCommonNS
+
+    //////////////////////////////////////////////////
+    /// LambdaTaskDecodeImage12
+    //////////////////////////////////////////////////
+    LambdaTaskDecodeImage12::LambdaTaskDecodeImage12(string strTaskName,
+                                                     Enum_priority Epriority,
+                                                     int32 nID,
+                                                     vector<int16> vCurrentChip,
+                                                     MemPool<char>* objMemPoolRaw,
+                                                     int32 nImageSizeAfterDC)
+        :m_vCurrentChip(vCurrentChip),
+         m_nDecodedImageSize(nImageSizeAfterDC),
+         m_nSubImages(1),
+         m_objMemPoolRaw(objMemPoolRaw),
+         m_objMemPoolCompressed(nullptr),
+         m_objMemPoolDecoded12(nullptr),
+         m_pDecoder(new ImageDecoder(m_vCurrentChip)),
+         m_nFrameRate(1000)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        m_strTaskName = strTaskName;
+        m_enumPriority = Epriority;
+        m_nID = nID;
+        m_enumTargetPriority = &m_enumPriority; // Default behaviour will ignore priority
+
+        m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
+
+
+        int32 nXtemp;
+        int32 nYtemp;
+        m_pDecoder->GetDecodedImageSize(nXtemp, nYtemp);
+
+        m_nImageSizeBeforeDC = nXtemp * nYtemp;
+        //m_pLiveImage = new int32[m_nImageSizeBeforeDC];
+        //m_p12bitDecodedImg = new int16[m_nImageSizeBeforeDC];
+
+        m_vSrcData.clear();
+        m_vSrcData.resize(m_nDecodedImageSize*sizeof(int16));
+    }
+
+    LambdaTaskDecodeImage12:: ~LambdaTaskDecodeImage12()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        m_pDecoder.reset();
+
+        if(m_pDC16)
+            m_pDC16.reset();
+    }
+
+    void LambdaTaskDecodeImage12::EnableDC(vector<int32>& vNIndex, vector<int32>& vNNominator)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_vNIndex = vNIndex;
+        m_vNNominator = vNNominator;
+
+        m_pDC16 = uptr_DC16(new DistortionCorrector<int16>(m_vNIndex,
+                                                           m_vNNominator,
+                                                           ((uint32)(2<<12)-1)));
+        m_fDCEnabled = true;
+    }
+
+    void LambdaTaskDecodeImage12::DisableDC()
+    {
+        LOG_TRACE(__FUNCTION__);
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_pDC16.reset();
+        m_fDCEnabled = false;
+    }
+
+    void LambdaTaskDecodeImage12::SetLiveMode(int32 nFrameRate, int32& nFrameNo, int32* pLiveImg)
+    {
+        LOG_TRACE(__FUNCTION__);
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_nFrameRate = nFrameRate;
+        m_nLiveFrameNo = &nFrameNo;
+        m_pLiveImage = pLiveImg;
+    }
+
+    void LambdaTaskDecodeImage12::SetBuffer(MemPool<char>* objMemPoolCompressed)
+    {
+        LOG_TRACE(__FUNCTION__);
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_objMemPoolCompressed = objMemPoolCompressed;
+    }
+
+    void LambdaTaskDecodeImage12::SetBuffer(MemPool<int16>* objMemPoolDecoded12)
+    {
+        LOG_TRACE(__FUNCTION__);
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_objMemPoolDecoded12 = objMemPoolDecoded12;
+    }
+
+    bool LambdaTaskDecodeImage12::DoDecodeImage()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        char* ptrchImg = 0;
+
+        if(m_objMemPoolRaw->GetStoredImageNumbers() == 0)
+            return false;
+
+        if(m_fCompressionEnabled)
+        {
+            if(m_objMemPoolCompressed->IsFull())
+                return false;
+        }
+        else
+        {
+            if(m_objMemPoolDecoded12->IsFull())
+                return false;
+        }
+
+        if(m_objMemPoolRaw->GetImage(ptrchImg,m_nFrameNo,m_shErrCode,m_nDataLength))
+        {
+            m_pDecoder->SetRawImage(ptrchImg);
+            m_p12bitDecodedImg = m_pDecoder->RunDecodingImg();
+            return true;
+        }
+        return false;
+    }
+
+    void LambdaTaskDecodeImage12::DoDistortionCorrection()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        int16* pImageAfterDC = m_pDC16->RunDistortCorrect(m_p12bitDecodedImg);
+        m_p12bitDecodedImg = pImageAfterDC;
+    }
+
+    void LambdaTaskDecodeImage12::DoCompression()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        //vector<uchar> vDstData;
+		m_vDstData.clear();
+
+        memmove(&m_vSrcData[0],m_p12bitDecodedImg,m_vSrcData.size());
+
+        m_pCompressor->CompressData(m_vSrcData,m_vDstData,m_nCompressionLevel);
+        m_pCompressedData = reinterpret_cast<char*>(&m_vDstData[0]);
+        m_nDataLength = m_vDstData.size();
+    }
+
+    void LambdaTaskDecodeImage12::SetFirstFrameNo()
+    {
+        if(m_fCompressionEnabled)
+        {
+            if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
+            {
+                int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                //if lFristFrame is -1, means it is single link version
+                if(lFristFrame!=-1)
+                    m_objMemPoolCompressed->SetFirstFrameNo(lFristFrame);
+            }
+        }
+        else
+        {
+            if(m_objMemPoolDecoded12->GetFirstFrameNo() == -1)
+            {
+                int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                //if lFristFrame is -1, means it is single link version
+                if(lFristFrame!=-1)
+                    m_objMemPoolDecoded12->SetFirstFrameNo(lFristFrame);
+            }
+        }
+    }
+
+    void LambdaTaskDecodeImage12::WriteData()
+    {
+        if(m_fCompressionEnabled)
+            WriteData(m_pCompressedData,m_nFrameNo,m_shErrCode,m_nDataLength);
+        else
+            WriteData(m_p12bitDecodedImg,m_nFrameNo,m_shErrCode);
+    }
+    void LambdaTaskDecodeImage12::WriteData(char* pCompressedData,
+                                            int32 nFrameNo,
+                                            int16 shErrorCode,
+                                            int32 nDataSize)
+    {
+        while(true)
+        {
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart || m_fExit)
+                break;
+
+            lock.unlock();
+
+            if((m_objMemPoolCompressed->SetImage(pCompressedData,
+                                                 nFrameNo,
+                                                 shErrorCode,
+                                                 true,
+                                                 nDataSize)))
+                break;
+            usleep(50); // Wait for next attempt
+        }
+
+    }
+
+    void LambdaTaskDecodeImage12::WriteData(int16* p12bitImg, int32 nFrameNo, int16 shErrorCode)
+    {
+        while(true)
+        {
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart || m_fExit)
+                break;
+
+            lock.unlock();
+
+            if(m_objMemPoolDecoded12->SetImage(p12bitImg,
+                                               nFrameNo,
+                                               shErrorCode,
+                                               true))
+                break;
+            usleep(20); // Wait for next attempt
+        }
+    }
+
+    void LambdaTaskDecodeImage12::UpdateLiveImage()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        if((m_nFrameNo - 1) % m_nFrameRate == 0)
+        {
+            //cout<<m_nFrameNo<<"-"<<m_nFrameRate<<endl;
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            *m_nLiveFrameNo = m_nFrameNo;
+            std::copy(m_p12bitDecodedImg,m_p12bitDecodedImg + m_nDecodedImageSize, m_pLiveImage);
+        }
+    }
+
+    //////////////////////////////////////////////////
+    /// LambdaTaskDecodeImage24
+    //////////////////////////////////////////////////
+    LambdaTaskDecodeImage24::LambdaTaskDecodeImage24(string strTaskName,
+                                                     Enum_priority Epriority,
+                                                     int32 nID,
+                                                     vector<int16> vCurrentChip,
+                                                     MemPool<char>* objMemPoolRaw,
+                                                     int32 nImageSizeAfterDC)
+        :m_vCurrentChip(vCurrentChip),
+         m_nDecodedImageSize(nImageSizeAfterDC),
+         m_nSubImages(1),
+         m_objMemPoolRaw(objMemPoolRaw),
+         m_objMemPoolCompressed(nullptr),
+         m_objMemPoolDecoded24(nullptr),
+         m_pDecoder(new ImageDecoder(m_vCurrentChip)),
+         m_nFrameRate(1000)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        m_strTaskName = strTaskName;
+        m_enumPriority = Epriority;
+        m_nID = nID;
+        m_enumTargetPriority = &m_enumPriority; // Default behaviour will ignore priority
+
+        m_nRawImageSize = m_objMemPoolRaw->GetElementSize();
+
+
+        int32 nXtemp;
+        int32 nYtemp;
+        m_pDecoder->GetDecodedImageSize(nXtemp, nYtemp);
+
+        m_nImageSizeBeforeDC = nXtemp * nYtemp;
+        //m_pLiveImage = new int32[m_nImageSizeBeforeDC];
+        m_p24bitDecodedImg = new int32[m_nImageSizeBeforeDC];
+        m_p24bitFinalImg = nullptr;
+
+        m_vSrcData.clear();
+        m_vSrcData.resize(m_nDecodedImageSize*sizeof(int32));
+
+    }
+
+    LambdaTaskDecodeImage24:: ~LambdaTaskDecodeImage24()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        m_pDecoder.reset();
+
+        if(m_pDC32)
+            m_pDC32.reset();
+
+        delete[] m_p24bitDecodedImg;
+
+    }
+
+    void LambdaTaskDecodeImage24::EnableDC(vector<int32>& vNIndex, vector<int32>& vNNominator)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_vNIndex = vNIndex;
+        m_vNNominator = vNNominator;
+
+
+        m_pDC32 = uptr_DC32(new DistortionCorrector<int32>(m_vNIndex,
+                                                           m_vNNominator,
+                                                           ((int32)(2<<24)-1)));
+        m_fDCEnabled = true;
+    }
+
+    void LambdaTaskDecodeImage24::DisableDC()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+
+        m_pDC32.reset();
+
+        m_fDCEnabled = false;
+    }
+
+    void LambdaTaskDecodeImage24::SetLiveMode(int32 nFrameRate, int32& nFrameNo, int32* pLiveImg)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_nFrameRate = nFrameRate;
+        m_nLiveFrameNo = &nFrameNo;
+        m_pLiveImage = pLiveImg;
+    }
+
+    void LambdaTaskDecodeImage24::SetBuffer(MemPool<char>* objMemPoolCompressed)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_objMemPoolCompressed = objMemPoolCompressed;
+    }
+
+    void LambdaTaskDecodeImage24::SetBuffer(MemPool<int32>* objMemPoolDecoded24)
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        boost::unique_lock<boost::mutex> lock(m_bstSync);
+        m_objMemPoolDecoded24 = objMemPoolDecoded24;
+    }
+
+    bool LambdaTaskDecodeImage24::DoDecodeImage()
+    {
+        LOG_TRACE(__FUNCTION__);
+        if(m_objMemPoolRaw->GetStoredImageNumbers() < 2)
+            return false;
+
+        if(!m_fCompressionEnabled)
+        {
+            if(m_objMemPoolDecoded24->IsFull())
+                return false;
+        }
+        else
+        {
+            if(m_objMemPoolCompressed->IsFull())
+                return false;
+        }
+        //if(m_objMemPoolRaw->GetImage())
+        /// TODO : get image from raw buffer
+        /// run decode image for each image
+        char* pImg1 = 0;
+        char* pImg2 = 0;
+        int32 nFrameNo1 = -1;
+        int32 nFrameNo2 = -1;
+        int16 sErrCode1 = -1;
+        int16 sErrCode2 = -1;
+        int16* p12BitImg1;
+        int16* p12BitImg2;
+
+        if(m_objMemPoolRaw->Get2Image(pImg1,nFrameNo1,sErrCode1,
+                                      pImg2,nFrameNo2,sErrCode2))
+        {
+            m_pDecoder->SetRawImage(pImg1);
+            p12BitImg1 = m_pDecoder->RunDecodingImg();
+
+            m_pDecoder->SetRawImage(pImg2);
+            p12BitImg2 = m_pDecoder->RunDecodingImg();
+
+            for(int32 i=0;i<m_nImageSizeBeforeDC;i++)
+                m_p24bitDecodedImg[i] = ((int32)p12BitImg1[i])
+                    +(((int32)p12BitImg2[i])*4096);
+
+            m_p24bitFinalImg = m_p24bitDecodedImg;
+
+            m_nFrameNo = nFrameNo2/2;
+            m_shErrCode = sErrCode1<=sErrCode2?sErrCode1:sErrCode2;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    void LambdaTaskDecodeImage24::DoDistortionCorrection()
+    {
+        LOG_TRACE(__FUNCTION__);
+        m_p24bitFinalImg = m_pDC32->RunDistortCorrect(m_p24bitDecodedImg);
+    }
+
+    void LambdaTaskDecodeImage24::DoCompression()
+    {
+        LOG_TRACE(__FUNCTION__);
+        vector<uchar> vDstData;
+
+        memmove(&m_vSrcData[0],m_p24bitFinalImg,m_vSrcData.size());
+        m_pCompressor->CompressData(m_vSrcData,vDstData,m_nCompressionLevel);
+        m_pCompressedData = reinterpret_cast<char*>(&vDstData[0]);
+        m_nDataLength = vDstData.size();
+    }
+
+    void LambdaTaskDecodeImage24::SetFirstFrameNo()
+    {
+        if(m_fCompressionEnabled)
+        {
+            if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
+            {
+                int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                //if lFristFrame is -1, means it is single link version
+                if(lFristFrame!=-1)
+                    m_objMemPoolCompressed->SetFirstFrameNo(lFristFrame);
+            }
+        }
+        else
+        {
+            if(m_objMemPoolDecoded24->GetFirstFrameNo() == -1)
+            {
+                int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
+                //if lFristFrame is -1, means it is single link version
+                if(lFristFrame!=-1)
+                    m_objMemPoolDecoded24->SetFirstFrameNo(lFristFrame);
+            }
+        }
+    }
+
+    void LambdaTaskDecodeImage24::WriteData()
+    {
+        if(m_fCompressionEnabled)
+            WriteData(m_pCompressedData,m_nFrameNo,m_shErrCode,m_nDataLength);
+        else
+            WriteData(m_p24bitFinalImg,m_nFrameNo,m_shErrCode);
+    }
+
+    void LambdaTaskDecodeImage24::WriteData(char* pCompressedData,
+                                            int32 nFrameNo,
+                                            int16 shErrorCode,
+                                            int32 nDataSize)
+    {
+        while(true)
+        {
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart || m_fExit)
+                break;
+
+            lock.unlock();
+
+            if((m_objMemPoolCompressed->SetImage(pCompressedData,
+                                                 nFrameNo,
+                                                 shErrorCode,
+                                                 true,
+                                                 nDataSize)))
+                break;
+
+            usleep(20); // Wait for next attempt
+        }
+
+        LOG_INFOS("Write 24bit compressed data finished");
+    }
+
+    void LambdaTaskDecodeImage24::WriteData(int32* p24bitImg, int32 nFrameNo, int16 shErrorCode)
+    {
+        while(true)
+        {
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            if(!m_fStart || m_fExit)
+                break;
+
+            lock.unlock();
+
+            if(m_objMemPoolDecoded24->SetImage(p24bitImg,
+                                               nFrameNo,
+                                               shErrorCode,
+                                               true))
+                break;
+
+            usleep(20); // Wait for next attempt
+        }
+
+        LOG_INFOS("Write 24bit uncompressed data finished");
+    }
+
+    void LambdaTaskDecodeImage24::UpdateLiveImage()
+    {
+        if((m_nFrameNo - 1) % m_nFrameRate == 0)
+        {
+            boost::unique_lock<boost::mutex> lock(m_bstSync);
+            *m_nLiveFrameNo = m_nFrameNo;
+            std::copy(m_p24bitFinalImg,m_p24bitFinalImg + m_nDecodedImageSize, m_pLiveImage);
+        }
+    }
+}
