@@ -64,6 +64,7 @@ protected:
     int LAMBDA_DetectorState;
     int LAMBDA_BadFrameCounter;
     int LAMBDA_MedipixIDs;
+    int LAMBDA_DetCoreVersionNumber;
     int LAMBDA_BadImage;
 #define LAMBDA_LAST_PARAM LAMBDA_BadImage
 
@@ -96,7 +97,8 @@ private:
 #define LAMBDA_OperatingModeString          "LAMBDA_OPERATING_MODE"
 #define LAMBDA_DetectorStateString          "LAMBDA_DETECTOR_STATE"
 #define LAMBDA_BadFrameCounterString       "LAMBDA_BAD_FRAME_COUNTER"
-#define Lambda_MedipixIDsString             "LAMBDA_MEDIPIX_IDS"
+#define LAMBDA_MedipixIDsString             "LAMBDA_MEDIPIX_IDS"
+#define LAMBDA_DetCoreVersionNumberString   "LAMBDA_DET_CORE_VERSION"
 #define LAMBDA_BadImageString               "LAMBDA_BAD_IMAGE"
 
 
