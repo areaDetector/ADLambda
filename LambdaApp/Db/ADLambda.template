@@ -18,6 +18,14 @@ record(waveform, "$(P)$(R)MedipixIDs")
     field(SCAN, "I/O Intr")
 }
 
+record(stringin, "$(P)$(R)DetCoreVersion")
+{
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DET_CORE_VERSION")
+    field(VAL, "UNKNOWN")
+    field(SCAN, "I/O Intr")
+}
+
 record(ao, "$(P)$(R)EnergyThreshold")
 {
    field(DTYP, "asynFloat64")
