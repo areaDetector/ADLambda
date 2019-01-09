@@ -38,7 +38,7 @@ dbLoadRecords("$(ADLAMBDA)/db/ADLambda.template","P=$(PREFIX),R=cam1:,PORT=$(POR
 # Create a standard arrays plugin, set it to get data from Driver.
 NDStdArraysConfigure("Image1", 3, 0, "$(PORT)", 0)
 dbLoadRecords("$(ADCORE)/db/NDPluginBase.template","P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),NDARRAY_ADDR=0")
-dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,TYPE=Int16,SIZE=16,FTVL=SHORT,NELEMENTS=802896")
+dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),TYPE=Int16,FTVL=SHORT,NELEMENTS=802896")
 #
 # Load all other plugins using commonPlugins.cmd
 < $(ADCORE)/iocBoot/commonPlugins.cmd
@@ -73,6 +73,16 @@ iocInit()
 create_monitor_set("auto_settings.req", 30, "P=$(PREFIX)")
 
 
+epicsThreadSleep "1"
+dbpf "8LAMBDA1:cam1:TriggerMode", "0"
+dbpf "8LAMBDA1:cam1:AcquireTime", ".001"
+dbpf "8LAMBDA1:cam1:AcquirePeriod", ".001"
+dbpf "8LAMBDA1:cam1:NumImages", "4735"
+epicsThreadSleep "1"
+
+dbpf "8LAMBDA1:cam1:DataType", "3"
+epicsThreadSleep "1"
+
 # Initialize the NDFileIMM_format for the IMM  plugins since not set on iocInit
 dbpf "8LAMBDA1:IMM0:NDFileIMM_format.PROC", "1"
 dbpf "8LAMBDA1:IMM1:NDFileIMM_format.PROC", "1"
@@ -81,15 +91,17 @@ dbpf "8LAMBDA1:IMM3:NDFileIMM_format.PROC", "1"
 dbpf "8LAMBDA1:IMMout:NDFileIMM_format.PROC", "1"
 # Initialize the EnergyThreshold on the Lambda since this does not happen on iocInit
 dbpf "8LAMBDA1:cam1:EnergyThreshold.PROC", "1"
+epicsThreadSleep "1"
 # Collect some images to initialize IMM0-IMM3.
 dbpf "8LAMBDA1:cam1:Acquire", "1"
-epicsThreadSleep "1"
+epicsThreadSleep "2"
 dbpf "8LAMBDA1:cam1:Acquire", "0"
 # Use the IMM Join which uses dfanout to set IMM0-IMM3 to Capture
 dbpf "8LAMBDA1:IMMJoin:IMMJoinedCapture", "1"
+epicsThreadSleep "2"
 #Collect a few images to Initialize the IMMout plugin
 dbpf "8LAMBDA1:cam1:Acquire", "1"
-epicsThreadSleep "1"
+epicsThreadSleep "2"
 dbpf "8LAMBDA1:cam1:Acquire", "0"
 # All ready for users to take some images.
 
