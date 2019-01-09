@@ -70,6 +70,11 @@ namespace DetLambdaNS
 
         string GetModuleID();
         string GetSystemInfo();
+
+        string GetDetCoreVersion();
+        string GetLibLambdaVersion();
+        string GetFirmwareVersion();
+        
         
         string GetCalibFile();
         
@@ -174,10 +179,10 @@ namespace DetLambdaNS
         // Helper function to get enum specifying Medipix3 readout chip mode
         Enum_readout_mode GetReadoutModeCode();
 	
-        // Reads the ID of a chip within the module.
-        // Typically, chip 1 can be ID'd to uniquely identify a particular module.
-        // Reading each chip on a module can also be used for debug purposes.
-        string GetChipID(int32 chipNo);
+        // // Reads the ID of a chip within the module.
+        // // Typically, chip 1 can be ID'd to uniquely identify a particular module.
+        // // Reading each chip on a module can also be used for debug purposes.
+        // string GetChipID(int32 chipNo);
 
         // CURRENTLY UNUSED
         int32 GetLatestImageNo();
@@ -289,6 +294,7 @@ namespace DetLambdaNS
         LambdaConfigReader* m_objConfigReader;
         
         string m_strCurrentModuleName;	
+        string m_strSystemType;
         bool m_bAcquisitionStart;
         bool m_bAcquisitionStop;
             
@@ -335,6 +341,7 @@ namespace DetLambdaNS
         int32* m_ptrnLiveData;
         int32 m_lLiveFrameNo;
         int16 m_shLiveErrCode;
+	bool m_hasFirstImageArrived;
         
         bool m_bRunning;
         bool m_bSysExit;

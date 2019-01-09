@@ -53,7 +53,8 @@ namespace DetLambdaNS
                      vector<int16> _vCurrentChips,
                      stDetCfgData _stDetCfg,
                      vector<stMedipixChipData> _vStChipData,
-                     bool _bSlaveModule);
+                     bool _bSlaveModule,
+                     string _strSystemType);
 
         /**
          * @brief get firmware version
@@ -239,6 +240,22 @@ namespace DetLambdaNS
          * this makes it possible to extract chip ID
          */
         vector<char> ReadOMR(int32 nChipNo);
+
+        /**
+         * @brief get chip id
+         * @param chip_no chip No.
+         * @return chip id
+         */
+
+        string GetChipID(int32 chip_no);
+
+         /*            
+         * @brief Wait for response from detector after command
+         * This should help timing issues and check if commands executed OK
+         * @return Response -1 for timeout, 0 for failure, 1 for success
+         */
+
+	int CheckResponse();
         
         /**
          * @brief destructor
@@ -259,6 +276,7 @@ namespace DetLambdaNS
 
       private:
         string m_strModuleID;
+        string m_strSystemType;
         NetworkInterface* m_objNetTCPInterface;
         bool m_bMultilink;
 

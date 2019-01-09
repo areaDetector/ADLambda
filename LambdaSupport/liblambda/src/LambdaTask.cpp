@@ -192,6 +192,10 @@ namespace DetLambdaNS
 
         int32 nCount = 200;
         int32 nNoDataTimes = 0;
+
+	bool bRollover = false; // Flag for detecting rollover
+	int32 nMaxFrameNo = pow(2,24)-1; // Rollover occurs at end of 24-bit counter
+	//cout << "Rollover test value" << nMaxFrameNo;
         
 
         //cout<<"listner thread starts"<<m_nID<<endl;
@@ -231,7 +235,16 @@ namespace DetLambdaNS
                     +(uchar)ptrchPacket[4]*256
                     +(uchar)ptrchPacket[3]*256*256;
 
-                
+		if(lFrameNo == nMaxFrameNo)
+		{
+		    bRollover = true;
+		    //cout << "Rollover detected";
+		}
+		if(bRollover && (lFrameNo < nMaxFrameNo))
+		{
+		    lFrameNo += (nMaxFrameNo+1); // In special case of rollover, subsequent images should have their number increased
+		}
+		               
                 shPacketSequenceNo = (uchar)ptrchPacket[2];
                 //if(shPacketSequenceNo == 1)
                 //    nPos = 0;
@@ -261,13 +274,23 @@ namespace DetLambdaNS
     void LambdaTask::DoAcquisition()
     {
         LOG_TRACE(__FUNCTION__);
+
         char* ptrchPacket = new char[UDP_PACKET_SIZE_NORMAL];    
         szt nPacketSize = UDP_PACKET_SIZE_NORMAL;
         int16 shErrorCode = 0;
-	
+        
         char* ptrchTmpImg = new char[m_nRawImageSize];
         int16 nErrorCode = 0;
         int32 lFrameNo = 0;
+
+        szt nCurrentPacketSize = 0;
+
+        int nPacketCode = 0;
+        int nReceivedData = 0;
+        int nRetVal = -1;
+        int nFrameLength = m_nRawImageSize;
+        int nBytesLeft = nFrameLength;
+        int nExcessBytes = 0;
 
         boost::unique_lock<boost::mutex> lock(*m_boostMtx);
         int32 lRequestedImgNo = m_objSys->GetNImages();
@@ -283,50 +306,112 @@ namespace DetLambdaNS
         
         while(true)
         {
-
+            //Test conditions for exiting acquisition loop
             if(lFrameNo>=lRequestedImgNo)
-            {		
+            {                
                 break;
             }
-            else if(!bIsStart)
+            
+            lock.lock();
+            bIsStart = m_objSys->GetAcquisitionStart();
+            lock.unlock();
+            
+            if(!bIsStart)
             {
-                //If acquisition stopped, empty any excess data from buffer before breaking
+                //If acq stopped, empty any remaining packets from buffer
                 while(true)
                 {
-                    shErrorCode = m_objNetInterface->ReceivePacket(ptrchPacket,nPacketSize);
-                    if(shErrorCode==-1)
+                    nPacketCode = m_objNetInterface->ReceivePacket(ptrchPacket,nCurrentPacketSize);
+                    if(nPacketCode==-1)
                     {
                         nNoDataTimes++;
-                        if(nNoDataTimes==nCount)
+                        if(nNoDataTimes>=nCount)
+                        {
+                            nNoDataTimes = 0;
                             break;
+                        }
                     }
-                    else 
+                    else
                     {
                         nNoDataTimes = 0;
                     }
                 }
                 break;
             }
-			
-            nErrorCode = m_objNetInterface->ReceiveData(ptrchTmpImg,m_nRawImageSize);
-            lFrameNo++;
-	    
-            m_objMemPoolRaw->SetImage(ptrchTmpImg,lFrameNo,nErrorCode);	  
-            LOG_INFOS(("Arrived Frame No is:"+to_string(lFrameNo)));
-            //cout<<"Arrived Frame No is:"<<to_string(static_cast<long long>(lFrameNo))<<endl;
-        }
+          
+
+            // NOTE - Sergej's UDP implementation uses a fixed packet size
+            // Just ditch excess bytes
+            // Error recovery more complicated - avoid this for now.
+            if(nExcessBytes > 0)
+            {
+                nExcessBytes = 0;
+            }
+
+            while(true)
+            {
+                nPacketCode = m_objNetInterface->ReceivePacket(ptrchPacket,nCurrentPacketSize);
+                if(nPacketCode==-1)
+                {
+                    nNoDataTimes++;
+                    if(nNoDataTimes>=nCount)
+                    {
+                        nNoDataTimes = 0;
+                        break;
+                    }
+                }
+                else
+                {
+                    // We have data 
+                    nNoDataTimes = 0;
+                    if(nCurrentPacketSize > nBytesLeft)
+                    {
+                        //Bytes from next image are present in buffer - need to take note of this
+                        std::copy(ptrchPacket,ptrchPacket+nBytesLeft,ptrchTmpImg+nReceivedData);
+                        nReceivedData += nBytesLeft;
+                        nExcessBytes = nCurrentPacketSize-nBytesLeft;
+                        nBytesLeft = 0;
+                    }
+                    else
+                    {
+                        std::copy(ptrchPacket,ptrchPacket+nCurrentPacketSize,ptrchTmpImg+nReceivedData);
+                        nReceivedData += nCurrentPacketSize;
+                        nBytesLeft = nBytesLeft-(nCurrentPacketSize);
+                    }
+                }
+
+                if(nBytesLeft==0)
+                {
+                    //first byte of the image should be 0xa0
+                    unsigned char uchByte = ptrchTmpImg[0];
+                    if(uchByte!=0xa0)
+                    {        
+                        LOG_STREAM(__FUNCTION__,ERROR,"Image data is wrong!");
+                        nErrorCode = 2;
+                    }
+                    else nErrorCode = 0;
+                    lFrameNo++; // Make first frame no 1, for consistency with multilink approach
+                    m_objMemPoolRaw->SetImage(ptrchTmpImg,lFrameNo,nErrorCode);          
+                    LOG_INFOS(("Arrived Frame No is:"+to_string(static_cast<long long>(lFrameNo))));
+                    // Reset some variables
+                    nReceivedData = 0;
+                    nBytesLeft = nFrameLength;
+                    nErrorCode = 0;
+                    break;
+                }
+            }
+
+        }///end of loop
 
         lock.lock();
         m_objSys->SetAcquisitionStart(false);
+        //m_objSys->SetState(ON);
         lock.unlock();
 
         delete ptrchPacket;
         delete ptrchTmpImg;
-        
         LOG_INFOS("Do acquisition thread exits");
     }
-
-
 
     void LambdaTask::DoAcquisitionTCP()
     {
@@ -586,8 +671,7 @@ namespace DetLambdaNS
                         
                         if(m_objMemPoolDecodedShort->GetFirstFrameNo() == -1)
                         {
-                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
-                
+                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();               
                             //if lFristFrame is -1, means it is single link version
                             if(lFristFrame!=-1)
                                 m_objMemPoolDecodedShort->SetFirstFrameNo(lFristFrame);
@@ -597,8 +681,7 @@ namespace DetLambdaNS
                     {    
                         if(m_objMemPoolCompressed->GetFirstFrameNo() == -1)
                         {
-                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();
-                
+                            int32 lFristFrame = m_objMemPoolRaw->GetFirstFrameNo();               
                             //if lFristFrame is -1, means it is single link version
                             if(lFristFrame!=-1)
                                 m_objMemPoolCompressed->SetFirstFrameNo(lFristFrame);

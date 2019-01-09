@@ -1,5 +1,4 @@
 #find libfsdetcore
-set(PKG_CONFIG_PATH "../liblambda-linux-x86_64/lib/pkgconfig")
 include(FindPkgConfig)
 pkg_search_module(FSDETCORE_LIB REQUIRED fsdetcore)
 

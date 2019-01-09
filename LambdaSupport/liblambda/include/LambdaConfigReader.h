@@ -113,8 +113,14 @@ namespace DetLambdaNS
          * @brief get module name
          * @return module name
          */
-        string GetModuleName();
 
+        string GetModuleName();
+        /**
+         * @brief get type of system (e.g. "small" for our new single chip)
+         * @return system type. Note that this is aimed at allowing workarounds for firmware
+         */
+        string GetSystemType();
+	
         /**
          * @brief get detector config data
          * @return detector config data
@@ -272,7 +278,7 @@ namespace DetLambdaNS
         
         string m_strOperationMode;
         string m_strCurrentModuleName;
-        
+        string m_strSystemType;
         ///chip related configuration
         stDetCfgData m_stDetCfgData;
         vector<int16> m_vCurrentChip;

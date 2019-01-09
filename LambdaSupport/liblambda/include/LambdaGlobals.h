@@ -22,12 +22,11 @@
 #pragma once
 
 #include <fsdetector/core/Globals.h>
+#include "Version.h"
 
 namespace DetLambdaNS
 {
     using namespace FSDetCoreNS;
-
-    const string LAMBDA_VERSION="0.8_develop";
     
     ///lambda control ip address for TCP control socket
     const string TCP_CONTROL_IP_ADDRESS = "169.254.1.1";

@@ -1,25 +1,51 @@
-file(GLOB_RECURSE TEST_SOURCES "*.cpp")
-file(GLOB_RECURSE LIB_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
-file(GLOB TEST_MOCK_SOURCES "${PROJECT_SOURCE_DIR}/test/mock/*.cpp")
+function(add executable source_files)
+  add_executable(${executable} ${source_files})
+  target_link_libraries(${executable}
+    lambda
+    libgtest
+    libgmock
+  )
 
-set(TEST_SOURCES "${TEST_SOURCES}"
-                 "${LIB_SOURCES}"
-                 "${TEST_MOCK_SOURCES}"
-				 "${CMAKE_COMMON_PATH}/src/NetworkInterface.cpp"
-                 "${CMAKE_COMMON_PATH}/src/FilesOperation.cpp"
-                 "${CMAKE_COMMON_PATH}/src/Utils.cpp")
-              
-message(STATUS "testing_source: ${TEST_SOURCES}:${PROJECT_SOURCE_DIR}")
+  add_test(NAME ${executable} COMMAND ${executable})
+endfunction()
 
-add_executable(${PROJECT_LAMBDA_TEST} ${TEST_SOURCES})
+#copy necessary files for testing
+file(COPY ../testdata DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-target_link_libraries(${PROJECT_LAMBDA_TEST} boost_system boost_thread dl pthread stdc++ cppunit z)
+# All Tests#######################################
+set(MODULETEST_NAME "moduletest")
+set(MODULETEST_SRC
+  ModuleTest.cpp
+  TestUtils.cpp
+  main.cpp)
 
-add_test(${PROJECT_LAMBDA_TEST} ${PROJECT_LAMBDA_TEST})
+set(CONFIGTEST_NAME "configurationtest")
+set(CONFIGTEST_SRC
+  ConfigReaderTest.cpp
+  TestUtils.cpp
+  main.cpp)
 
-#run the test after all the targets are built
-add_custom_command(TARGET ${PROJECT_LAMBDA_TEST}
-                   POST_BUILD
-                   COMMAND ./${PROJECT_LAMBDA_TEST}
-                   WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-                   COMMENT "Running ${PROJECT_LAMBDA_TEST}" VERBATIM)
+set(COMPRESSIONTEST_NAME "compressiontest")
+set(COMPRESSIONTEST_SRC
+  CompressionTest.cpp
+  TestUtils.cpp
+  main.cpp)
+
+set(DECODERTEST_NAME "imagedecodertest")
+set(DECODERTEST_SRC
+  ImageDecoderTest.cpp
+  TestUtils.cpp
+  main.cpp)
+
+set(DCTEST_NAME "distortioncorrectiontest")
+set(DCTEST_SRC
+  DistortionCorrectorTest.cpp
+  TestUtils.cpp
+  main.cpp)
+
+#add tests
+add("${MODULETEST_NAME}" "${MODULETEST_SRC}")
+add("${CONFIGTEST_NAME}" "${CONFIGTEST_SRC}")
+add("${COMPRESSIONTEST_NAME}" "${COMPRESSIONTEST_SRC}")
+add("${DECODERTEST_NAME}" "${DECODERTEST_SRC}")
+add("${DCTEST_NAME}" "${DCTEST_SRC}")
