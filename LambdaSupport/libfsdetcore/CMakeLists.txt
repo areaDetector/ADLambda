@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.0.2)
+set(Boost_INCLUDE_DIR /local/boost-build/include)
+set(Boost_LIBRARY_DIR /local/boost-build/lib)
+
 project(fsdetcore)
 
+
 set(MAJOR_VERSION 0)
-set(MINOR_VERSION 7)
+set(MINOR_VERSION 8)
 set(LIBRARY_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}")
 set(SO_VERSION ${LIBRARY_VERSION})
 # configure path
@@ -37,8 +41,8 @@ include_directories("${CMAKE_SOURCE_DIR}/include"
 # check compiler ID
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     #require at least gcc 4.9
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
-      message(FATAL_ERROR "GCC version must be at least 4.9!")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+      message(FATAL_ERROR "GCC version must be at least 4.8!")
     endif()
 else()
     message(FATAL_ERROR "Unsupported compiler")

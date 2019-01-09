@@ -169,7 +169,11 @@ namespace FSDetCoreNS
         szt nReadLen = 1500;
 
         nRetVal = ::recv(m_nSockfd, (char*)ptrchData, nReadLen, 0);
-        nLength = static_cast<szt>(nRetVal);
+        
+        //nLength = static_cast<szt>(nRetVal);
+
+        nLength = (nRetVal>0 ? nRetVal:0);
+        
         if(nRetVal > 0)
             return 0;    // Indicates OK
         else
