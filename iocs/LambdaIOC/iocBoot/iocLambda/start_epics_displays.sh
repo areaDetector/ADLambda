@@ -1,6 +1,6 @@
 #!/bin/tcsh
-cd /local/epics/synApps_5_8/support/areaDetector-R3-0/ADLambda/iocs/LambdaIOC/iocBoot/iocLambda
-setenv EPICS_DISPLAY_PATH ../../../../LambdaApp/op/adl:../../../../../ADCore-R3-0/ADApp/op/adl:../../../../../NDPluginPipeWriter/PipeWriterApp/op/adl:../../../../../../asyn-4-30/opi/medm:../../../../../NDPluginFileIMM/NDFileIMMApp/op/adl
+cd /local/epics/synApps_6_0/support/areaDetector-R3-4/ADLambda/iocs/LambdaIOC/iocBoot/iocLambda
+setenv EPICS_DISPLAY_PATH ../../../../LambdaApp/op/adl:../../../../../ADCore-R3-4/ADApp/op/adl:../../../../../NDPluginPipeWriter/PipeWriterApp/op/adl:../../../../../../asyn-4-33/opi/medm:../../../../../NDPluginFileIMM/NDFileIMMApp/op/adl
 
 medm -x -macro "P=8LAMBDA1:,R=cam1:" LambdaBase.adl &
 sleep 1
