@@ -41,7 +41,8 @@ namespace DetLambdaNS
         ,m_nY(-1)
         ,m_nMaxRawImageNumbers(RAW_BUFFER_LENGTH)
         ,m_nMaxDecodedImageNumbers(DECODED_BUFFER_LENGTH)
-        ,m_bSlaveModule(false) 
+        ,m_bSlaveModule(false)
+        ,m_strSystemType("standard") 
     {
         LOG_TRACE(__FUNCTION__);
 
@@ -157,6 +158,13 @@ namespace DetLambdaNS
         LOG_TRACE(__FUNCTION__);
 
         return m_stDetCfgData;
+    }
+
+    string LambdaConfigReader::GetSystemType()
+    {
+        LOG_TRACE(__FUNCTION__);
+
+        return m_strSystemType;
     }
     
     void LambdaConfigReader::LoadLocalConfig(bool bOpModeRunningSwitch,string strOpMode)
@@ -540,6 +548,11 @@ namespace DetLambdaNS
                 {
                     //vSplittedVal[1] module name
                     m_strCurrentModuleName = vSplittedVal[1];
+                }
+	        else if(vSplittedVal[0] == "systemType")
+                {
+                    //vSplittedVal[1] module name
+                    m_strSystemType = vSplittedVal[1];
                 }
                 else if(vSplittedVal[0] == "modulesPosition")
                 {

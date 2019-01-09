@@ -31,6 +31,7 @@
 #include <fsdetector/core/FilesOperation.h>
 #include <fsdetector/core/ThreadUtils.h>
 #include <fsdetector/core/MemUtils.h>
+#include <math.h>
 
 ///namespace DetCommonNS
 namespace DetLambdaNS

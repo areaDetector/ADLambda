@@ -50,7 +50,25 @@ namespace DetLambdaNS
          * @return system info
          */
         virtual string GetSystemInfo() = 0;
+        
+        /**
+         * @brief get detector core library version
+         * @return core lib version
+         */
+        virtual string GetDetCoreVersion() = 0;
 
+        /**
+         * @brief get liblambda version
+         * @return liblamba version
+         */
+        virtual string GetLibLambdaVersion() = 0;
+
+        /**
+         * @brief get firmware version
+         * @return firmware version
+         */
+        virtual string GetFirmwareVersion() = 0;
+        
         /**
          * @brief get path of calib file
          */

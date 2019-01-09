@@ -34,7 +34,8 @@ namespace DetLambdaNS
                                vector<int16> _vCurrentChips,
                                stDetCfgData _stDetCfg,
                                vector<stMedipixChipData> _vStChipData,
-                               bool _bSlaveModule)
+                               bool _bSlaveModule,
+                               string _strSystemType)
         :m_strModuleID(_strModuleID),
          m_objNetTCPInterface(_objNetIn),
          m_bMultilink(_bMultilink),
@@ -42,6 +43,7 @@ namespace DetLambdaNS
          m_stDetCfg(_stDetCfg),
          m_vStChips(_vStChipData),
          m_bSlaveModule(_bSlaveModule),
+         m_strSystemType(_strSystemType),
          m_dShutterTime(2000),
          m_shTriggerMode(0),
          m_lImageNo(1)
@@ -64,6 +66,11 @@ namespace DetLambdaNS
         
         m_vExeCmd.resize(COMMAND_LENGTH,0x00);
         m_vExeCmd[1] = 0xa0;
+
+	// Workaround for 6 chip to avoid unwanted load commands
+	// Currently commented out to test new 12-chip handshake
+	//if(m_strSystemType == "handshake")
+	//    m_vCurrentUsedChips = {1, 2, 3, 10, 11, 12};
 
         // initialize all the parameters
         for(szt i=0;i<m_vCurrentUsedChips.size();i++)
@@ -357,6 +364,8 @@ namespace DetLambdaNS
         EnableChip(nChipNo);
 
         m_objNetTCPInterface->SendData(m_vStChips[nChipNo-1].vStrOMR);
+	if(m_strSystemType == "handshake")
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
         m_objNetTCPInterface->SendData(m_vExeCmd);
         // Having executed command, need to receive data back over TCP interface
         // Note that we request at least 1 byte; total data is very short, so this means we want at least one packet but are agnostic about the length
@@ -391,6 +400,118 @@ namespace DetLambdaNS
     
     }
 
+    string LambdaModule::GetChipID(int32 chip_no)
+    {
+        // Use Read OMR functionality to get the OMR value back.
+        // This function waits for timeout when called.
+        vector<char> v_OMRread = ReadOMR(chip_no);
+        // Current version prints debug info when reading OMR -
+        // this is sufficient for tests, but should implement some 
+        // Medipix-specific decoding ultimately.
+        // For now, just return arbitrary value
+        string str_output = "";
+        if(v_OMRread.size() < 14)
+        {
+            str_output = "Error";
+        }
+        else
+        {
+            string alphabet = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            uchar ycoord_raw = static_cast<uchar>(v_OMRread[13] & 0x0F); // Last 4 bits
+            string ycoord = std::to_string(ycoord_raw);
+            uchar xcoord_raw = static_cast<uchar>(v_OMRread[13] & 0xF0);
+            xcoord_raw = xcoord_raw>>4;
+            // Need to convert this to letter, where A=1, B=2 etc.
+            // Possible danger? Remove minus 1 here temporarily?
+            int32 xcoord_pos = (int32)xcoord_raw; 
+            string xcoord = alphabet.substr(xcoord_pos,1);
+            // Then, grab wafer number - need to be careful with signed vs unsigned char
+            uchar lowerpart = static_cast<uchar>(v_OMRread[12]);
+            uchar upperpart = static_cast<uchar>(v_OMRread[11] & 0x0F);
+            uint32 waferval = lowerpart;
+            waferval+= upperpart * 256;
+            string waferstr = std::to_string(waferval);
+            // Now, deal with possible corrections
+            char correcttest = (v_OMRread[11] & 0x30)>>4;
+            // Bit of a pain - construct 8 bit value spread across 2 bytes
+            uchar correct_raw = static_cast<uchar>((v_OMRread[11] & 0xC0)>>6);
+            correct_raw = correct_raw | ((v_OMRread[10] & 0x3F)<<2);
+            switch(correcttest)
+            {
+                case 1: // Y correction
+                    correct_raw = correct_raw & 0x0F;
+                    ycoord = std::to_string(correct_raw);
+                    break;
+                case 2: // X correction
+                    correct_raw = correct_raw & 0x0F;
+                    xcoord_pos = static_cast<int32>(correct_raw);
+                    xcoord = alphabet.substr(xcoord_pos,1);
+                    break;
+                case 3: // Wafer correction
+                    lowerpart=correct_raw;
+                    waferval = lowerpart;
+                    waferval+= upperpart * 256;
+                    waferstr = std::to_string(waferval);
+                    break;
+            }
+            // Build output string
+            str_output.append(waferstr);
+            str_output.append(xcoord);
+            str_output.append(ycoord);
+        }
+        return str_output;
+    }
+
+    int LambdaModule::CheckResponse()
+    {
+        LOG_TRACE(__FUNCTION__);
+        
+        // Call this after certain commands to (a) wait for detector reply and (b) check if command worked
+	// Currently, ReceiveData command below has a very long timeout - in future may benefit from changing
+        int lengthResponse = 40; // Response is 40 bytes
+        int minlength = 30; // Wait for at least 30 bytes
+        int lengthBuffer = 1600; // Oversized buffer to deal with excess data if problems occur. 
+        vector<char> vRecv(lengthBuffer,0x00);
+        char * pRecv = vRecv.data();
+        szt nDataReceived = 0;
+        int retval = 0;
+	int nTotDataReceived = 0;
+	int nmaxtries = 2000;
+	int ntries = 0;
+
+	// Will implement "timeout" in this code - aim for 1s. One cycle has 0.5ms timeout, so this is 2000.
+	while((nTotDataReceived < minlength) && (ntries < nmaxtries))
+	{
+	    retval = m_objNetTCPInterface->ReceivePacket(pRecv, nDataReceived);
+	    if(retval == 0) // Data present
+	    {
+	        nTotDataReceived+=nDataReceived;
+		pRecv+=nDataReceived; // Move pointer along
+	    }
+	    else
+	    {
+	        ++ntries;
+	    }
+	}      
+	
+
+	if(nTotDataReceived == 0)
+	{
+            std::cout << "Detector response timed out" << "\n";
+	    return -1;
+	}
+	else
+        {
+	    retval = int(vRecv[0]);
+	    std::cout << "Detector response " << retval << "\n";
+	    return retval;
+        }
+
+        std::cout << "Shouldn't see this!" << "\n";
+        return -1; // Shouldn't reach here, included for safety
+    
+    }  
+
     
     void LambdaModule::Reset()
     {
@@ -411,13 +532,14 @@ namespace DetLambdaNS
         SetAllDACs();
         ConfigAllMatrices();
 
-        if(m_stDetCfg.bCRW)
-            WriteReadOutMode(3);
+        if(m_stDetCfg.bCRW && m_stDetCfg.nCounterMode == 3)
+            WriteReadOutMode(1); // Special burst CRW for 1-chip system - only compatible with CRW mode of chip
+        else if(m_stDetCfg.bCRW)
+            WriteReadOutMode(3); // Standard CRW
         else if(m_stDetCfg.nCounterMode == 2)
-            WriteReadOutMode(4);
+            WriteReadOutMode(4); // Read out 2 counters e.g. in 24 bit
         else if(m_stDetCfg.nCounterMode ==0 ||m_stDetCfg.nCounterMode==1)
-            WriteReadOutMode(2);
-
+            WriteReadOutMode(2); // Read out 1 counter sequentially (0 or 1 - controlled by OMR)	
         PrepNextImaging();
 
     }
@@ -460,6 +582,9 @@ namespace DetLambdaNS
             m_vStChips[m_vCurrentUsedChips[0]-1].vStrOMR[3] |=0x20;
         
         m_objNetTCPInterface->SendData(m_vStChips[m_vCurrentUsedChips[0]-1].vStrOMR);
+	if(m_strSystemType == "handshake")
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
+	
         // For slave modules, need to give execute command to ensure it's ready to roll
         if(m_bSlaveModule) m_objNetTCPInterface->SendData(m_vExeCmd);
     
@@ -506,7 +631,13 @@ namespace DetLambdaNS
         EnableChip(nChipNo);
             
         m_objNetTCPInterface->SendData(m_vStChips[nChipNo-1].vStrOMR);
+	if(m_strSystemType == "handshake")
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
+	
         m_objNetTCPInterface->SendData(m_vStChips[nChipNo-1].vStrDAC);
+
+        if((m_strSystemType == "small") || (m_strSystemType == "handshake"))
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
     }
 
     void LambdaModule::SetAllDACs()
@@ -730,6 +861,8 @@ namespace DetLambdaNS
         // I need to pad each set of data out to the length of a full matrix.
 
         char chTemp;
+
+	int responseval = 0;
         
         int16 shRowBlockSelTemp = m_stDetCfg.shRowBlockSel;
         m_stDetCfg.shRowBlockSel = 7;
@@ -766,11 +899,16 @@ namespace DetLambdaNS
         // Then pad out to correct length - maybe plus 36 (see manual)
         strSubConfigDataString.resize(vStrConfigData.size()+2);
 
-
         EnableChip(nChipNo);
         m_objNetTCPInterface->SendData(m_vStChips[nChipNo-1].vStrOMR);
+	if(m_strSystemType == "handshake")
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
+	
         m_objNetTCPInterface->SendData(const_cast<char*>(strSubConfigDataString.c_str()),
                                        strSubConfigDataString.size());
+        // NEWSINGLECHIP BUG FIX CODE
+        if((m_strSystemType == "small") || (m_strSystemType == "handshake"))
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
             
         strSubConfigDataString.clear();
         // First byte of this data string is set to 1010 - the "execute" code
@@ -791,8 +929,13 @@ namespace DetLambdaNS
 
         EnableChip(nChipNo);
         m_objNetTCPInterface->SendData(m_vStChips[nChipNo-1].vStrOMR);
+	if(m_strSystemType == "handshake")
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
+	
         m_objNetTCPInterface->SendData(const_cast<char*>(strSubConfigDataString.c_str()),
                                        strSubConfigDataString.size());
+        if((m_strSystemType == "small") || (m_strSystemType == "handshake"))
+            int responseval = CheckResponse(); // Basic check of response rather than sleep
 
         // Set back rowBlockSel
         m_stDetCfg.shRowBlockSel = shRowBlockSelTemp;

@@ -96,6 +96,7 @@ namespace DetLambdaNS
         m_nCompressionMethod = 0;
 
         m_strModuleID = "unknown";
+        m_strSystemType = "standard";
         
         m_nThreadNumbers = THREAD_NUMBER;
         m_nRawBufferLength = RAW_BUFFER_LENGTH;
@@ -131,6 +132,7 @@ namespace DetLambdaNS
         m_bAcquisitionStop = true;
         m_ptrnLiveData = new int32[m_nDistortedImageSize];
         std::fill(m_ptrnLiveData,m_ptrnLiveData+m_nDistortedImageSize,0);
+        m_hasFirstImageArrived = false;
         m_lLiveFrameNo = -1;
         m_shLiveErrCode = -1;
 
@@ -178,10 +180,11 @@ namespace DetLambdaNS
         for(szt i=0; i<m_vCurrentChip.size();i++)
         {
             int32 currentChip = m_vCurrentChip[i];
-            string IDtest = GetChipID(currentChip);
+	    if((m_strSystemType == "hexa") && (currentChip >=4) && (currentChip <=9)) continue; // Hack for hexa (discrepancy between chips present and image size - want to skip nonexistent chips	
+            string IDtest = m_objLambdaModule->GetChipID(currentChip);
             if(i == 0)
                 m_strModuleID = IDtest;
-            std::cout << "ID of chip " << currentChip << " is " << IDtest << "\n";
+            // std::cout << "ID of chip " << currentChip << " is " << IDtest << "\n";
         }
                 
         m_bRunning = true;
@@ -236,6 +239,7 @@ namespace DetLambdaNS
         m_objConfigReader->LoadLocalConfig(bSwitchMode, strOpMode);
         m_bMultilink = m_objConfigReader->GetMultilink();
         m_bBurstMode = m_objConfigReader->GetBurstMode();
+        m_strSystemType = m_objConfigReader->GetSystemType();
         m_objConfigReader->GetUDPConfig(m_vStrMAC,m_vStrIP,m_vUShPort);
         m_objConfigReader->GetTCPConfig(m_strTCPIPAddress,m_shTCPPortNo);
         m_objConfigReader->GetChipConfig(m_vCurrentChip,m_vStCurrentChipData);
@@ -374,7 +378,8 @@ namespace DetLambdaNS
                                                      m_vCurrentChip,
                                                      m_stDetCfgData,
                                                      m_vStCurrentChipData,
-                                                     m_bSlaveModule);
+                                                     m_bSlaveModule,
+                                                     m_strSystemType);
 
                 //send udp data via TCP
                 m_objLambdaModule->WriteUDPMACAddress(0,m_vStrMAC[0]);
@@ -410,7 +415,10 @@ namespace DetLambdaNS
                 return true;
             }
             else
+            {
+                std::cout << "Unable to connect to detector. Please check that detector is powered and connected." << "\n";
                 return false;
+            }
         }
         else
         {
@@ -431,7 +439,9 @@ namespace DetLambdaNS
                                                      m_vCurrentChip,
                                                      m_stDetCfgData,
                                                      m_vStCurrentChipData,
-                                                     m_bSlaveModule);
+                                                     m_bSlaveModule,
+                                                     m_strSystemType);
+
                 //send udp data via TCP
                 m_objLambdaModule->WriteUDPMACAddress(0,m_vStrMAC[0]);
                 m_objLambdaModule->WriteUDPIP(0,m_vStrIP[0]);
@@ -461,7 +471,10 @@ namespace DetLambdaNS
                 return true;
             }
             else
+            {
+                std::cout << "Unable to connect to detector. Please check that detector is powered and connected." << "\n";
                 return false;
+            }
         }
     }
 
@@ -518,6 +531,21 @@ namespace DetLambdaNS
             + m_objLambdaModule->GetFirmwareVersion();
     }
 
+    string LambdaSysImpl::GetDetCoreVersion()
+    {
+        return FSDetCoreNS::FSDETCORE_VERSION;
+    }
+
+    string LambdaSysImpl::GetLibLambdaVersion()
+    {
+        return LAMBDA_VERSION;
+    }
+
+    string LambdaSysImpl::GetFirmwareVersion()
+    {
+        return m_objLambdaModule->GetFirmwareVersion();
+    }
+    
     string LambdaSysImpl::GetCalibFile()
     {
         LOG_TRACE(__FUNCTION__);
@@ -544,6 +572,7 @@ namespace DetLambdaNS
         else if(strOperationMode=="ContinuousReadWriteCSM") emNewMode = OPERATION_MODE_12;
         else if(strOperationMode=="TwentyFourBitCSM") emNewMode = OPERATION_MODE_24;
         else if(strOperationMode=="DualThresholdCSM") emNewMode = OPERATION_MODE_2x12;
+        else if(strOperationMode=="HighSpeedBurst") emNewMode = OPERATION_MODE_12;
 
         else emNewMode = OPERATION_MODE_UNKNOWN;
         return emNewMode;
@@ -573,7 +602,9 @@ namespace DetLambdaNS
                                                      m_bMultilink,
                                                      m_vCurrentChip,
                                                      m_stDetCfgData,
-                                                     m_vStCurrentChipData,m_bSlaveModule);
+                                                     m_vStCurrentChipData,
+                                                     m_bSlaveModule,
+                                                     m_strSystemType);
 		
                 //cout << "Existing threshold = " << m_nThreshold
                 //<< " and energy = " << m_fEnergy << endl;            
@@ -846,6 +877,7 @@ namespace DetLambdaNS
             m_objThPool->SetPriorityLevel(HIGH); 
         }
         std::fill(m_ptrnLiveData,m_ptrnLiveData+m_nDistortedImageSize,0);
+	m_hasFirstImageArrived = false;
         //cout << "Putting into receiving state \n";
         m_nTaskID = 0;
         //reset once, for avoiding the images come after stopacq command 
@@ -1040,68 +1072,6 @@ namespace DetLambdaNS
     {
         return (m_nRawBufferLength - (m_objMemPoolRaw->GetStoredImageNumbers()));
     }
-    
-    string LambdaSysImpl::GetChipID(int32 chipNo)
-    {
-        // Use Read OMR functionality to get the OMR value back.
-        // This function waits for timeout when called.
-        vector<char> v_OMRread = m_objLambdaModule->ReadOMR(chipNo);
-        // Current version prints debug info when reading OMR -
-        // this is sufficient for tests, but should implement some 
-        // Medipix-specific decoding ultimately.
-        // For now, just return arbitrary value
-        string str_output = "";
-        if(v_OMRread.size() < 14)
-        {
-            str_output = "Error";
-        }
-        else
-        {
-            string alphabet = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            uchar ycoord_raw = static_cast<uchar>(v_OMRread[13] & 0x0F); // Last 4 bits
-            string ycoord = std::to_string(ycoord_raw);
-            uchar xcoord_raw = static_cast<uchar>(v_OMRread[13] & 0xF0);
-            xcoord_raw = xcoord_raw>>4;
-            // Need to convert this to letter, where A=1, B=2 etc.
-            // Possible danger? Remove minus 1 here temporarily?
-            int32 xcoord_pos = (int32)xcoord_raw; 
-            string xcoord = alphabet.substr(xcoord_pos,1);
-            // Then, grab wafer number - need to be careful with signed vs unsigned char
-            uchar lowerpart = static_cast<uchar>(v_OMRread[12]);
-            uchar upperpart = static_cast<uchar>(v_OMRread[11] & 0x0F);
-            uint32 waferval = lowerpart;
-            waferval+= upperpart * 256;
-            string waferstr = std::to_string(waferval);
-            // Now, deal with possible corrections
-            char correcttest = (v_OMRread[11] & 0x30)>>4;
-            // Bit of a pain - construct 8 bit value spread across 2 bytes
-            uchar correct_raw = static_cast<uchar>((v_OMRread[11] & 0xC0)>>6);
-            correct_raw = correct_raw | ((v_OMRread[10] & 0x3F)<<2);
-            switch(correcttest)
-            {
-                case 1: // Y correction
-                    correct_raw = correct_raw & 0x0F;
-                    ycoord = std::to_string(correct_raw);
-                    break;
-                case 2: // X correction
-                    correct_raw = correct_raw & 0x0F;
-                    xcoord_pos = static_cast<int32>(correct_raw);
-                    xcoord = alphabet.substr(xcoord_pos,1);
-                    break;
-                case 3: // Wafer correction
-                    lowerpart=correct_raw;
-                    waferval = lowerpart;
-                    waferval+= upperpart * 256;
-                    waferstr = std::to_string(waferval);
-                    break;
-            }
-            // Build output string
-            str_output.append(waferstr);
-            str_output.append(xcoord);
-            str_output.append(ycoord);
-        }
-        return str_output;
-    }
 
     void LambdaSysImpl::GetRawImage(char* ptrchRetImg,int32& lFrameNo,int16& shErrCode)
     {
@@ -1169,13 +1139,13 @@ namespace DetLambdaNS
         uint32 nFPS = static_cast<uint32>(1*1000/((m_dShutterTime)*10));
         if(nFPS == 0)
             nFPS = 1;
-        if(lFrameNo % nFPS == 0)
+        if((lFrameNo % nFPS == 0) || !m_hasFirstImageArrived)
         {
             m_lLiveFrameNo = lFrameNo;
             m_shLiveErrCode = shErrCode;
             std::copy(ptrshImg,ptrshImg+m_nDistortedImageSize,m_ptrnLiveData);
-        }
-         
+	    m_hasFirstImageArrived = true;
+        }         
     }
 
     void LambdaSysImpl::SetCurrentImage(int32* ptrnImg,int32 lFrameNo,int16 shErrCode)
@@ -1183,11 +1153,12 @@ namespace DetLambdaNS
         uint32 nFPS = static_cast<uint32>(1*1000/((m_dShutterTime)*10));
         if(nFPS == 0)
             nFPS = 1;
-        if(lFrameNo % nFPS == 0)
+        if((lFrameNo % nFPS == 0) || !m_hasFirstImageArrived)
         {
             m_lLiveFrameNo = lFrameNo;
             m_shLiveErrCode = shErrCode;
             std::copy(ptrnImg,ptrnImg+m_nDistortedImageSize,m_ptrnLiveData);
+	    m_hasFirstImageArrived = true;
         }
          
     }

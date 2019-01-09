@@ -1,8 +1,12 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 2.8)
+set(Boost_INCLUDE_DIR /local/boost-build/include)
+set(Boost_LIBRARY_DIR /local/boost-build/lib)
 project(lambda)
+enable_testing()
+
 
 set(MAJOR_VERSION 0)
-set(MINOR_VERSION 8)
+set(MINOR_VERSION 9)
 set(LIBRARY_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}")
 set(SO_VERSION ${LIBRARY_VERSION})
 
@@ -30,16 +34,17 @@ find_package(LibBoost)
 find_package(Zlib)
 
 include_directories("${PROJECT_SOURCE_DIR}/include/"
-                      ${Boost_INCLUDE_DIRS}
-                      ${Z_INC_DIRS}
-					  ${FSDETCORE_LIB_INCLUDE_DIRS})
+                    ${Boost_INCLUDE_DIRS}
+                    ${Z_INC_DIRS}
+                    ${FSDETCORE_LIB_INCLUDE_DIRS}
+)
 					
 link_directories(${FSDETCORE_LIB_LIBRARY_DIRS})
 					
 # check compiler ID
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     #require at least gcc 4.9
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
       message(FATAL_ERROR "GCC version must be at least 4.9!")
     endif()
 else()
