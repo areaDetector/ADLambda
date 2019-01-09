@@ -103,8 +103,10 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int maxBuffers,
             asynParamInt32, &LAMBDA_DetectorState);
     status |= ADDriver::createParam(LAMBDA_BadFrameCounterString,
             asynParamInt32, &LAMBDA_BadFrameCounter);
-    status |= ADDriver::createParam(Lambda_MedipixIDsString,
+    status |= ADDriver::createParam(LAMBDA_MedipixIDsString,
             asynParamOctet, &LAMBDA_MedipixIDs);
+    status |= ADDriver::createParam(LAMBDA_DetCoreVersionNumberString,
+            asynParamOctet, &LAMBDA_DetCoreVersionNumber);
     status |= ADDriver::createParam(LAMBDA_BadImageString,
             asynParamInt32, &LAMBDA_BadImage);
     status |= connect(pasynUserSelf);
@@ -774,13 +776,12 @@ asynStatus ADLambda::initializeDetector(){
     string model = "Lambda 750K";
     string moduleID = lambdaInstance->GetModuleID();
     setStringParam(ADSerialNumber, moduleID);
-    string sysInfo = lambdaInstance->GetSystemInfo();
-    string fwVers = "firmware version:";
-    int pos = sysInfo.find(fwVers);
-    string fwStr = sysInfo.substr(pos + fwVers.length());
-    setStringParam(ADFirmwareVersion, fwStr);
-    string version = LAMBDA_VERSION;
+    string fwVers = lambdaInstance->GetFirmwareVersion();
+    setStringParam(ADFirmwareVersion, fwVers);
+    string version = lambdaInstance->GetLibLambdaVersion();
     setStringParam(ADSDKVersion, version);
+    string detCoreVers = lambdaInstance->GetDetCoreVersion();
+    setStringParam(LAMBDA_DetCoreVersionNumber, detCoreVers);
 
     callParamCallbacks();
 
