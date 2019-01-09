@@ -1,5 +1,5 @@
 #find libboost
-set(BOOST_ROOT "/local/boost-build")
+set (BOOST_ROOT "/local/boost-build")
 set(BOOST_MIN_VERSION "1.55.0")
 find_package(Boost ${BOOST_MIN_VERSION} COMPONENTS system thread REQUIRED)
 

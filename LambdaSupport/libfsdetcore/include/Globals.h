@@ -47,6 +47,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <vector>
+#include "Version.h"
 
 namespace FSDetCoreNS
 {
