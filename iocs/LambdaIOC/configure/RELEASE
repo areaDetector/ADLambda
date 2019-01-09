@@ -2,8 +2,9 @@
 # Run "gnumake clean uninstall install" in the application
 # top directory each time this file is changed.
 
-ADLAMBDA=$(AREA_DETECTOR)/ADLambda
+ADLAMBDA = $(TOP)/../..
 
 -include $(TOP)/../../../configure/RELEASE_PRODS_INCLUDE
 -include $(TOP)/RELEASE.local
 -include $(TOP)/configure/RELEASE.local
+
