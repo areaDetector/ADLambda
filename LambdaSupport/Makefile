@@ -14,14 +14,16 @@ INC += fsdetector/core/NetworkImplementation.h
 INC += fsdetector/core/NetworkInterface.h
 INC += fsdetector/core/ThreadUtils.h
 INC += fsdetector/core/Utils.h
+INC += fsdetector/core/Version.h
 INC += fsdetector/lambda/LambdaGlobals.h
 INC += fsdetector/lambda/LambdaInterface.h
 INC += fsdetector/lambda/LambdaSysImpl.h
+INC += fsdetector/lambda/Version.h
 #=============================
 ifeq (linux-x86_64, $(findstring linux-x86_64, $(T_A)))
-LIB_INSTALLS_Linux += ../liblambda-$(EPICS_HOST_ARCH)/lib/liblambda.so.0.8
+LIB_INSTALLS_Linux += ../liblambda-$(EPICS_HOST_ARCH)/lib/liblambda.so.0.9
 LIB_INSTALLS_Linux += ../liblambda-$(EPICS_HOST_ARCH)/lib/liblambda.so
-LIB_INSTALLS_Linux += ../liblambda-$(EPICS_HOST_ARCH)/lib/libfsdetcore.so.0.7
+LIB_INSTALLS_Linux += ../liblambda-$(EPICS_HOST_ARCH)/lib/libfsdetcore.so.0.8
 LIB_INSTALLS_Linux += ../liblambda-$(EPICS_HOST_ARCH)/lib/libfsdetcore.so
 endif
 
