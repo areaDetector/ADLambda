@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+<class>MainWindow</class>
+<widget class="QMainWindow" name="MainWindow">
+    <property name="geometry">
+        <rect>
+            <x>102</x>
+            <y>106</y>
+            <width>717</width>
+            <height>754</height>
+        </rect>
+    </property>
+    <property name="styleSheet">
+        <string>
+
+QWidget#centralWidget {background: rgba(187, 187, 187, 255);}
+QPushButton::menu-indicator {image: url(none.png); width: 0}
+
+</string>
+    </property>
+    <widget class="QWidget" name="centralWidget">
+        <widget class="caGraphics" name="caRectangle_0">
+            <property name="form">
+                <enum>caGraphics::Rectangle</enum>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>96</x>
+                    <y>9</y>
+                    <width>500</width>
+                    <height>25</height>
+                </rect>
+            </property>
+            <property name="foreground">
+                <color alpha="255">
+                    <red>218</red>
+                    <green>218</green>
+                    <blue>218</blue>
+                </color>
+            </property>
+            <property name="fillstyle">
+                <enum>Filled</enum>
+            </property>
+            <property name="lineColor">
+                <color alpha="255">
+                    <red>218</red>
+                    <green>218</green>
+                    <blue>218</blue>
+                </color>
+            </property>
+            <property name="linestyle">
+                <enum>Solid</enum>
+            </property>
+        </widget>
+        <widget class="caLabel" name="caLabel_0">
+            <property name="frameShape">
+                <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="foreground">
+                <color alpha="255">
+                    <red>10</red>
+                    <green>0</green>
+                    <blue>184</blue>
+                </color>
+            </property>
+            <property name="background">
+                <color alpha="0">
+                    <red>10</red>
+                    <green>0</green>
+                    <blue>184</blue>
+                </color>
+            </property>
+            <property name="text">
+                <string>Area Detector Control - $(P)$(R)</string>
+            </property>
+            <property name="fontScaleMode">
+                <enum>ESimpleLabel::WidthAndHeight</enum>
+            </property>
+            <property name="alignment">
+                <set>Qt::AlignAbsolute|Qt::AlignHCenter|Qt::AlignVCenter</set>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>154</x>
+                    <y>10</y>
+                    <width>384</width>
+                    <height>25</height>
+                </rect>
+            </property>
+        </widget>
+        <widget class="caInclude" name="caInclude_0">
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>41</y>
+                    <width>352</width>
+                    <height>367</height>
+                </rect>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>41</y>
+                    <width>350</width>
+                    <height>365</height>
+                </rect>
+            </property>
+            <property name="filename">
+                <string>LambdaSetup.adl</string>
+            </property>
+            <property name="macro">
+                <string></string>
+            </property>
+        </widget>
+        <widget class="caInclude" name="caInclude_1">
+            <property name="geometry">
+                <rect>
+                    <x>353</x>
+                    <y>153</y>
+                    <width>353</width>
+                    <height>511</height>
+                </rect>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>353</x>
+                    <y>153</y>
+                    <width>351</width>
+                    <height>509</height>
+                </rect>
+            </property>
+            <property name="filename">
+                <string>LambdaCollect.adl</string>
+            </property>
+            <property name="macro">
+                <string></string>
+            </property>
+        </widget>
+        <widget class="caInclude" name="caInclude_2">
+            <property name="geometry">
+                <rect>
+                    <x>1</x>
+                    <y>412</y>
+                    <width>358</width>
+                    <height>255</height>
+                </rect>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>1</x>
+                    <y>412</y>
+                    <width>356</width>
+                    <height>253</height>
+                </rect>
+            </property>
+            <property name="filename">
+                <string>LambdaReadout.adl</string>
+            </property>
+            <property name="macro">
+                <string></string>
+            </property>
+        </widget>
+        <widget class="caInclude" name="caInclude_3">
+            <property name="geometry">
+                <rect>
+                    <x>356</x>
+                    <y>56</y>
+                    <width>352</width>
+                    <height>82</height>
+                </rect>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>356</x>
+                    <y>56</y>
+                    <width>350</width>
+                    <height>80</height>
+                </rect>
+            </property>
+            <property name="filename">
+                <string>LambdaPlugins.adl</string>
+            </property>
+            <property name="macro">
+                <string></string>
+            </property>
+        </widget>
+        <widget class="caInclude" name="caInclude_4">
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>670</y>
+                    <width>717</width>
+                    <height>77</height>
+                </rect>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>670</y>
+                    <width>715</width>
+                    <height>75</height>
+                </rect>
+            </property>
+            <property name="filename">
+                <string>LambdaConfig.adl</string>
+            </property>
+            <property name="macro">
+                <string></string>
+            </property>
+        </widget>
+        <zorder>caRectangle_0</zorder>
+        <zorder>caLabel_0</zorder>
+        <zorder>caInclude_0</zorder>
+        <zorder>caInclude_1</zorder>
+        <zorder>caInclude_2</zorder>
+        <zorder>caInclude_3</zorder>
+        <zorder>caInclude_4</zorder>
+    </widget>
+</widget>
+</ui>
