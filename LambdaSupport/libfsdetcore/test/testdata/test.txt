@@ -1,3 +1,0 @@
-defineOperationMode TwentyFourBit 0 3 Twenty_four_bit_readout
-defineSrcIPAddressCH1 196.254.3.41
-defineDetPortTCP
