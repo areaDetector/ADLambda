@@ -22,10 +22,7 @@ epicsEnvSet("CBUFFS", "1000")
 # The search path for database files
 epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db")
 #epicsThreadSleep(15)
-# Create a PICam driver
-# LambdaConfig(const char *portName, const char * configPath, IDType, IDValue, maxBuffers, size_t maxMemory, int priority, int stackSize)
 
-# This is for a 
 LambdaConfig("$(PORT)", "config",  0, 0, 0, 0)
 epicsThreadSleep(2)
 
@@ -42,63 +39,12 @@ dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=I
 #
 # Load all other plugins using commonPlugins.cmd
 < $(ADCORE)/iocBoot/commonPlugins.cmd
-#
-dbpf "8LAMBDA1:Scatter1:MaxThreads", "5"
 
-#Note Local plugin to run the IMM plugin writer
-NDFileIMMConfigure("IMM0", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
-dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM0:,PORT=IMM0,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
-NDFileIMMConfigure("IMM1", 2000000, 300, 0, "$(PORT)",  0, 0, 0 )
-dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM1:,PORT=IMM1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
-NDFileIMMConfigure("IMM2", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
-dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM2:,PORT=IMM2,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
-NDFileIMMConfigure("IMM3", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
-dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMM3:,PORT=IMM3,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
-NDFileIMMConfigure("IMMout", 2000000, 300, 0, "$(PORT)",  0, 0, 0)
-dbLoadRecords("$(ADCORE)/db/NDFileIMM.template", "P=$(PREFIX),R=IMMout:,PORT=IMMout,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT)")
-
-dbLoadRecords("$(TOP)/iocBoot/iocLambda/IMMJoin.template", "P=$(PREFIX), R=IMMJoin:")
 set_requestfile_path("$(ADLAMBDA)/LambdaApp/Db")
-set_requestfile_path("$(NDPLUGINPIPEWRITER)/PipeWriterApp/Db")
-set_requestfile_path("$(NDPLUGINFILEIMM)/NDFileIMMApp/Db")
 
-#asynSetTraceMask($(PORT),0,0x09)
-#asynSetTraceMask($(PORT),0,0x11)
+##########
 iocInit()
+##########
 
 # save things every thirty seconds
 create_monitor_set("auto_settings.req", 30, "P=$(PREFIX)")
-
-
-epicsThreadSleep "1"
-dbpf "8LAMBDA1:cam1:TriggerMode", "0"
-dbpf "8LAMBDA1:cam1:AcquireTime", ".001"
-dbpf "8LAMBDA1:cam1:AcquirePeriod", ".001"
-dbpf "8LAMBDA1:cam1:NumImages", "4735"
-epicsThreadSleep "1"
-
-dbpf "8LAMBDA1:cam1:DataType", "3"
-epicsThreadSleep "1"
-
-# Initialize the NDFileIMM_format for the IMM  plugins since not set on iocInit
-dbpf "8LAMBDA1:IMM0:NDFileIMM_format.PROC", "1"
-dbpf "8LAMBDA1:IMM1:NDFileIMM_format.PROC", "1"
-dbpf "8LAMBDA1:IMM2:NDFileIMM_format.PROC", "1"
-dbpf "8LAMBDA1:IMM3:NDFileIMM_format.PROC", "1"
-dbpf "8LAMBDA1:IMMout:NDFileIMM_format.PROC", "1"
-# Initialize the EnergyThreshold on the Lambda since this does not happen on iocInit
-dbpf "8LAMBDA1:cam1:EnergyThreshold.PROC", "1"
-epicsThreadSleep "1"
-# Collect some images to initialize IMM0-IMM3.
-dbpf "8LAMBDA1:cam1:Acquire", "1"
-epicsThreadSleep "2"
-dbpf "8LAMBDA1:cam1:Acquire", "0"
-# Use the IMM Join which uses dfanout to set IMM0-IMM3 to Capture
-dbpf "8LAMBDA1:IMMJoin:IMMJoinedCapture", "1"
-epicsThreadSleep "2"
-#Collect a few images to Initialize the IMMout plugin
-dbpf "8LAMBDA1:cam1:Acquire", "1"
-epicsThreadSleep "2"
-dbpf "8LAMBDA1:cam1:Acquire", "0"
-# All ready for users to take some images.
-
