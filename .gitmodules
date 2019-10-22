@@ -1,0 +1,6 @@
+[submodule "liblambda"]
+	path = liblambda
+	url = https://stash.desy.de/scm/fsdsdet/liblambda.git
+[submodule "libfsdetcore"]
+	path = libfsdetcore
+	url = https://stash.desy.de/scm/fsdsdet/libfsdetcore.git
