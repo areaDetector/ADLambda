@@ -10,7 +10,7 @@ endif
 USR_CPPFLAGS += -fpermissive
 LIBRARY_IOC = ADLambda
 LIB_SRCS += ADLambda.cpp
-LIB_LIBS += lambda
+USR_SYS_LIBS += xsp
 
 DBD += LambdaSupport.dbd
 

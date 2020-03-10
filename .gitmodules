@@ -4,9 +4,3 @@
 [submodule "libfsdetcore"]
 	path = libfsdetcore
 	url = https://stash.desy.de/scm/fsdsdet/libfsdetcore.git
-[submodule "lambdaSupport/libfsdetcore"]
-	path = lambdaSupport/libfsdetcore
-	url = https://stash.desy.de/scm/fsdsdet/libfsdetcore.git
-[submodule "lambdaSupport/liblambda"]
-	path = lambdaSupport/liblambda
-	url = https://stash.desy.de/scm/fsdsdet/liblambda.git
