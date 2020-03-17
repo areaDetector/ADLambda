@@ -80,6 +80,8 @@ private:
     asynStatus initializeDetector();
     asynStatus setSizeParams();
 
+	void spawnAcquireThread(int receiver);
+
 	std::unique_ptr<xsp::System> sys;
 	std::shared_ptr<xsp::lambda::Detector> det;
 	
