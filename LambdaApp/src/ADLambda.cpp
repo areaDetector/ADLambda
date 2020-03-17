@@ -29,7 +29,11 @@ static void receiver_acquire_callback(void *drvPvt)
 {
 	acquire_data* data = (acquire_data*) drvPvt;
 	
+	printf("Spawing acquire thread for receiver: %d\n", data->receiver);
+	
 	data->driver->acquireThread(data->receiver);
+	
+	delete data;
 }
 
 extern "C" 
@@ -390,6 +394,19 @@ void ADLambda::processTwentyFourBit(const void* data, NDArrayInfo arrayInfo)
 	}
 }
 
+void ADLambda::spawnAcquireThread(int receiver)
+{
+	acquire_data* data = new acquire_data;
+
+	data->driver = this;
+	data->receiver = receiver;
+
+	epicsThreadCreate("ADLambda::acquireThread()",
+              epicsThreadPriorityLow,
+              epicsThreadGetStackSize(epicsThreadStackMedium),
+              (EPICSTHREADFUNC)::receiver_acquire_callback,
+              data);
+}
 
 /**
  * Background thread to wait until an acquire signal is recieved.
@@ -417,16 +434,7 @@ void ADLambda::waitAcquireThread()
 		
 		for (int index = 0; index < this->recs.size(); index += 1)
 		{
-			acquire_data data;
-			
-			data.driver = this;
-			data.receiver = index;
-		
-			epicsThreadCreate("ADLambda::acquireThread()",
-	                  epicsThreadPriorityLow,
-	                  epicsThreadGetStackSize(epicsThreadStackMedium),
-	                  (EPICSTHREADFUNC)::receiver_acquire_callback,
-	                  &data);
+			this->spawnAcquireThread(index);
 		}
 		
 		int threads_running = this->recs.size();
@@ -485,7 +493,11 @@ void ADLambda::acquireThread(int receiver)
 		this->setIntegerParam(receiver, LAMBDA_DecodedQueueDepth, numBuffered);
 		
 		const xsp::Frame* frame = this->recs[receiver]->frame(1500);
-
+	
+		printf("Receiver %d received frame %p\n", receiver, frame);
+	
+		if (frame == nullptr) { continue; }
+	
 		long frameNo = frame->nr();
 		const void* data = frame->data();
 		
@@ -513,19 +525,25 @@ void ADLambda::acquireThread(int receiver)
 			this->callParamCallbacks();
 		}
 
-		if (this->pArrays[0])    { this->pArrays[0]->release(); }
+		if (this->pArrays[receiver])    { this->pArrays[receiver]->release(); }
 		
 		int arrayCallbacks;
 		getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
 		
 		if (arrayCallbacks)
 		{
-			this->pArrays[0] = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
-		
-			pImage = this->pArrays[0];
+			this->pArrays[receiver] = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
 			
 			NDArrayInfo arrayInfo;
-			pImage->getInfo(&arrayInfo);
+			this->pArrays[receiver]->getInfo(&arrayInfo);
+			
+			xsp::Position modulepos = this->recs[receiver]->position();
+			int xval = (int) modulepos.x;
+			int yval = (int) modulepos.y;
+			
+			this->pArrays[receiver]->pAttributeList->clear();
+			this->pArrays[receiver]->pAttributeList->add("LAMBDA_XOFF", "Image X Offset", NDAttrInt32,  &xval);
+			this->pArrays[receiver]->pAttributeList->add("LAMBDA_YOFF", "Image Y Offset", NDAttrInt32,  &yval);
 			
 			int bitDepth = this->recs[receiver]->frameDepth();
 			
@@ -542,8 +560,8 @@ void ADLambda::acquireThread(int receiver)
 			/* Time stamps */
 			epicsTimeStamp currentTime;
 			epicsTimeGetCurrent(&currentTime);
-			pImage->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
-			updateTimeStamp(&pImage->epicsTS);
+			this->pArrays[receiver]->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
+			updateTimeStamp(&this->pArrays[receiver]->epicsTS);
 			
 			pImage->uniqueId = frameNo;
 			
@@ -551,8 +569,8 @@ void ADLambda::acquireThread(int receiver)
 			
 			/* get attributes that have been defined for this
 			* driver */
-			getAttributes(pImage->pAttributeList);
-			doCallbacksGenericPointer(pImage, NDArrayData, receiver);
+			getAttributes(this->pArrays[receiver]->pAttributeList);
+			doCallbacksGenericPointer(this->pArrays[receiver], NDArrayData, receiver);
 		}
 		
 		this->recs[receiver]->release(frameNo);
