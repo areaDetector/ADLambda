@@ -31,6 +31,9 @@ asynSetTraceIOMask($(PORT), 0, 2)
 
 dbLoadRecords("$(ADCORE)/db/ADBase.template", "P=$(PREFIX),R=cam1:,PORT=$(PORT),ADDR=0,TIMEOUT=1")
 dbLoadRecords("$(ADLAMBDA)/db/ADLambda.template","P=$(PREFIX),R=cam1:,PORT=$(PORT),ADDR=0,TIMEOUT=1")
+
+dbLoadRecords("$(ADCORE)/db/ADBase.template", "P=$(PREFIX),R=cam2:,PORT=$(PORT),ADDR=1,TIMEOUT=1")
+dbLoadRecords("$(ADLAMBDA)/db/ADLambda.template","P=$(PREFIX),R=cam2:,PORT=$(PORT),ADDR=1,TIMEOUT=1")
 #
 # Create a standard arrays plugin, set it to get data from Driver.
 NDStdArraysConfigure("Image1", 3, 0, "$(PORT)", 0)
