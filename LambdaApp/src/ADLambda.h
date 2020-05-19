@@ -35,12 +35,13 @@ public:
 	virtual asynStatus disconnect();
 	virtual asynStatus connect();
 	
-	void processTwelveBit(const void*, NDArrayInfo);
-	void processTwentyFourBit(const void*, NDArrayInfo);
+	void processTwelveBit(NDArray*, const void*, NDArrayInfo);
+	void processTwentyFourBit(NDArray*, const void*, NDArrayInfo);
 	
 	void waitAcquireThread();
 	void acquireThread(int receiver);
 	void monitorThread();
+	void stitchImageThread();
 
 	void report(FILE *fp, int details);
 
@@ -86,12 +87,16 @@ private:
 	std::shared_ptr<xsp::lambda::Detector> det;
 	
 	std::vector<std::shared_ptr<xsp::Receiver> > recs;
+	std::vector<bool> get_next;
 	
 	epicsEvent* startAcquireEvent;
  	epicsEvent* threadFinishEvent;
+ 	
+ 	epicsEvent** imageReceiveEvents;
+ 	
+ 	NDArray* pImage;
 
     std::string configFileName;
-    NDArray *pImage;
     NDDataType_t imageDataType;
 };
 
