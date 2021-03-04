@@ -1,0 +1,31 @@
+record(ao, "$(P)$(R)EnergyThreshold$(ADDR)")
+{
+   field(PINI, 1)
+   field(DTYP, "asynFloat64")
+   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_ENERGY_THRESHOLD")
+   field(PREC, "4")
+}
+
+record(ai, "$(P)$(R)EnergyThreshold$(ADDR)_RBV")
+{
+   field(DTYP, "asynFloat64")
+   field(SCAN, "I/O Intr")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_ENERGY_THRESHOLD_READ")
+   field(PREC, "4")
+}
+
+record(ao, "$(P)$(R)DualThreshold$(ADDR)")
+{
+   field(PINI, 1)
+   field(DTYP, "asynFloat64")
+   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DUAL_THRESHOLD")
+   field(PREC, "4")
+}
+
+record(ai, "$(P)$(R)DualThreshold$(ADDR)_RBV")
+{
+   field(DTYP, "asynFloat64")
+   field(SCAN, "I/O Intr")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DUAL_THRESHOLD_READ")
+   field(PREC, "4")
+}

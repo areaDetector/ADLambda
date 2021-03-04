@@ -26,13 +26,6 @@ record(stringin, "$(P)$(R)DetCoreVersion")
     field(SCAN, "I/O Intr")
 }
 
-record(ao, "$(P)$(R)EnergyThreshold")
-{
-   field(DTYP, "asynFloat64")
-   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_ENERGY_THRESHOLD")
-   field(PREC, "4")
-}
-
 record(longin, "$(P)$(R)DecodedQueueDepth")
 {
    field(DTYP, "asynInt32")
@@ -73,13 +66,16 @@ record(mbbo, "$(P)$(R)TriggerMode")
 }
 record(mbbo, "$(P)$(R)OperatingMode")
 {
-   field(PINI, "YES")
    field(DTYP, "asynInt32")
    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
-   field(ZRST, "ContinuousReadWrite")
+   field(ZRST, "16-Bit")
    field(ZRVL, "0")
-   field(ONST, "TwentyFourBit")
+   field(ONST, "24-Bit")
    field(ONVL, "1")
+   field(TWST, "16-Bit Dual-Threshold")
+   field(TWVL, "2")
+   field(THST, "24-Bit Dual-Threshold")
+   field(THVL, "3")
    field(VAL,  "0")
    info(autosaveFields, "VAL")
 }
@@ -88,12 +84,17 @@ record(mbbi, "$(P)$(R)OperatingMode_RBV")
 {
    field(DTYP, "asynInt32")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
-   field(ZRST, "ContinuousReadWrite")
+   field(ZRST, "16-Bit")
    field(ZRVL, "0")
-   field(ONST, "TwentyFourBit")
+   field(ONST, "24-Bit")
    field(ONVL, "1")
+   field(TWST, "16-Bit Dual-Threshold")
+   field(TWVL, "2")
+   field(THST, "24-Bit Dual-Threshold")
+   field(THVL, "3")
    field(VAL,  "0")
    field(SCAN, "I/O Intr")
+   field(PINI, "YES")
    info(autosaveFields, "VAL")
 }
 
@@ -139,4 +140,16 @@ record(ao, "$(P)$(R)AcquirePeriod")
 record(ai, "$(P)$(R)AcquirePeriod_RBV")
 {
    field("PREC","4")
+}
+
+record(bo, "$(P)$(R)GetThresholds")
+{
+	field(DTYP, "asynInt32")
+	field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_GET_THRESHOLDS")
+}
+
+record(bo, "$(P)$(R)SetThresholds")
+{
+	field(DTYP, "asynInt32")
+	field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_SET_THRESHOLDS")
 }
