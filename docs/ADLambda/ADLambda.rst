@@ -1,40 +1,13 @@
-.. raw:: html
+areaDetector Lambda driver
+==========================
 
-   <div style="text-align: center">
+:author:  John Hammonds (Argonne National Laboratory)
 
-.. rubric:: areaDetector Lambda driver
-   :name: areadetector-lambda-driver
-
-.. rubric:: March 1, 2016
-   :name: march-1-2016
-
-.. rubric:: John Hammonds
-   :name: john-hammonds
-
-.. rubric:: Scientific Software & Data Management Group
-   :name: scientific-software-data-management-group
-
-.. rubric:: Advanced Photon Source
-   :name: advanced-photon-source
-
-.. rubric:: Argonne National Laboratory
-   :name: argonne-national-laboratory
-
-.. raw:: html
-
-   </div>
 
 Table Of Contents
 -----------------
 
--  `Introduction <#Introduction>`__
--  `Implementation of standard driver parameters <#StandardNotes>`__
--  `Lambda Driver Parameters <#Driver_parameters>`__
--  `Configuration <#Configuration>`__
--  `MEDM screens <#MEDM_screens>`__
--  `Performance Measurements <#Performance_Measurements>`__
--  `Hardware Notes <#Hardware_Notes>`__
--  `Restrictions <#Restrictions>`__
+.. contents:: Contents
 
 Introduction
 ------------
@@ -101,17 +74,12 @@ the standard driver parameters.
 Lambda specific parameters
 --------------------------------------------------------------------------------
 
+Parameter Definition in ADLambda.cpp and record definitions in ADLambda.template
+
 .. cssclass:: table-bordered table-striped table-hover
 .. list-table::
   :header-rows: 1
   
-  * -
-    -
-    -
-    - Parameter Definition in ADLambda.cpp and record definitions in ADLambda.template
-    -
-    -
-    -
   * - Parameter index variable
     - asyn interface
     - Access
