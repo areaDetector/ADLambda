@@ -1,4 +1,4 @@
-areaDetector Lambda driver
+ADLambda
 ==========================
 
 :author:  John Hammonds (Argonne National Laboratory)
