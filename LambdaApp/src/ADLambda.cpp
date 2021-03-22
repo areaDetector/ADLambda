@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iocsh.h>
 #include <vector>
+#include <string>
 #include <iostream>
 
 #include <epicsTime.h>
@@ -34,6 +35,11 @@ static void receiver_acquire_callback(void *drvPvt)
 	delete data;
 }
 
+static void errlog_callback(xsp::LogLevel lv, const std::string msg)
+{
+	printf("%s\n", msg.c_str());
+}
+
 extern "C" 
 {
 	/** Configuration command for Lambda driver; creates a new ADLambda object.
@@ -59,8 +65,6 @@ extern "C"
 }
 
 const char *ADLambda::driverName = "Lambda";
-const int ADLambda::TWELVE_BIT = 12;
-const int ADLambda::TWENTY_FOUR_BIT = 24;
 
 /**
  * Constructor
@@ -110,11 +114,16 @@ configFileName(configPath)
 	createParam(LAMBDA_MedipixIDsString, asynParamOctet, &LAMBDA_MedipixIDs);
 	createParam(LAMBDA_DetCoreVersionNumberString, asynParamOctet, &LAMBDA_DetCoreVersionNumber);
 	createParam(LAMBDA_BadImageString, asynParamInt32, &LAMBDA_BadImage);
-	createParam(LAMBDA_GetThresholdsString, asynParamInt32, &LAMBDA_GetThresholds);
-	createParam(LAMBDA_SetThresholdsString, asynParamInt32, &LAMBDA_SetThresholds);
+	createParam(LAMBDA_ReadoutThreadsString, asynParamInt32, &LAMBDA_ReadoutThreads);
+	
+	setIntegerParam(LAMBDA_ReadoutThreads, 0);
 
 	this->startAcquireEvent = new epicsEvent();
-	this->threadFinishEvent = new epicsEvent();
+	
+	this->threadFinishEvents = calloc(numModules, sizeof(epicsEvent*));
+	for (int index = 0; index < numModules; index += 1)    { this->threadFinishEvents[index] = new epicsEvent(); }
+	
+	//xsp::setLogHandler(errlog_callback);
 	
 	this->connect();
 }
@@ -152,15 +161,27 @@ asynStatus ADLambda::connect()
 		setIntegerParam(index, NDArraySizeY, rec->frameHeight());
 		setIntegerParam(index, NDArraySize, 0);
 		
-		if (rec->frameDepth() == TWELVE_BIT) 
+		int depth = rec->frameDepth();
+		
+		if (depth == ONE_BIT)
 		{
-			setIntegerParam(index, NDDataType, NDUInt16);
+			setIntegerParam(index, NDDataType, NDUInt8);
 			setIntegerParam(index, LAMBDA_OperatingMode, 0);
 		}
-		else if (rec->frameDepth() == TWENTY_FOUR_BIT) 
+		else if (depth == SIX_BIT)
+		{
+			setIntegerParam(index, NDDataType, NDUInt8);
+			setIntegerParam(index, LAMBDA_OperatingMode, 1);
+		}
+		else if (depth == TWELVE_BIT) 
+		{
+			setIntegerParam(index, NDDataType, NDUInt16);
+			setIntegerParam(index, LAMBDA_OperatingMode, 2);
+		}
+		else if (depth == TWENTY_FOUR_BIT) 
 		{
 			setIntegerParam(index, NDDataType, NDUInt32);
-			setIntegerParam(index, LAMBDA_OperatingMode, 1);
+			setIntegerParam(index, LAMBDA_OperatingMode, 3);
 		}
 		
 		recs.push_back(rec);
@@ -179,6 +200,8 @@ asynStatus ADLambda::connect()
 
 	std::string version = xsp::libraryVersion();
 	setStringParam(ADSDKVersion, version);
+		
+	this->getThresholds();
 		
 	callParamCallbacks();
 	
@@ -216,8 +239,6 @@ asynStatus ADLambda::disconnect()
  */
 asynStatus ADLambda::acquireStop()
 {
-	asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Enter\n", driverName, __FUNCTION__);
-
 	int status = asynSuccess;
 
 	det->stopAcquisition();
@@ -226,114 +247,22 @@ asynStatus ADLambda::acquireStop()
 	setIntegerParam(ADAcquire, 0);
 	callParamCallbacks();
 
-	asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Exit\n", driverName, __FUNCTION__);
 	return (asynStatus)status;
 }
 
-void ADLambda::processTwelveBit(const void* data, void* output_data, int nelements)
+
+template <typename epicsType>
+void ADLambda::processOutput(const void* data, void* output_data, int nelements)
 {
-	const uint16_t* frame_data = reinterpret_cast<const uint16_t*>(data);	
+	const epicsType* frame_data = reinterpret_cast<const epicsType*>(data);
 
 	switch (imageDataType) 
 	{
 		case NDUInt8:
 		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to UInt8 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsUInt8);
-			const uint16_t*first = frame_data;
-			const uint16_t*last = frame_data + nelements;
-			unsigned char  *result = (unsigned char *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to UInt8 %d %p, %p , %p\n", 
-				      imageDataType, first, last, result);
-			
-			std::copy(first, last, result);
-		}
-		break;
-		
-		case NDInt16:
-		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to Int16 %d\n", imageDataType);
-				   
-			int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsInt16);
-			const uint16_t*first = frame_data;
-			const uint16_t*last = frame_data + nelements;
-			short  *result = (short *)output_data;
-
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to Int16 %d %p, %p , %p\n",
-				      imageDataType, first, last, result);
-				      
-			std::copy(first, last, result);
-		}
-		break;
-		
-		case NDUInt16:
-		{
-			memcpy(output_data, frame_data, nelements * sizeof(epicsInt16));
-		}
-		break;
-		
-		case NDInt32:
-		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to Int32 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsInt32);
-			const uint16_t*first = frame_data;
-			const uint16_t*last = frame_data + nelements;
-			int  *result = (int *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to Int32 %d %p, %p , %p\n",
-				      imageDataType, first, last, result);
-				      
-			std::copy(first, last, result);
-		}
-		break;
-		
-		case NDUInt32:
-		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to UInt32 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt16)/sizeof(epicsUInt32);
-			const uint16_t*first = frame_data;
-			const uint16_t*last = frame_data + nelements;
-			unsigned int  *result = (unsigned int *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt16 to UInt32 %d %p, %p , %p\n",
-				      imageDataType, first, last, result);
-				      
-			std::copy(first, last, result);
-		}
-		break;
-		
-		case NDFloat32:
-		case NDFloat64:
-		default:
-		{
-			asynPrint (pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Unhandled Data Type %d", 
-				       driverName, __FUNCTION__, imageDataType);
-		}
-		break;
-	}
-}
-
-void ADLambda::processTwentyFourBit(const void* data, void* output_data, int nelements)
-{
-	const uint32_t* frame_data = reinterpret_cast<const uint32_t*>(data);
-
-	switch (imageDataType) 
-	{
-		case NDUInt8:
-		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to UInt8 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt8);
-			const uint32_t* first = frame_data;
-			const uint32_t* last = frame_data + nelements;
-			unsigned char  *result = (unsigned char *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to UInt8 %d %p, %p , %p\n",
-			          imageDataType, first, last, result);
+			const epicsType* first = frame_data;
+			const epicsType* last = frame_data + nelements;
+			epicsUInt8* result = (epicsUInt8*) output_data;
 			          
 			std::copy(first, last, result);
 		}
@@ -342,15 +271,9 @@ void ADLambda::processTwentyFourBit(const void* data, void* output_data, int nel
 		
 		case NDInt16:
 		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to Int16 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsInt16);
-			const uint32_t* first = frame_data;
-			const uint32_t* last = frame_data + nelements;
-			short  *result = (short *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to Int16 %d %p, %p , %p\n",
-			          imageDataType, first, last, result);
+			const epicsType* first = frame_data;
+			const epicsType* last = frame_data + nelements;
+			epicsInt16* result = (epicsInt16*) output_data;
 			          
 			std::copy(first, last, result);
 		}
@@ -359,15 +282,9 @@ void ADLambda::processTwentyFourBit(const void* data, void* output_data, int nel
 		
 		case NDUInt16:
 		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to UInt16 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt16);
-			const uint32_t* first = frame_data;
-			const uint32_t* last = frame_data + nelements;
-			unsigned short  *result = (unsigned short *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to UInt16 %d %p, %p , %p\n",
-			          imageDataType, first, last, result);
+			const epicsType* first = frame_data;
+			const epicsType* last = frame_data + nelements;
+			epicsUInt16* result = (epicsUInt16*) output_data;
 			          
 			std::copy(first, last, result);
 		}
@@ -375,15 +292,9 @@ void ADLambda::processTwentyFourBit(const void* data, void* output_data, int nel
 		
 		case NDInt32:
 		{
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to Int32 %d\n", imageDataType);
-			
-			int scaleBytes = sizeof(epicsUInt32)/sizeof(epicsUInt32);
-			const uint32_t* first = frame_data;
-			const uint32_t* last = frame_data + nelements;
-			int  *result = (int *)output_data;
-			
-			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Copying from UInt32 to Int32 %d %p, %p , %p\n",
-			          imageDataType, first, last, result);
+			const epicsType* first = frame_data;
+			const epicsType* last = frame_data + nelements;
+			epicsInt32* result = (epicsInt32*) output_data;
 			          
 			std::copy(first, last, result);
 		}
@@ -391,7 +302,11 @@ void ADLambda::processTwentyFourBit(const void* data, void* output_data, int nel
 		
 		case NDUInt32:
 		{
-			memcpy(output_data, frame_data, nelements * sizeof(epicsUInt32));
+			const epicsType* first = frame_data;
+			const epicsType* last = frame_data + nelements;
+			epicsUInt32* result = (epicsUInt32*) output_data;
+		
+			std::copy(first, last, result);
 		}
 		break;
 		
@@ -409,6 +324,13 @@ void ADLambda::processTwentyFourBit(const void* data, void* output_data, int nel
 
 void ADLambda::spawnAcquireThread(int receiver)
 {
+	int curr_threads;
+	
+	getIntegerParam(LAMBDA_ReadoutThreads, &curr_threads);
+	curr_threads += 1;
+	setIntegerParam(LAMBDA_ReadoutThreads, curr_threads);
+	callParamCallbacks();
+
 	acquire_data* data = new acquire_data;
 
 	data->driver = this;
@@ -448,17 +370,20 @@ void ADLambda::waitAcquireThread()
 		this->unlock();
 		
 		for (int index = 0; index < this->recs.size(); index += 1)
-		{
+		{		
 			this->spawnAcquireThread(index);
 		}
 		
 		int threads_running = this->recs.size();
 		
-		while(threads_running != 0)
+		for (int index = 0; index < this->recs.size(); index += 1)
 		{
-			this->threadFinishEvent->wait();
+			this->threadFinishEvents[index]->wait();
 			
 			threads_running -= 1;
+
+			setIntegerParam(LAMBDA_ReadoutThreads, threads_running);
+			callParamCallbacks();
 		}
 		
 		this->lock();
@@ -499,11 +424,15 @@ void ADLambda::acquireThread(int receiver)
 	
 	this->getIntegerParam(LAMBDA_OperatingMode, &operating_mode);
 	
-	printf("Operating Mode = %d\n", operating_mode);
+	if (operating_mode < 0)
+	{ 
+		this->setIntegerParam(LAMBDA_OperatingMode, 0);
+		operating_mode = 0; 
+	}
 	
-	if (operating_mode < 0)    { operating_mode = 0; }
+	bool dual_mode = (operating_mode > 3);
 	
-	if (operating_mode > 1)    { imagedims[1] = height * 2; }
+	if (dual_mode)    { imagedims[1] = height * 2; }
 	
 	/*
 	 * Each module will use address 0's number of images
@@ -513,21 +442,24 @@ void ADLambda::acquireThread(int receiver)
 	int toRead;
 	getIntegerParam(ADNumImages, &toRead);
 	
+	double exposure;
+	getDoubleParam(ADAcquireTime, &exposure);
+	
 	std::shared_ptr<xsp::Receiver> rec = this->recs[receiver];
 	
 	bool dual = false;
 	
+	
 	xsp::Frame* frame = NULL;
 	xsp::Frame* dual_frame = NULL;
 	
-	while (numAcquired < toRead) 
-	//&&  (rec->isBusy() || rec->framesQueued()))
+	while (numAcquired < toRead && det->isBusy())
 	{	
 		int numBuffered = rec->framesQueued();
 	
 		if (numBuffered < 0) { printf("rec->framesQueued() returned %d\n", numBuffered); }
 	
-		if (numBuffered == 0)    { continue; }
+		if (numBuffered == 0)    { epicsThreadSleep(exposure); continue; }
 	
 		this->setIntegerParam(receiver, LAMBDA_DecodedQueueDepth, numBuffered);
 	
@@ -538,8 +470,8 @@ void ADLambda::acquireThread(int receiver)
 		if (!dual)    { frame = temp; }
 		else          { dual_frame = temp; }
 		
-		if (operating_mode > 1 && !dual)    { dual = true; continue; }
-		else                                { dual = false; }
+		if (dual_mode && !dual)    { dual = true; continue; }
+		else                       { dual = false; }
 	
 		long frameNo = frame->nr();
 		const char* data = (const char*) frame->data();
@@ -584,17 +516,21 @@ void ADLambda::acquireThread(int receiver)
 			
 			int bitDepth = rec->frameDepth();
 			
-			if      (bitDepth == TWELVE_BIT)         { this->processTwelveBit(data, output->pData, height * width); }
-			else if (bitDepth == TWENTY_FOUR_BIT)    { this->processTwentyFourBit(data, output->pData, height * width); }
+			if (bitDepth == ONE_BIT || 
+			    bitDepth == SIX_BIT)               { this->processOutput<epicsUInt8>(data, output->pData, height * width); }
+			else if (bitDepth == TWELVE_BIT)       { this->processOutput<epicsUInt16>(data, output->pData, height * width); }
+			else if (bitDepth == TWENTY_FOUR_BIT)  { this->processOutput<epicsUInt32>(data, output->pData, height * width); }
 			
-			if (operating_mode > 1)
+			if (dual_mode)
 			{
 				unsigned int offset = height * width * arrayInfo.bytesPerElement;
 			
-				const char* output_data = (const char*) output->pData;
+				char* output_data = (char*) output->pData;
 			
-				if      (bitDepth == TWELVE_BIT)         { this->processTwelveBit(dual_frame->data(), &output_data[offset], height * width); }
-				else if (bitDepth == TWENTY_FOUR_BIT)    { this->processTwentyFourBit(dual_frame->data(), &output_data[offset], height * width); }
+				if (bitDepth == ONE_BIT || 
+			        bitDepth == SIX_BIT)                 { this->processOutput<epicsUInt8>(dual_frame->data(), &output_data[offset], height * width);; }
+				else if (bitDepth == TWELVE_BIT)         { this->processOutput<epicsUInt16>(dual_frame->data(), &output_data[offset], height * width); }
+				else if (bitDepth == TWENTY_FOUR_BIT)    { this->processOutput<epicsUInt32>(dual_frame->data(), &output_data[offset], height * width); }
 			}
 			
 			int arrayCounter;
@@ -622,7 +558,7 @@ void ADLambda::acquireThread(int receiver)
 		rec->release(frameNo);
 	}
 	
-	this->threadFinishEvent->trigger();
+	this->threadFinishEvents[receiver]->trigger();
 }
 
 /**
@@ -685,6 +621,26 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 		acquirePeriod = value;
 		setDoubleParam(function, acquirePeriod);
 	}
+	else if (function == LAMBDA_EnergyThreshold)
+	{
+		std::vector<double> thresholds = det->thresholds();
+		
+		thresholds[0] = value;
+		
+		det->setThresholds(thresholds);
+		
+		this->getThresholds();
+	}
+	else if (function == LAMBDA_DualThreshold)
+	{
+		std::vector<double> thresholds = det->thresholds();
+		
+		thresholds[1] = value;
+		
+		det->setThresholds(thresholds);
+		
+		this->getThresholds();
+	}
 	else 
 	{
 		if (function < LAMBDA_FIRST_PARAM) 
@@ -699,37 +655,12 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 void ADLambda::getThresholds()
 {
 	std::vector<double> thresholds = det->thresholds();
-		
-	for (int index = 0; index < this->recs.size(); index += 1)
+	
+	for (int index = 0; index < recs.size(); index += 1)
 	{
-		setDoubleParam(index, LAMBDA_EnergyThresholdRBV, thresholds[index]);
+		setDoubleParam(index, LAMBDA_EnergyThresholdRBV, thresholds[0]);
+		setDoubleParam(index, LAMBDA_DualThresholdRBV, thresholds[1]);
 	}
-}
-
-void ADLambda::setThresholds()
-{
-	std::vector<double> thresholds;
-			
-	int operating_mode;
-	getIntegerParam(LAMBDA_OperatingMode, &operating_mode);
-	
-	for (int index = 0; index < this->recs.size(); index += 1)
-	{
-		double val;
-		getDoubleParam(index, LAMBDA_EnergyThreshold, &val);
-		
-		thresholds.push_back(val);
-		
-		if (operating_mode > 1)
-		{
-			getDoubleParam(index, LAMBDA_DualThreshold, &val);
-			thresholds.push_back(val);
-		}			
-	}
-	
-	det->setThresholds(thresholds);
-	
-	this->getThresholds();
 }
 
 
@@ -799,42 +730,54 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value) {
 		        value);
 		if (value == 0)
 		{
+			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1));
+			setIntegerParam(NDDataType, NDUInt8);
+		}
+		else if (value == 1)
+		{
+			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6));
+			setIntegerParam(NDDataType, NDUInt8);
+		}
+		else if (value == 2)
+		{
 			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12));
 			setIntegerParam(NDDataType, NDUInt16);
-			callParamCallbacks();
 		}
-		else if(value == 1) 
+		else if(value == 3) 
 		{
 			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24));
 			setIntegerParam(NDDataType, NDUInt32);
-			callParamCallbacks();
 		}
-		else if (value == 2)
+		else if (value == 4)
+		{
+			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1,
+			                                                 xsp::lambda::ChargeSumming::OFF,
+			                                                 xsp::lambda::CounterMode::DUAL));
+			setIntegerParam(NDDataType, NDUInt8);
+		}
+		else if (value == 5)
+		{
+			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6,
+			                                                 xsp::lambda::ChargeSumming::OFF,
+			                                                 xsp::lambda::CounterMode::DUAL));
+			setIntegerParam(NDDataType, NDUInt8);
+		}
+		else if (value == 6)
 		{
 			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12, 
 			                                                 xsp::lambda::ChargeSumming::OFF,
 			                                                 xsp::lambda::CounterMode::DUAL));
 			setIntegerParam(NDDataType, NDUInt16);
-			callParamCallbacks();
+
 		}
-		else if (value == 3)
+		else if (value == 7)
 		{
 			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24, 
 			                                                 xsp::lambda::ChargeSumming::OFF,
 			                                                 xsp::lambda::CounterMode::DUAL));
 			setIntegerParam(NDDataType, NDUInt32);
-			callParamCallbacks();
+			
 		}
-		
-		this->setThresholds();
-	}
-	else if (function == LAMBDA_GetThresholds)
-	{
-		if (value == 1)    { this->getThresholds(); }
-	}
-	else if (function == LAMBDA_SetThresholds)
-	{
-		if (value == 1)    { this->setThresholds(); }
 	}
 	else if (function < LAMBDA_FIRST_PARAM) 
 	{
