@@ -1,0 +1,4 @@
+file "ADBase_settings.req" P=$(P),R=$(R)
+
+$(P)$(R)EnergyThreshold
+$(P)$(R)DualThreshold
