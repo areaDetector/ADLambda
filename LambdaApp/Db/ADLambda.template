@@ -28,20 +28,6 @@ record(stringin, "$(P)$(R)DetCoreVersion")
     field(SCAN, "I/O Intr")
 }
 
-record(longin, "$(P)$(R)DecodedQueueDepth")
-{
-   field(DTYP, "asynInt32")
-   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DECODED_QUEUE_DEPTH")
-   field(SCAN, "I/O Intr")
-}
-
-record(longin, "$(P)$(R)BadFrameCounter")
-{
-   field(DTYP, "asynInt32")
-   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
-   field(SCAN, "I/O Intr")
-}
-
 record(mbbo, "$(P)$(R)ImageMode")
 {
    field(TWST, "")
@@ -66,6 +52,24 @@ record(mbbo, "$(P)$(R)TriggerMode")
    field(VAL,  "0")
    info(autosaveFields, "VAL")
 }
+
+record(mbbi, "$(P)$(R)TriggerMode_RBV")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))TRIGGER_MODE")
+   field(ZRST, "Internal")
+   field(ZRVL, "0")
+   field(ONST, "External_SequencePer")
+   field(ONVL, "1")
+   field(TWST, "External_ImagePer")
+   field(TWVL, "2")
+   field(THST, "Gating_Mode")
+   field(THVL, "3")
+   field(VAL,  "0")
+   info(autosaveFields, "VAL")
+}
+
 record(mbbo, "$(P)$(R)OperatingMode")
 {
    field(DTYP, "asynInt32")

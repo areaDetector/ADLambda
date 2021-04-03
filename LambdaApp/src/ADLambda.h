@@ -25,6 +25,12 @@ static const int SIX_BIT = 6;
 static const int TWELVE_BIT = 12;
 static const int TWENTY_FOUR_BIT = 24;
 
+static const int ONE_BIT_MODE = 0;
+static const int SIX_BIT_MODE = 1;
+static const int TWELVE_BIT_MODE = 2;
+static const int TWENTY_FOUR_BIT_MODE = 3;
+
+static const double ONE_BILLION = 1.E9;
 
 /**
  * Class to wrap Lambda detector library provided by X-Spectrum
@@ -34,16 +40,14 @@ class epicsShareClass ADLambda: public ADDriver
 public:
 	static const char *driverName;
 
-	ADLambda(const char *portName, const char *configPath, int numModules);
+	ADLambda(const char *portName, const char *configPath, int numModules, int readout);
 	~ADLambda();
 
 	virtual asynStatus disconnect();
 	virtual asynStatus connect();
 	
-	template <typename epicsType> void processOutput(const void*, void*, int);
-	
 	void waitAcquireThread();
-	void acquireThread(int receiver);
+	void acquireThread(int receiver, int thread_no);
 	void monitorThread();
 
 	void report(FILE *fp, int details);
@@ -82,6 +86,7 @@ protected:
 
 private:
 	bool connected;
+	int ReadThreadPerModule;
 
     asynStatus acquireStart();
     asynStatus acquireStop();
@@ -90,7 +95,7 @@ private:
    
    	void getThresholds();
    
-	void spawnAcquireThread(int receiver);
+	void spawnAcquireThread(int receiver, int thread_no);
 
 	std::unique_ptr<xsp::System> sys;
 	std::shared_ptr<xsp::lambda::Detector> det;
@@ -99,12 +104,21 @@ private:
 	
 	epicsEvent* startAcquireEvent;
  	epicsEvent** threadFinishEvents;
+ 	epicsMutex** threadReceiverLocks;
 
     std::string configFileName;
     NDArray *pImage;
     NDArray** saved_frames;
     NDDataType_t imageDataType;
 };
+
+typedef struct
+{
+	ADLambda* driver;
+	int receiver;
+	int thread_no;
+} acquire_data;
+
 
 #define LAMBDA_VersionNumberString          "LAMBDA_VERSION_NUMBER"
 #define LAMBDA_ConfigFilePathString         "LAMBDA_CONFIG_FILE_PATH"
