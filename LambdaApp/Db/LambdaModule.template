@@ -1,31 +1,48 @@
-record(ao, "$(P)$(R)EnergyThreshold$(ADDR)")
+record(longin, "$(P)$(R)NumImagesCounter$(ADDR)")
 {
-   field(PINI, 1)
-   field(DTYP, "asynFloat64")
-   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_ENERGY_THRESHOLD")
-   field(PREC, "4")
+   field(DTYP, "asynInt32")
+   field(OUT, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))NIMAGES_COUNTER")
 }
 
-record(ai, "$(P)$(R)EnergyThreshold$(ADDR)_RBV")
+record(longin, "$(P)$(R)NumImagesCounter$(ADDR)_RBV")
 {
-   field(DTYP, "asynFloat64")
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))NIMAGES_COUNTER")
    field(SCAN, "I/O Intr")
-   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_ENERGY_THRESHOLD_READ")
-   field(PREC, "4")
 }
 
-record(ao, "$(P)$(R)DualThreshold$(ADDR)")
+
+record(longout, "$(P)$(R)BadFrameCounter$(ADDR)")
 {
-   field(PINI, 1)
-   field(DTYP, "asynFloat64")
-   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DUAL_THRESHOLD")
-   field(PREC, "4")
+   field(DTYP, "asynInt32")
+   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
 }
 
-record(ai, "$(P)$(R)DualThreshold$(ADDR)_RBV")
+record(longin, "$(P)$(R)BadFrameCounter$(ADDR)_RBV")
 {
-   field(DTYP, "asynFloat64")
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
    field(SCAN, "I/O Intr")
-   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DUAL_THRESHOLD_READ")
-   field(PREC, "4")
+}
+
+
+record(longin, "$(P)$(R)DecodedQueueDepth$(ADDR)")
+{
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DECODED_QUEUE_DEPTH")
+   field(SCAN, "I/O Intr")
+}
+
+
+record(longout, "$(P)$(R)ArrayCounter$(ADDR)")
+{
+   field(DTYP, "asynInt32")
+   field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))ARRAY_COUNTER")
+}
+
+record(longin, "$(P)$(R)ArrayCounter$(ADDR)_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))ARRAY_COUNTER")
+   field(SCAN, "I/O Intr")
 }
