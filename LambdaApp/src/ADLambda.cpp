@@ -332,7 +332,7 @@ void ADLambda::monitorThread()
 		
 void ADLambda::acquireThread(int receiver, int thread_no)
 {
-	int virtual_index = receiver + (this->recs.size() * thread_no);
+	const int virtual_index = receiver + (this->recs.size() * thread_no);
 
     this->setIntegerParam(receiver, ADNumImagesCounter, 0);
 	this->setIntegerParam(receiver, LAMBDA_BadFrameCounter, 0);
@@ -348,7 +348,7 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 	
 	size_t imagedims[2] = {width, height};
 	
-	bool dual_mode = (operating_mode > TWENTY_FOUR_BIT_MODE);
+	const bool dual_mode = (operating_mode > TWENTY_FOUR_BIT_MODE);
 	
 	if (dual_mode)    { imagedims[1] = height * 2; }
 	
@@ -367,23 +367,10 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 	
 	std::shared_ptr<xsp::Receiver> rec = this->recs[receiver];
 	
-	xsp::Frame* frame = NULL;
-	xsp::Frame* dual_frame = NULL;
+	xsp::Frame* frames[2] = { NULL, NULL };
 	
 	int numAcquired = 0;
-	bool dual = false;
-	
-	// Wait for the frames to start coming in
-	while (rec->framesQueued() == 0)
-	{
-		if (!det->isBusy())
-		{
-			this->threadFinishEvents[virtual_index]->trigger();
-			return;
-		}
-	
-		epicsThreadSleep(exposure); 
-	}
+	int dual = 0;
 	
 	while (numAcquired < toRead)
 	{
@@ -397,17 +384,11 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			else                  { break; }
 		}
 		
-		if (!dual)
-		{ 
-			frame = temp;
-			
-			if (dual_mode)    { dual = true; continue; } 
-		}
-		else
-		{ 
-			dual_frame = temp; 
-			dual = false;
-		}
+		frames[dual] = temp;
+		
+		if (dual_mode && !dual)    { dual = 1; continue; }
+		
+		dual = 0;
 		
 		this->threadReceiverLocks[receiver]->lock();
 			this->getIntegerParam(receiver, ADNumImagesCounter, &numAcquired);
@@ -415,8 +396,8 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			this->setIntegerParam(receiver, ADNumImagesCounter, numAcquired);
 		this->threadReceiverLocks[receiver]->unlock();
 	
-		if (frame->data() == NULL || frame->status() != xsp::FrameStatusCode::FRAME_OK ||
-		   (dual_mode && (dual_frame->data() == NULL || dual_frame->status() != xsp::FrameStatusCode::FRAME_OK)))
+		if (frames[0]->status() != xsp::FrameStatusCode::FRAME_OK ||
+		   (dual_mode && frames[1]->status() != xsp::FrameStatusCode::FRAME_OK))
 		{
 			int badFrames;
 			
@@ -427,8 +408,8 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 				this->setIntegerParam(receiver, LAMBDA_BadImage, 1);
 			this->threadReceiverLocks[receiver]->unlock();
 			
-			rec->release(frame->nr());
-			if (dual_mode)    { rec->release(dual_frame->nr()); }
+			rec->release(frames[0]->nr());
+			if (dual_mode)    { rec->release(frames[1]->nr()); }
 			
 			continue;
 		}
@@ -455,11 +436,11 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			output->dims[0].offset = (int) modulepos.x;
 			output->dims[1].offset = (int) modulepos.y;
 			
-			memcpy(img_data, (char*) frame->data(), arrayInfo.totalBytes);
+			memcpy(img_data, (char*) frames[0]->data(), arrayInfo.totalBytes);
 			
 			if (dual_mode)
 			{
-				memcpy(&img_data[arrayInfo.totalBytes], (char*) dual_frame->data(), arrayInfo.totalBytes);
+				memcpy(&img_data[arrayInfo.totalBytes], (char*) frames[1]->data(), arrayInfo.totalBytes);
 			}
 						
 			setIntegerParam(NDArraySize, arrayInfo.totalBytes);
@@ -470,7 +451,7 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			output->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
 			updateTimeStamp(&output->epicsTS);
 			
-			output->uniqueId = frame->nr();
+			output->uniqueId = frames[0]->nr();
 			
 			int arrayCounter;
 			
@@ -484,8 +465,8 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			doCallbacksGenericPointer(output, NDArrayData, receiver);
 		}
 		
-		rec->release(frame->nr());
-		if (dual_mode)    { rec->release(dual_frame->nr()); }
+		rec->release(frames[0]->nr());
+		if (dual_mode)    { rec->release(frames[1]->nr()); }
 		
 		
 		int numBuffered = rec->framesQueued();
