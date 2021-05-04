@@ -74,8 +74,8 @@ const char *ADLambda::driverName = "Lambda";
  */
 ADLambda::ADLambda(const char *portName, const char *configPath, int numModules, int readout) :
 	ADDriver(portName, 
-	         numModules, 
-	         int(NUM_LAMBDA_PARAMS), 
+	         numModules,
+			 0,
 	         0, 
 	         0, 
 	         asynEnumMask, 
@@ -109,7 +109,6 @@ configFileName(configPath)
 	createParam(LAMBDA_OperatingModeString, asynParamInt32, &LAMBDA_OperatingMode);
 	createParam(LAMBDA_DetectorStateString, asynParamInt32, &LAMBDA_DetectorState);
 	createParam(LAMBDA_BadFrameCounterString, asynParamInt32, &LAMBDA_BadFrameCounter);
-	createParam(LAMBDA_MedipixIDsString, asynParamOctet, &LAMBDA_MedipixIDs);
 	createParam(LAMBDA_BadImageString, asynParamInt32, &LAMBDA_BadImage);
 	createParam(LAMBDA_ReadoutThreadsString, asynParamInt32, &LAMBDA_ReadoutThreads);
 	
