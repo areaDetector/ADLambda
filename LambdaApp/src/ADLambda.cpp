@@ -102,7 +102,6 @@ configFileName(configPath)
 	
 	for (int index = 0; index < numModules; index += 1)    { this->threadReceiverLocks[index] = new epicsMutex(); }
 
-	createParam(LAMBDA_VersionNumberString, asynParamOctet, &LAMBDA_VersionNumber);
 	createParam(LAMBDA_ConfigFilePathString, asynParamOctet, &LAMBDA_ConfigFilePath);
 	createParam(LAMBDA_EnergyThresholdString, asynParamFloat64, &LAMBDA_EnergyThreshold);
 	createParam(LAMBDA_DualThresholdString, asynParamFloat64, &LAMBDA_DualThreshold);
@@ -111,7 +110,6 @@ configFileName(configPath)
 	createParam(LAMBDA_DetectorStateString, asynParamInt32, &LAMBDA_DetectorState);
 	createParam(LAMBDA_BadFrameCounterString, asynParamInt32, &LAMBDA_BadFrameCounter);
 	createParam(LAMBDA_MedipixIDsString, asynParamOctet, &LAMBDA_MedipixIDs);
-	createParam(LAMBDA_DetCoreVersionNumberString, asynParamOctet, &LAMBDA_DetCoreVersionNumber);
 	createParam(LAMBDA_BadImageString, asynParamInt32, &LAMBDA_BadImage);
 	createParam(LAMBDA_ReadoutThreadsString, asynParamInt32, &LAMBDA_ReadoutThreads);
 	
