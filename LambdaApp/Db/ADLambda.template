@@ -10,16 +10,6 @@ record(waveform, "$(P)$(R)ConfigFilePath")
     field(SCAN, "I/O Intr")
 }
 
-record(waveform, "$(P)$(R)MedipixIDs")
-{
-    field(PINI, "YES")
-    field(DTYP, "asynOctetRead")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_MEDIPIX_IDS")
-    field(FTVL, "CHAR")
-    field(NELM, "256")
-    field(SCAN, "I/O Intr")
-}
-
 record(mbbo, "$(P)$(R)ImageMode")
 {
    field(TWST, "")

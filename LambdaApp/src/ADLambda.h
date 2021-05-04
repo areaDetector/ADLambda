@@ -72,7 +72,6 @@ protected:
     int LAMBDA_OperatingMode;
     int LAMBDA_DetectorState;
     int LAMBDA_BadFrameCounter;
-    int LAMBDA_MedipixIDs;
     int LAMBDA_BadImage;
     int LAMBDA_ReadoutThreads;
 
