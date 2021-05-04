@@ -8,9 +8,9 @@
 <body>
    <div style="text-align: center">
       <h1>areaDetector Lambda driver</h1>
-      <h2>March 1, 2016</h2>
-      <h2>John Hammonds</h2>
-      <h2>Scientific Software & Data Management Group</h2>
+      <h2>May 3, 2021</h2>
+      <h2>Keenan Lang</h2>
+      <h2>Beamline Controls Group</h2>
       <h2>
          Advanced Photon Source</h2>
 
@@ -83,15 +83,13 @@
          <tr>
             <td>ADTriggerMode</td>
             <td>$(P)$(R)TriggerMode</td>
-            <td>Default descriptions are overloaded.  Allows four modes:<p>
+            <td>Default descriptions are overloaded.  Allows three modes:<p>
             <ul>
             <li>Internal</li>
             <li>External_SequencePer - each external pulse runs an <b>image 
                            sequence</b> per pulse</i>
             <li>External_ImagePer - each external pulse runs an <b>image</b> 
                            per pulse</i>
-            <li>Gating_Mode - Trigger an image that is active while the 
-            pulse is high</li>
             </ul>
             </td>
          </tr>
@@ -137,15 +135,6 @@
             <th>EPICS record type</th>
          </tr>
          <tr>
-            <td>LAMBDA_ConfigFilePath</td>
-            <td>asynOctet</td>
-            <td>r/w</td>
-            <td>Displays the full path to the detector's configueationFile</td>
-            <td>LAMBDA_CONFIG_FILE_PATH</td>
-            <td>ConfigFilePath</td>
-            <td>waveform</td>
-         </tr>
-         <tr>
             <td>LAMBDA_EnergyThreshold</td>
             <td>asynFloat64</td>
             <td>r/w</td>
@@ -154,6 +143,15 @@
             <td>EnergyThreshold</td>
             <td>ao</td>
          </tr>
+         <tr>
+            <td>LAMBDA_DualThreshold</td>
+            <td>asynFloat64</td>
+            <td>r/w</td>
+            <td>Sets the maximum energy that should register a valid event.</td>
+            <td>LAMBDA_DUAL_THRESHOLD</td>
+            <td>DualThreshold</td>
+            <td>ao</td>
+         </tr> 
          <tr>
             <td>LAMBDA_DecodedQueueDepth</td>
             <td>asynInt32</td>
@@ -170,22 +168,29 @@
             <td>Counts the number of bad frames detected during decoding. 
             images are sent as a number of packets, rotating over 4 network ports. 
             If the packets for the next image are received on all 4 ports, before
-            the finish of an image, then the frame is counted as a bad frame.</td>
+            the finish of an image, then the frame is counted as a bad frame.
+            
+            Each receiver module updates this field independently
+            </td>
             <td>LAMBDA_BAD_FRAME_COUNTER</td>
-            <td>BadFrameCounter</td>
+            <td>BadFrameCounter#</td>
             <td>longin</td>
          </tr>
          <tr>
             <td>LAMBDA_OperatingMode</td>
             <td>asynInt32</td>
             <td>r/w</td>
-            <td>Switches between 12 and 24 bit counting mode.  These are 
+            <td>Switches between 1, 6, 12, and 24 bit counting mode as well as dual-threshold modes.  These are 
             referenced in pulldown as<p> 
             <ul>
-            <li> ContinuousReadWrite - Switches to 12-bit mode and sets image 
-            data type to UInt16.</li>
-            <li> TwentyFourBit - Switches to 24-bit mode also sets image
-            data type to UInt32.
+                    <li> 1-Bit - Switches to 1-bit mode and sets image data type to UInt8.</li>
+                    <li> 6-Bit - Switches to 6-bit mode and sets image data type to UInt8.</li>
+                    <li> 12-Bit- Switches to 12-bit mode and sets image data type to UInt16.</li>
+                    <li> 24-Bit - Switches to 24-bit mode also sets image data type to UInt32.</li>
+                    <li> 1-Bit Dual-Threshold - Dual-Threshold version of 1-Bit mode from above.</li>
+                    <li> 6-Bit Dual-Threshold - Dual-Threshold version of 6-Bit mode from above.</li>
+                    <li> 12-Bit Dual-Threshold - Dual-Threshold version of 12-Bit mode from above.</li>
+                    <li> 24-Bit Dual-Threshold - Dual-Threshold version of 24-Bit mode from above.</li>
             </ul>
             Note that it is possible in each mode to choose any Integer data 
             type
@@ -232,9 +237,7 @@
    The Lambda detector instance is created using the LambdaConfig command, either from C/C++ 
    or from the EPICS IOC shell.
    </p> 
-   <pre> int LambdaConfig(const char *portName, const char* configPath, 
-         int maxBuffers, size_t maxMemory, 
-         int priority, int stackSize)</pre>
+   <pre> int LambdaConfig(const char *portName, const char* configPath, int numModules, int readthreads_per_module)</pre>
          
    <p>
    For details on the meaning of the parameters to this function refer to the documentation
