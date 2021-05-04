@@ -71,9 +71,7 @@ protected:
 
     int LAMBDA_ConfigFilePath;
     int LAMBDA_EnergyThreshold;
-    int LAMBDA_EnergyThresholdRBV;
     int LAMBDA_DualThreshold;
-    int LAMBDA_DualThresholdRBV;
     int LAMBDA_DecodedQueueDepth;
     int LAMBDA_OperatingMode;
     int LAMBDA_DetectorState;
@@ -123,9 +121,7 @@ typedef struct
 #define LAMBDA_VersionNumberString          "LAMBDA_VERSION_NUMBER"
 #define LAMBDA_ConfigFilePathString         "LAMBDA_CONFIG_FILE_PATH"
 #define LAMBDA_EnergyThresholdString        "LAMBDA_ENERGY_THRESHOLD"
-#define LAMBDA_EnergyThresholdRBVString     "LAMBDA_ENERGY_THRESHOLD_READ"
 #define LAMBDA_DualThresholdString          "LAMBDA_DUAL_THRESHOLD"
-#define LAMBDA_DualThresholdRBVString       "LAMBDA_DUAL_THRESHOLD_READ"
 #define LAMBDA_DecodedQueueDepthString      "LAMBDA_DECODED_QUEUE_DEPTH"
 #define LAMBDA_OperatingModeString          "LAMBDA_OPERATING_MODE"
 #define LAMBDA_DetectorStateString          "LAMBDA_DETECTOR_STATE"
