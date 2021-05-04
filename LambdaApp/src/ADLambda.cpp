@@ -105,9 +105,7 @@ configFileName(configPath)
 	createParam(LAMBDA_VersionNumberString, asynParamOctet, &LAMBDA_VersionNumber);
 	createParam(LAMBDA_ConfigFilePathString, asynParamOctet, &LAMBDA_ConfigFilePath);
 	createParam(LAMBDA_EnergyThresholdString, asynParamFloat64, &LAMBDA_EnergyThreshold);
-	createParam(LAMBDA_EnergyThresholdRBVString, asynParamFloat64, &LAMBDA_EnergyThresholdRBV);
 	createParam(LAMBDA_DualThresholdString, asynParamFloat64, &LAMBDA_DualThreshold);
-	createParam(LAMBDA_DualThresholdRBVString, asynParamFloat64, &LAMBDA_DualThresholdRBV);
 	createParam(LAMBDA_DecodedQueueDepthString, asynParamInt32, &LAMBDA_DecodedQueueDepth);
 	createParam(LAMBDA_OperatingModeString, asynParamInt32, &LAMBDA_OperatingMode);
 	createParam(LAMBDA_DetectorStateString, asynParamInt32, &LAMBDA_DetectorState);
@@ -570,8 +568,8 @@ void ADLambda::getThresholds()
 {
 	std::vector<double> thresholds = det->thresholds();
 	
-	setDoubleParam(LAMBDA_EnergyThresholdRBV, thresholds[0]);
-	setDoubleParam(LAMBDA_DualThresholdRBV, thresholds[1]);
+	setDoubleParam(LAMBDA_EnergyThreshold, thresholds[0]);
+	setDoubleParam(LAMBDA_DualThreshold, thresholds[1]);
 }
 
 
