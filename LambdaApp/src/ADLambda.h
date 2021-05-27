@@ -66,6 +66,7 @@ public:
 
 protected:
     int LAMBDA_ConfigFilePath;
+    #define LAMBDA_FIRST_PARAM LAMBDA_ConfigFilePath
     int LAMBDA_EnergyThreshold;
     int LAMBDA_DualThreshold;
     int LAMBDA_DecodedQueueDepth;
