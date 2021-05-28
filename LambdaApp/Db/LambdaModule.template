@@ -1,4 +1,4 @@
-record(longin, "$(P)$(R)NumImagesCounter$(ADDR)")
+record(longout, "$(P)$(R)NumImagesCounter$(ADDR)")
 {
    field(DTYP, "asynInt32")
    field(OUT, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))NIMAGES_COUNTER")
