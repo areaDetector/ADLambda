@@ -28,7 +28,7 @@ static void receiver_acquire_callback(void *drvPvt)
 {
 	acquire_data* data = (acquire_data*) drvPvt;
 	
-	data->driver->acquireThread(data->receiver, data->thread_no);
+	data->driver->acquireThread(data->receiver);
 	
 	delete data;
 }
@@ -44,11 +44,10 @@ extern "C"
 	 * \param[in] portName The name of the asyn port driver to be created.
 	 * \param[in] configPath path to the config files.
 	 * \param[in] numModules Number of image module in the camera
-	 * \param[in] readout Number of readout threads per module
 	 */
-	void LambdaConfig(const char *portName, const char* configPath, int numModules, int readout) 
+	void LambdaConfig(const char *portName, const char* configPath, int numModules) 
 	{
-		new ADLambda(portName, configPath, numModules, readout);
+		new ADLambda(portName, configPath, numModules);
 	}
 
 }
@@ -72,7 +71,7 @@ const char *ADLambda::driverName = "Lambda";
  *            ASYN_CANBLOCK is set in asynFlags.
  *
  */
-ADLambda::ADLambda(const char *portName, const char *configPath, int numModules, int readout) :
+ADLambda::ADLambda(const char *portName, const char *configPath, int numModules) :
 	ADDriver(portName, 
 	         numModules,
 			 0,
@@ -86,21 +85,16 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int numModules,
 	         0),
 configFileName(configPath)
 {
-	this->ReadThreadPerModule = readout;
-
 	this->startAcquireEvent = new epicsEvent();
 
-	this->saved_frames = calloc(numModules * this->ReadThreadPerModule, sizeof(NDArray*));
-	this->threadFinishEvents = calloc(numModules * this->ReadThreadPerModule, sizeof(epicsEvent*));
-	this->threadReceiverLocks = calloc(numModules, sizeof(epicsMutex*));
+	this->saved_frames = calloc(numModules, sizeof(NDArray*));
+	this->threadFinishEvents = calloc(numModules, sizeof(epicsEvent*));
 	
-	for (int index = 0; index < numModules * this->ReadThreadPerModule; index += 1)
+	for (int index = 0; index < numModules; index += 1)
 	{ 
 		this->saved_frames[index] = nullptr;
 		this->threadFinishEvents[index] = new epicsEvent();
 	}
-	
-	for (int index = 0; index < numModules; index += 1)    { this->threadReceiverLocks[index] = new epicsMutex(); }
 
 	createParam(LAMBDA_ConfigFilePathString, asynParamOctet, &LAMBDA_ConfigFilePath);
 	createParam(LAMBDA_EnergyThresholdString, asynParamFloat64, &LAMBDA_EnergyThreshold);
@@ -241,20 +235,12 @@ asynStatus ADLambda::acquireStop()
 	return (asynStatus) status;
 }
 
-void ADLambda::spawnAcquireThread(int receiver, int thread_no)
+void ADLambda::spawnAcquireThread(int receiver)
 {
-	int curr_threads;
-	
-	getIntegerParam(LAMBDA_ReadoutThreads, &curr_threads);
-	curr_threads += 1;
-	setIntegerParam(LAMBDA_ReadoutThreads, curr_threads);
-	callParamCallbacks();
-
 	acquire_data* data = new acquire_data;
 
 	data->driver = this;
 	data->receiver = receiver;
-	data->thread_no = thread_no;
 
 	epicsThreadCreate("ADLambda::acquireThread()",
               epicsThreadPriorityMedium,
@@ -289,21 +275,16 @@ void ADLambda::waitAcquireThread()
 		
 		this->unlock();
 		
-		for (int thread_index = 0; thread_index < this->ReadThreadPerModule; thread_index += 1)
-		{
-			for (int rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
-			{		
-				this->spawnAcquireThread(rec_index, thread_index);
-			}
+		for (int rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
+		{		
+			this->spawnAcquireThread(rec_index);
 		}
 		
-		int threads_started;
+		setIntegerParam(LAMBDA_ReadoutThreads, this->recs.size());
 		
-		getIntegerParam(LAMBDA_ReadoutThreads, &threads_started);
+		int threads_running = this->recs.size();
 		
-		int threads_running = threads_started;
-		
-		for (int index = 0; index < threads_started; index += 1)
+		for (int index = 0; index < this->recs.size(); index += 1)
 		{
 			this->threadFinishEvents[index]->wait();
 			
@@ -325,10 +306,8 @@ void ADLambda::monitorThread()
 {
 }
 		
-void ADLambda::acquireThread(int receiver, int thread_no)
+void ADLambda::acquireThread(int receiver)
 {
-	const int virtual_index = receiver + (this->recs.size() * thread_no);
-
     this->setIntegerParam(receiver, ADNumImagesCounter, 0);
 	this->setIntegerParam(receiver, LAMBDA_BadFrameCounter, 0);
 	this->setIntegerParam(receiver, LAMBDA_BadImage, 0);
@@ -385,23 +364,22 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 		
 		dual = 0;
 		
-		this->threadReceiverLocks[receiver]->lock();
-			this->getIntegerParam(receiver, ADNumImagesCounter, &numAcquired);
-			numAcquired += 1;
-			this->setIntegerParam(receiver, ADNumImagesCounter, numAcquired);
-		this->threadReceiverLocks[receiver]->unlock();
+
+		this->getIntegerParam(receiver, ADNumImagesCounter, &numAcquired);
+		numAcquired += 1;
+		this->setIntegerParam(receiver, ADNumImagesCounter, numAcquired);
+
 	
 		if (frames[0]->status() != xsp::FrameStatusCode::FRAME_OK ||
 		   (dual_mode && frames[1]->status() != xsp::FrameStatusCode::FRAME_OK))
 		{
 			int badFrames;
 			
-			this->threadReceiverLocks[receiver]->lock();
-				this->getIntegerParam(receiver, LAMBDA_BadFrameCounter, &badFrames);
-				badFrames += 1;
-				this->setIntegerParam(receiver, LAMBDA_BadFrameCounter, badFrames);		
-				this->setIntegerParam(receiver, LAMBDA_BadImage, 1);
-			this->threadReceiverLocks[receiver]->unlock();
+			this->getIntegerParam(receiver, LAMBDA_BadFrameCounter, &badFrames);
+			badFrames += 1;
+			this->setIntegerParam(receiver, LAMBDA_BadFrameCounter, badFrames);		
+			this->setIntegerParam(receiver, LAMBDA_BadImage, 1);
+
 			
 			rec->release(frames[0]->nr());
 			if (dual_mode)    { rec->release(frames[1]->nr()); }
@@ -409,7 +387,7 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			continue;
 		}
 	
-		if (this->saved_frames[virtual_index])    { this->saved_frames[virtual_index]->release(); }
+		if (this->saved_frames[receiver])    { this->saved_frames[receiver]->release(); }
 		
 		
 		int arrayCallbacks;
@@ -420,7 +398,7 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			NDArray* output = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
 			char* img_data = (char*) output->pData;
 			
-			this->saved_frames[virtual_index] = output;
+			this->saved_frames[receiver] = output;
 			
 			NDArrayInfo arrayInfo;
 			output->getInfo(&arrayInfo);
@@ -450,11 +428,9 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 			
 			int arrayCounter;
 			
-			this->threadReceiverLocks[receiver]->lock();
-				getIntegerParam(receiver, NDArrayCounter, &arrayCounter);
-				arrayCounter += 1;
-				setIntegerParam(receiver, NDArrayCounter, arrayCounter);
-			this->threadReceiverLocks[receiver]->unlock();
+			getIntegerParam(receiver, NDArrayCounter, &arrayCounter);
+			arrayCounter += 1;
+			setIntegerParam(receiver, NDArrayCounter, arrayCounter);
 			
 			callParamCallbacks(receiver);
 			doCallbacksGenericPointer(output, NDArrayData, receiver);
@@ -472,7 +448,7 @@ void ADLambda::acquireThread(int receiver, int thread_no)
 	this->setIntegerParam(receiver, LAMBDA_DecodedQueueDepth, numBuffered);
 	this->callParamCallbacks(receiver);
 	
-	this->threadFinishEvents[virtual_index]->trigger();
+	this->threadFinishEvents[receiver]->trigger();
 }
 
 /**
@@ -733,13 +709,12 @@ asynStatus 	ADLambda::readOctet (asynUser *pasynUser, char *value,
 static const iocshArg LambdaConfigArg0 = { "Port name", iocshArgString };
 static const iocshArg LambdaConfigArg1 = { "Config file path", iocshArgString };
 static const iocshArg LambdaConfigArg2 = { "numModules", iocshArgInt };
-static const iocshArg LambdaConfigArg3 = { "Readout Threads", iocshArgInt };
-static const iocshArg * const LambdaConfigArgs[] = { &LambdaConfigArg0, &LambdaConfigArg1, &LambdaConfigArg2, &LambdaConfigArg3};
+static const iocshArg * const LambdaConfigArgs[] = { &LambdaConfigArg0, &LambdaConfigArg1, &LambdaConfigArg2};
 
 static void configLambdaCallFunc(const iocshArgBuf *args) {
-	LambdaConfig(args[0].sval, args[1].sval, args[2].ival, args[3].ival);
+	LambdaConfig(args[0].sval, args[1].sval, args[2].ival);
 }
-static const iocshFuncDef configLambda = { "LambdaConfig", 4, LambdaConfigArgs };
+static const iocshFuncDef configLambda = { "LambdaConfig", 3, LambdaConfigArgs };
 
 static void LambdaRegister(void) 
 {
