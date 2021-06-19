@@ -40,14 +40,14 @@ class epicsShareClass ADLambda: public ADDriver
 public:
 	static const char *driverName;
 
-	ADLambda(const char *portName, const char *configPath, int numModules, int readout);
+	ADLambda(const char *portName, const char *configPath, int numModules);
 	~ADLambda();
 
 	virtual asynStatus disconnect();
 	virtual asynStatus connect();
 	
 	void waitAcquireThread();
-	void acquireThread(int receiver, int thread_no);
+	void acquireThread(int receiver);
 	void monitorThread();
 
 	void report(FILE *fp, int details);
@@ -78,7 +78,6 @@ protected:
 
 private:
 	bool connected;
-	int ReadThreadPerModule;
 
     asynStatus acquireStart();
     asynStatus acquireStop();
@@ -87,7 +86,7 @@ private:
    
    	void getThresholds();
    
-	void spawnAcquireThread(int receiver, int thread_no);
+	void spawnAcquireThread(int receiver);
 
 	std::unique_ptr<xsp::System> sys;
 	std::shared_ptr<xsp::lambda::Detector> det;
@@ -108,7 +107,6 @@ typedef struct
 {
 	ADLambda* driver;
 	int receiver;
-	int thread_no;
 } acquire_data;
 
 
