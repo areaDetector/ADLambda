@@ -393,15 +393,30 @@ void ADLambda::acquireThread(int receiver)
 		int arrayCallbacks;
 		getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
 		
+		NDArray* output = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
+		
+		this->saved_frames[receiver] = output;
+			
+		NDArrayInfo arrayInfo;
+		output->getInfo(&arrayInfo);
+		
+		/* Time stamps */
+		epicsTimeStamp currentTime;
+		epicsTimeGetCurrent(&currentTime);
+		output->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
+		updateTimeStamp(&output->epicsTS);
+		
+		output->uniqueId = frames[0]->nr();
+		
+		int arrayCounter;
+		
+		getIntegerParam(receiver, NDArrayCounter, &arrayCounter);
+		arrayCounter += 1;
+		setIntegerParam(receiver, NDArrayCounter, arrayCounter);
+		
 		if (arrayCallbacks)
 		{
-			NDArray* output = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
 			char* img_data = (char*) output->pData;
-			
-			this->saved_frames[receiver] = output;
-			
-			NDArrayInfo arrayInfo;
-			output->getInfo(&arrayInfo);
 			
 			std::memset(img_data, 0, arrayInfo.totalBytes);
 			
@@ -417,20 +432,6 @@ void ADLambda::acquireThread(int receiver)
 			}
 						
 			setIntegerParam(NDArraySize, arrayInfo.totalBytes);
-			
-			/* Time stamps */
-			epicsTimeStamp currentTime;
-			epicsTimeGetCurrent(&currentTime);
-			output->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
-			updateTimeStamp(&output->epicsTS);
-			
-			output->uniqueId = frames[0]->nr();
-			
-			int arrayCounter;
-			
-			getIntegerParam(receiver, NDArrayCounter, &arrayCounter);
-			arrayCounter += 1;
-			setIntegerParam(receiver, NDArrayCounter, arrayCounter);
 			
 			callParamCallbacks(receiver);
 			doCallbacksGenericPointer(output, NDArrayData, receiver);
