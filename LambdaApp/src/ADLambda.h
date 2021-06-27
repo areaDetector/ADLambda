@@ -12,6 +12,8 @@
 #define ADLAMBDA_H
 #include <libxsp.h>
 #include <string>
+#include <map>
+#include <deque>
 
 
 #include <epicsString.h>
@@ -48,7 +50,7 @@ public:
 	
 	void waitAcquireThread();
 	void acquireThread(int receiver);
-	void monitorThread();
+	void exportThread();
 
 	void report(FILE *fp, int details);
 
@@ -75,6 +77,8 @@ protected:
     int LAMBDA_BadFrameCounter;
     int LAMBDA_BadImage;
     int LAMBDA_ReadoutThreads;
+    int LAMBDA_StitchedWidth;
+    int LAMBDA_StitchedHeight;
 
 private:
 	bool connected;
@@ -85,6 +89,9 @@ private:
     asynStatus setSizeParams();
    
    	void getThresholds();
+   	void setSizes();
+   	bool dualMode();
+   	void incrementValue(int param);
    
 	void spawnAcquireThread(int receiver);
 
@@ -92,6 +99,9 @@ private:
 	std::shared_ptr<xsp::lambda::Detector> det;
 	
 	std::vector<std::shared_ptr<xsp::Receiver> > recs;
+	
+	std::map<int, NDArray*> frames;
+	std::deque<NDArray*> export_queue;
 	
 	epicsEvent* startAcquireEvent;
  	epicsEvent** threadFinishEvents;
@@ -121,6 +131,8 @@ typedef struct
 #define LAMBDA_BadImageString               "LAMBDA_BAD_IMAGE"
 #define LAMBDA_ReadoutThreadsString         "LAMBDA_NUM_READOUT_THREADS"
 #define LAMBDA_TemperatureString            "LAMBDA_TEMPERATURE"
+#define LAMBDA_StitchWidthString            "LAMBDA_STITCHED_WIDTH"
+#define LAMBDA_StitchHeightString           "LAMBDA_STITCHED_HEIGHT"
 
 
 #endif
