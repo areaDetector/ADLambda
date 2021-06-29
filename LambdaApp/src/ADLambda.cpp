@@ -454,17 +454,14 @@ void ADLambda::acquireThread(int receiver)
 					int in_offset = row * frame_width * info.bytesPerElement;
 					int out_offset = ((y_shift + frame_height * which) * width + x_shift) * info.bytesPerElement;
 				
-					std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
+					std::memcpy(&out_data[out_offset + in_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
 				}
-				
-				rec->release(acquired[which]->nr());
 			}
 		}
-		else
-		{
-			rec->release(acquired[0]->nr());
-			if (dual_mode)    { rec->release(acquired[1]->nr()); }
-		}
+		
+		rec->release(acquired[0]->nr());
+		if (dual_mode)    { rec->release(acquired[1]->nr()); }
+
 		
 		this->lock();
 			int id = output->uniqueId;
