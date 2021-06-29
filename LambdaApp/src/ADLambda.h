@@ -105,7 +105,7 @@ private:
 	
 	epicsEvent* startAcquireEvent;
  	epicsEvent** threadFinishEvents;
- 	epicsMutex** threadReceiverLocks;
+ 	epicsMutex* dequeLock;
 
     std::string configFileName;
     NDArray *pImage;

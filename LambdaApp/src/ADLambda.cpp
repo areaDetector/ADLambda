@@ -75,6 +75,7 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int numModules)
 configFileName(configPath)
 {
 	this->startAcquireEvent = new epicsEvent();
+	this->dequeLock = new epicsMutex();
 
 	this->threadFinishEvents = calloc(numModules, sizeof(epicsEvent*));
 	this->saved_frames = calloc(numModules, sizeof(NDArray*));
@@ -98,6 +99,7 @@ configFileName(configPath)
 	createParam(LAMBDA_StitchHeightString, asynParamInt32, &LAMBDA_StitchedHeight);
 	
 	setIntegerParam(LAMBDA_ReadoutThreads, 0);
+	setIntegerParam(LAMBDA_BadFrameCounter, 0);
 	
 	//xsp::setLogHandler(errlog_callback);
 	
@@ -328,6 +330,8 @@ void ADLambda::waitAcquireThread()
 		
 		this->lock();
 		
+		this->frames.clear();
+		
 		acquireStop();
 	}
 	
@@ -338,7 +342,11 @@ void ADLambda::exportThread()
 {
 	while(this->connected)
 	{
-		if (export_queue.empty())
+		dequeLock->lock();
+		bool sleep = export_queue.empty();
+		dequeLock->unlock();
+	
+		if (sleep)
 		{
 			epicsThreadSleep(0.00025);
 			continue;
@@ -346,7 +354,10 @@ void ADLambda::exportThread()
 		
 		if (this->pImage)    { this->pImage->release(); }
 		
-		this->pImage = export_queue.front();
+		dequeLock->lock();
+			this->pImage = export_queue.front();
+			export_queue.pop_front();
+		dequeLock->unlock();
 		
 		NDArrayInfo info;
 		this->pImage->getInfo(&info);
@@ -361,8 +372,6 @@ void ADLambda::exportThread()
 		{
 			doCallbacksGenericPointer(this->pImage, NDArrayData, 0);
 		}
-		
-		export_queue.pop_front();
 	}
 }
 		
@@ -433,7 +442,7 @@ void ADLambda::acquireThread(int receiver)
 		output->getInfo(&info);
 		numAcquired += 1;
 		
-		if (bad_frame == 0)
+		if (bad_frame == (int) xsp::FrameStatusCode::FRAME_OK)
 		{
 			for (int which = 0; which <= dual_mode; which += 1)
 			{
@@ -451,13 +460,18 @@ void ADLambda::acquireThread(int receiver)
 				rec->release(acquired[which]->nr());
 			}
 		}
+		else
+		{
+			rec->release(acquired[0]->nr());
+			if (dual_mode)    { rec->release(acquired[1]->nr()); }
+		}
 		
 		this->lock();
 			int id = output->uniqueId;
 			
-			if (id < 0)            { id -= 1; }
-			else if (bad_frame)    { id = -1 * std::abs(id) - 1; }
-			else                   { id += 1; }
+			if (id < 0)                { id -= 1; }
+			else if (bad_frame > 0)    { id = -1 * std::abs(id) - 1; }
+			else                       { id += 1; }
 		
 			if   (std::abs(id) < this->recs.size())    { output->uniqueId = id; }
 			else 
@@ -465,7 +479,12 @@ void ADLambda::acquireThread(int receiver)
 				output->uniqueId = frame_no;
 				
 				if (id < 0)    { incrementValue(LAMBDA_BadFrameCounter); }	
-				else           { this->export_queue.push_back(output); }
+				else
+				{ 
+					dequeLock->lock();
+					this->export_queue.push_back(output); 
+					dequeLock->unlock();
+				}
 				
 				this->frames.erase(frame_no);
 			}
