@@ -108,6 +108,7 @@ configFileName(configPath)
 
 ADLambda::~ADLambda()    { this->disconnect(); }
 
+
 asynStatus ADLambda::connect()
 {
 	sys = xsp::createSystem(configFileName);
@@ -122,6 +123,23 @@ asynStatus ADLambda::connect()
 	sys->initialize();
 
 	det = std::dynamic_pointer_cast<xsp::lambda::Detector>(sys->detector("lambda"));
+	
+	det->setEventHandler([&](auto t, const void* d) {
+		switch (t) 
+		{
+			case xsp::EventType::READY:
+				break;
+				
+			case xsp::EventType::START:
+				break;
+				
+			case xsp::EventType::STOP:
+				this->setIntegerParam(ADStatus, ADStatusReadout);
+				this->callParamCallbacks();
+				break;
+		}
+	});
+	
 	
 	std::vector<std::string> IDS = sys->receiverIds();
 	
@@ -273,7 +291,7 @@ void ADLambda::spawnAcquireThread(int receiver)
 	data->receiver = receiver;
 
 	epicsThreadCreate("ADLambda::acquireThread()",
-              epicsThreadPriorityHigh,
+              epicsThreadPriorityMedium,
               epicsThreadGetStackSize(epicsThreadStackMedium),
               (EPICSTHREADFUNC)::receiver_acquire_callback,
               data);
@@ -302,7 +320,17 @@ void ADLambda::waitAcquireThread()
 		this->imageDataType = datatype;
 		this->setIntegerParam(LAMBDA_BadImage, 0);
 		
-		det->startAcquisition();		
+		try
+		{
+			det->startAcquisition();
+		}
+		catch(const xsp::RuntimeError& e)
+		{
+			this->setIntegerParam(ADStatus, ADStatusIdle);
+			this->setStringParam(ADStatusMessage, "Failed to start acquisition");
+			this->callParamCallbacks();
+			continue;
+		}
 
 		this->unlock();
 		
