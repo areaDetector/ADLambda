@@ -131,13 +131,22 @@ asynStatus ADLambda::connect()
 				break;
 				
 			case xsp::EventType::START:
+				this->setIntegerParam(ADStatus, ADStatusAcquire);
 				break;
 				
 			case xsp::EventType::STOP:
-				this->setIntegerParam(ADStatus, ADStatusReadout);
-				this->callParamCallbacks();
+			{
+				int stat;
+				this->getIntegerParam(ADStatus, &stat);
+				if (stat == ADStatusAcquire)
+				{
+					this->setIntegerParam(ADStatus, ADStatusReadout);
+				}
 				break;
+			}
 		}
+		
+		this->callParamCallbacks();
 	});
 	
 	
@@ -265,24 +274,6 @@ void ADLambda::incrementValue(int param)
 }
 
 
-/**
- * Method called when WriteInt32 intercepts a message to stop
- * acquisition or if handleNewImageTask finds the requested
- * number of images have been captured.
- */
-asynStatus ADLambda::acquireStop()
-{
-	int status = asynSuccess;
-
-	det->stopAcquisition();
-
-	setIntegerParam(ADStatus, ADStatusIdle);
-	setIntegerParam(ADAcquire, 0);
-	callParamCallbacks();
-
-	return (asynStatus) status;
-}
-
 void ADLambda::spawnAcquireThread(int receiver)
 {
 	acquire_data* data = new acquire_data;
@@ -326,7 +317,7 @@ void ADLambda::waitAcquireThread()
 		}
 		catch(const xsp::RuntimeError& e)
 		{
-			this->setIntegerParam(ADStatus, ADStatusIdle);
+			
 			this->setStringParam(ADStatusMessage, "Failed to start acquisition");
 			this->callParamCallbacks();
 			continue;
@@ -356,11 +347,19 @@ void ADLambda::waitAcquireThread()
 			callParamCallbacks();
 		}
 		
+		det->stopAcquisition();
+		
 		this->lock();
 		
 		this->frames.clear();
+
+		this->setIntegerParam(ADAcquire, 0);
+		this->callParamCallbacks();
 		
-		acquireStop();
+		while (! export_queue.empty())    { epicsThreadSleep(0.00025); }
+		
+		this->setIntegerParam(ADStatus, ADStatusIdle);
+		this->callParamCallbacks();
 	}
 	
 	this->unlock();

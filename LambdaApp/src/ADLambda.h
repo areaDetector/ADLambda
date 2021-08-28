@@ -84,7 +84,6 @@ private:
 	bool connected;
 
     asynStatus acquireStart();
-    asynStatus acquireStop();
     asynStatus initializeDetector();
     asynStatus setSizeParams();
    
