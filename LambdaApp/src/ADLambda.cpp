@@ -419,6 +419,8 @@ void ADLambda::acquireThread(int receiver)
 	xsp::Frame* acquired[2] = { NULL, NULL };
 	
 	int dual_mode = this->dualMode() ? 1 : 0;
+	if (dual_mode)    { imagedims[1] = height * 2; }
+	
 	int numAcquired = 0;
 	int dual = 0;
 	
@@ -479,9 +481,10 @@ void ADLambda::acquireThread(int receiver)
 				for (int row = 0; row < frame_height; row += 1)
 				{
 					int in_offset = row * frame_width * info.bytesPerElement;
-					int out_offset = ((y_shift + frame_height * which) * width + x_shift) * info.bytesPerElement;
+
+					int out_offset = ((y_shift + row + (height * which)) * width + x_shift) * info.bytesPerElement;
 				
-					std::memcpy(&out_data[out_offset + in_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
+					std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
 				}
 			}
 		}
