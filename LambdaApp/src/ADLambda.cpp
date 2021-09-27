@@ -456,12 +456,19 @@ void ADLambda::acquireThread(int receiver)
 		this->lock();
 			if (this->frames.find(frame_no) == this->frames.end())
 			{
-				this->frames[frame_no] = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
-				this->frames[frame_no]->uniqueId = 0;
-
+				NDArray* new_frame = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
+				new_frame->uniqueId = 0;
+			
+				NDArrayInfo main_info;
+				new_frame->getInfo(&main_info);
+			
+				memset((char*) new_frame->pData, 0, imagedims[0] * imagedims[1] * main_info.bytesPerElement);
+			
 				epicsTimeStamp currentTime = epicsTime::getCurrent();
-				this->frames[frame_no]->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
+				new_frame->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
 				updateTimeStamp(&(this->frames[frame_no]->epicsTS));
+			
+				this->frames[frame_no] = new_frame;
 				
 				incrementValue(ADNumImagesCounter);
 			}
