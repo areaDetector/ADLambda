@@ -466,7 +466,7 @@ void ADLambda::acquireThread(int receiver)
 			
 				epicsTimeStamp currentTime = epicsTime::getCurrent();
 				new_frame->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
-				updateTimeStamp(&(this->frames[frame_no]->epicsTS));
+				updateTimeStamp(&(new_frame->epicsTS));
 			
 				this->frames[frame_no] = new_frame;
 				
@@ -576,6 +576,23 @@ asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 	int status = asynSuccess;
 	int function = pasynUser->reason;
 
+	//Record for later use
+	int adStatus;
+	int adacquiring;
+	getIntegerParam(ADStatus, &adStatus);
+	getIntegerParam(ADAcquire, &adacquiring);
+
+	if ((adStatus != ADStatusIdle) || adacquiring)    
+	{ 
+		setStringParam(ADStatusMessage, "Failed to set value, currently not Idle");
+		this->callParamCallbacks();
+		return asynError; 
+	}
+	else
+	{
+		setStringParam(ADStatusMessage, "");
+	}
+
 	setDoubleParam(function, value);
 	
 	if (function == ADAcquireTime) 
@@ -649,12 +666,23 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	getIntegerParam(ADStatus, &adStatus);
 	getIntegerParam(ADAcquire, &adacquiring);
 
+	if ((adStatus != ADStatusIdle) || adacquiring)    
+	{ 
+		setStringParam(ADStatusMessage, "Failed to set value, currently not Idle");
+		this->callParamCallbacks();
+		return asynError; 
+	}
+	else
+	{
+		setStringParam(ADStatusMessage, "");
+	}
+	
 	/** Make sure that we write the value to the param */
 	setIntegerParam(addr, function, value);
 
 	if (function == ADAcquire)
 	{
-		if (value && (adStatus == ADStatusIdle))    { this->startAcquireEvent->trigger(); }
+		if (value && (adStatus == ADStatusIdle) && (adacquiring == 0))    { this->startAcquireEvent->trigger(); }
 		else if (!value && adacquiring)
 		{ 
 			det->stopAcquisition();
@@ -663,10 +691,10 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	}
 	else if (function == ADNumImages)
 	{
-		det->setFrameCount(value);
+		det->setFrameCount(value); 
 	}
 	else if (function == ADTriggerMode)
-	{		
+	{
 		if      (value == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
 		else if (value == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
 		else if (value == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
