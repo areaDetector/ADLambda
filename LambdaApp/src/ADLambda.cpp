@@ -665,9 +665,16 @@ void ADLambda::getThresholds()
 
 void ADLambda::setTriggerMode(int mode)
 {
-	if      (mode == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
-	else if (mode == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
-	else if (mode == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
+	det->setGatingMode(xsp::lambda::Gating::OFF);
+
+	if      (value == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
+	else if (value == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
+	else if (value == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
+	else if (value == 3)
+	{ 
+		det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE);
+		det->setGatingMode(xsp::lambda::Gating::ON);
+	}
 }
 
 void ADLambda::setOperatingMode(int mode)
