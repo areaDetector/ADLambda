@@ -273,6 +273,24 @@ void ADLambda::incrementValue(int param)
 	setIntegerParam(param, val);
 }
 
+void ADLambda::syncParameters()
+{
+	double shuttertime;
+	int triggermode;
+	int operatingmode;
+	
+	getIntegerParam(ADTriggerMode, &triggermode);
+	getIntegerParam(LAMBDA_OperatingMode, &operatingmode);
+	getDoubleParam(ADAcquireTime, &shuttertime);
+	
+	this->setTriggerMode(triggermode);
+	this->setOperatingMode(operatingmode);
+	
+	det->setShutterTime(shuttertime * 1000);
+	
+	this->callParamCallbacks();
+}
+
 
 void ADLambda::spawnAcquireThread(int receiver)
 {
@@ -310,6 +328,8 @@ void ADLambda::waitAcquireThread()
 	
 		this->imageDataType = datatype;
 		this->setIntegerParam(LAMBDA_BadImage, 0);
+		
+		this->syncParameters();
 		
 		try
 		{
@@ -643,6 +663,67 @@ void ADLambda::getThresholds()
 	setDoubleParam(LAMBDA_DualThreshold, thresholds[1]);
 }
 
+void ADLambda::setTriggerMode(int mode)
+{
+	if      (mode == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
+	else if (mode == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
+	else if (mode == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
+}
+
+void ADLambda::setOperatingMode(int mode)
+{
+	if (mode == 0)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 1)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 2)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12));
+		setIntegerParam(NDDataType, NDUInt16);
+	}
+	else if(mode == 3) 
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24));
+		setIntegerParam(NDDataType, NDUInt32);
+	}
+	else if (mode == 4)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1,
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 5)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6,
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 6)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12, 
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt16);
+
+	}
+	else if (mode == 7)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24, 
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt32);
+		
+	}
+}
+
 
 /**
  * Override from super class to handle detector specific parameters.
@@ -666,6 +747,23 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	getIntegerParam(ADStatus, &adStatus);
 	getIntegerParam(ADAcquire, &adacquiring);
 
+
+	if (function == ADAcquire)
+	{
+		if (value && (adStatus == ADStatusIdle) && (adacquiring == 0))    { this->startAcquireEvent->trigger(); }
+		else if (!value && adacquiring)
+		{ 
+			det->stopAcquisition();
+			this->setIntegerParam(ADStatus, ADStatusAborting);
+		}
+		
+		/** Make sure that we write the value to the param */
+		setIntegerParam(addr, function, value);
+		
+		this->callParamCallbacks(addr);
+		return asynSuccess;
+	}
+
 	if ((adStatus != ADStatusIdle) || adacquiring)    
 	{ 
 		setStringParam(ADStatusMessage, "Failed to set value, currently not Idle");
@@ -679,85 +777,24 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	
 	/** Make sure that we write the value to the param */
 	setIntegerParam(addr, function, value);
-
-	if (function == ADAcquire)
-	{
-		if (value && (adStatus == ADStatusIdle) && (adacquiring == 0))    { this->startAcquireEvent->trigger(); }
-		else if (!value && adacquiring)
-		{ 
-			det->stopAcquisition();
-			this->setIntegerParam(ADStatus, ADStatusAborting);
-		}
-	}
-	else if (function == ADNumImages)
+	
+	if (function == ADNumImages)
 	{
 		det->setFrameCount(value); 
 	}
 	else if (function == ADTriggerMode)
 	{
-		if      (value == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
-		else if (value == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
-		else if (value == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
+		this->setTriggerMode(value);
 	}
 	else if ((function == ADSizeX) || (function == ADSizeY) ||
 	         (function == ADMinX)  || (function == ADMinY) )
 	{
-		setSizes();
+		this->setSizes();
 	}
 	else if (function == LAMBDA_OperatingMode) 
 	{
-		if (value == 0)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1));
-			setIntegerParam(NDDataType, NDUInt8);
-		}
-		else if (value == 1)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6));
-			setIntegerParam(NDDataType, NDUInt8);
-		}
-		else if (value == 2)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12));
-			setIntegerParam(NDDataType, NDUInt16);
-		}
-		else if(value == 3) 
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24));
-			setIntegerParam(NDDataType, NDUInt32);
-		}
-		else if (value == 4)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1,
-			                                                 xsp::lambda::ChargeSumming::OFF,
-			                                                 xsp::lambda::CounterMode::DUAL));
-			setIntegerParam(NDDataType, NDUInt8);
-		}
-		else if (value == 5)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6,
-			                                                 xsp::lambda::ChargeSumming::OFF,
-			                                                 xsp::lambda::CounterMode::DUAL));
-			setIntegerParam(NDDataType, NDUInt8);
-		}
-		else if (value == 6)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12, 
-			                                                 xsp::lambda::ChargeSumming::OFF,
-			                                                 xsp::lambda::CounterMode::DUAL));
-			setIntegerParam(NDDataType, NDUInt16);
-
-		}
-		else if (value == 7)
-		{
-			det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24, 
-			                                                 xsp::lambda::ChargeSumming::OFF,
-			                                                 xsp::lambda::CounterMode::DUAL));
-			setIntegerParam(NDDataType, NDUInt32);
-			
-		}
-		
-		setSizes();
+		this->setOperatingMode(value);		
+		this->setSizes();
 	}
 	else if (function < LAMBDA_FIRST_PARAM) 
 	{
