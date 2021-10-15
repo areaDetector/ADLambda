@@ -600,10 +600,146 @@ void ADLambda::writeDepth(int depth)
 {
 	setIntegerParam(LAMBDA_OperatingMode, depth);
 
+<<<<<<< HEAD
 	if      (depth == ONE_BIT)            { setIntegerParam(NDDataType, NDUInt8); }
 	else if (depth == SIX_BIT)            { setIntegerParam(NDDataType, NDUInt8); }
 	else if (depth == TWELVE_BIT)         { setIntegerParam(NDDataType, NDUInt16); }
 	else if (depth == TWENTY_FOUR_BIT)    { setIntegerParam(NDDataType, NDUInt32); }
+=======
+	//Record for later use
+	int adStatus;
+	int adacquiring;
+	getIntegerParam(ADStatus, &adStatus);
+	getIntegerParam(ADAcquire, &adacquiring);
+
+	if ((adStatus != ADStatusIdle) || adacquiring)    
+	{ 
+		setStringParam(ADStatusMessage, "Failed to set value, currently not Idle");
+		this->callParamCallbacks();
+		return asynError; 
+	}
+	else
+	{
+		setStringParam(ADStatusMessage, "");
+	}
+
+	setDoubleParam(function, value);
+	
+	if (function == ADAcquireTime) 
+	{
+		double shutterTime = value * 1000.0;
+		det->setShutterTime(shutterTime);
+	}
+	else if (function == ADAcquirePeriod)
+	{
+		double acquirePeriod = value;
+		setDoubleParam(function, acquirePeriod);
+	}
+	else if (function == LAMBDA_EnergyThreshold)
+	{
+		std::vector<double> thresholds = det->thresholds();
+		
+		thresholds[0] = value;
+		
+		det->setThresholds(thresholds);
+		this->getThresholds();
+	}
+	else if (function == LAMBDA_DualThreshold)
+	{
+		std::vector<double> thresholds = det->thresholds();
+		
+		thresholds[1] = value;
+		
+		det->setThresholds(thresholds);
+		this->getThresholds();
+	}
+	else 
+	{
+		if (function < LAMBDA_FIRST_PARAM) 
+		{
+			status = ADDriver::writeFloat64(pasynUser, value);
+		}
+	}
+	
+	callParamCallbacks();
+	return (asynStatus) status;
+}
+
+void ADLambda::getThresholds()
+{
+	std::vector<double> thresholds = det->thresholds();
+	
+	setDoubleParam(LAMBDA_EnergyThreshold, thresholds[0]);
+	setDoubleParam(LAMBDA_DualThreshold, thresholds[1]);
+}
+
+void ADLambda::setTriggerMode(int mode)
+{
+	det->setGatingMode(xsp::lambda::Gating::OFF);
+
+	if      (value == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
+	else if (value == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
+	else if (value == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
+	else if (value == 3)
+	{ 
+		det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE);
+		det->setGatingMode(xsp::lambda::Gating::ON);
+	}
+}
+
+void ADLambda::setOperatingMode(int mode)
+{
+	if (mode == 0)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 1)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 2)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12));
+		setIntegerParam(NDDataType, NDUInt16);
+	}
+	else if(mode == 3) 
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24));
+		setIntegerParam(NDDataType, NDUInt32);
+	}
+	else if (mode == 4)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1,
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 5)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6,
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt8);
+	}
+	else if (mode == 6)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12, 
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt16);
+
+	}
+	else if (mode == 7)
+	{
+		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24, 
+		                                                 xsp::lambda::ChargeSumming::OFF,
+		                                                 xsp::lambda::CounterMode::DUAL));
+		setIntegerParam(NDDataType, NDUInt32);
+		
+	}
+>>>>>>> 79fb3ee (Enable gating mode)
 }
 
 
