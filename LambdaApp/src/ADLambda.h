@@ -89,8 +89,11 @@ private:
    
    	void getThresholds();
    	void setSizes();
+   	void setTriggerMode(int mode);
+   	void setOperatingMode(int mode);
    	bool dualMode();
    	void incrementValue(int param);
+   	void syncParameters();
    
 	void spawnAcquireThread(int receiver);
 
