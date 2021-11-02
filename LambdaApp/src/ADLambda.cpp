@@ -168,22 +168,22 @@ asynStatus ADLambda::connect()
 		
 		if (depth == ONE_BIT)
 		{
-			setIntegerParam(NDDataType, NDUInt8);
+			setIntegerParam(NDDataType, NDInt8);
 			setIntegerParam(LAMBDA_OperatingMode, ONE_BIT_MODE);
 		}
 		else if (depth == SIX_BIT)
 		{
-			setIntegerParam(NDDataType, NDUInt8);
+			setIntegerParam(NDDataType, NDInt8);
 			setIntegerParam(LAMBDA_OperatingMode, SIX_BIT_MODE);
 		}
 		else if (depth == TWELVE_BIT) 
 		{
-			setIntegerParam(NDDataType, NDUInt16);
+			setIntegerParam(NDDataType, NDInt16);
 			setIntegerParam(LAMBDA_OperatingMode, TWELVE_BIT_MODE);
 		}
 		else if (depth == TWENTY_FOUR_BIT) 
 		{
-			setIntegerParam(NDDataType, NDUInt32);
+			setIntegerParam(NDDataType, NDInt32);
 			setIntegerParam(LAMBDA_OperatingMode, TWENTY_FOUR_BIT_MODE);
 		}
 		
