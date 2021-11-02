@@ -170,7 +170,32 @@ asynStatus ADLambda::connect()
 		if (rec->frameWidth() + pos.x > full_width)    { full_width = rec->frameWidth() + pos.x; }
 		if (rec->frameHeight() + pos.y > full_height)  { full_height = rec->frameHeight() + pos.y; }
 		
+<<<<<<< HEAD
 		this->writeDepth(rec->frameDepth());
+=======
+		int depth = rec->frameDepth();
+		
+		if (depth == ONE_BIT)
+		{
+			setIntegerParam(NDDataType, NDInt8);
+			setIntegerParam(LAMBDA_OperatingMode, ONE_BIT_MODE);
+		}
+		else if (depth == SIX_BIT)
+		{
+			setIntegerParam(NDDataType, NDInt8);
+			setIntegerParam(LAMBDA_OperatingMode, SIX_BIT_MODE);
+		}
+		else if (depth == TWELVE_BIT) 
+		{
+			setIntegerParam(NDDataType, NDInt16);
+			setIntegerParam(LAMBDA_OperatingMode, TWELVE_BIT_MODE);
+		}
+		else if (depth == TWENTY_FOUR_BIT) 
+		{
+			setIntegerParam(NDDataType, NDInt32);
+			setIntegerParam(LAMBDA_OperatingMode, TWENTY_FOUR_BIT_MODE);
+		}
+>>>>>>> 0c714e0 (Signed Data)
 		
 		recs.push_back(rec);
 	}
