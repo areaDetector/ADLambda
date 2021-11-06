@@ -110,7 +110,7 @@ private:
  	epicsMutex* dequeLock;
 
     std::string configFileName;
-    NDArray *pImage;
+    NDArray *pImage = NULL;
     NDArray** saved_frames;
     NDDataType_t imageDataType;
 };
