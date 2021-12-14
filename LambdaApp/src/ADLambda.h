@@ -27,11 +27,6 @@ static const int SIX_BIT = 6;
 static const int TWELVE_BIT = 12;
 static const int TWENTY_FOUR_BIT = 24;
 
-static const int ONE_BIT_MODE = 0;
-static const int SIX_BIT_MODE = 1;
-static const int TWELVE_BIT_MODE = 2;
-static const int TWENTY_FOUR_BIT_MODE = 3;
-
 static const double ONE_BILLION = 1.E9;
 
 /**
@@ -56,15 +51,7 @@ public:
 
 	virtual asynStatus  readInt32 (asynUser *pasynUser, epicsInt32 *value);
 
-	virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
-
 	virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
-
-	virtual asynStatus writeOctet(asynUser *pasynUser, const char *value,
-	                              size_t nChars, size_t *nActual);
-
-	virtual asynStatus 	readOctet (asynUser *pasynUser, char *value, 
-	                               size_t maxChars, size_t *nActual, int *eomReason);
 
 protected:
     int LAMBDA_ConfigFilePath;
@@ -73,6 +60,8 @@ protected:
     int LAMBDA_DualThreshold;
     int LAMBDA_DecodedQueueDepth;
     int LAMBDA_OperatingMode;
+    int LAMBDA_DualMode;
+    int LAMBDA_ChargeSumming;
     int LAMBDA_DetectorState;
     int LAMBDA_BadFrameCounter;
     int LAMBDA_BadImage;
@@ -82,18 +71,12 @@ protected:
 
 private:
 	bool connected;
-
-    asynStatus acquireStart();
-    asynStatus initializeDetector();
-    asynStatus setSizeParams();
    
-   	void getThresholds();
    	void setSizes();
-   	void setTriggerMode(int mode);
-   	void setOperatingMode(int mode);
-   	bool dualMode();
    	void incrementValue(int param);
-   	void syncParameters();
+   	void decrementValue(int param);
+   	void sendParameters();
+   	void writeDepth(int depth);
    
 	void spawnAcquireThread(int receiver);
 
@@ -109,10 +92,8 @@ private:
  	epicsEvent** threadFinishEvents;
  	epicsMutex* dequeLock;
 
-    std::string configFileName;
-    NDArray *pImage;
-    NDArray** saved_frames;
-    NDDataType_t imageDataType;
+	std::string configFileName;
+    NDArray *pImage = NULL;
 };
 
 typedef struct
@@ -127,12 +108,13 @@ typedef struct
 #define LAMBDA_DualThresholdString          "LAMBDA_DUAL_THRESHOLD"
 #define LAMBDA_DecodedQueueDepthString      "LAMBDA_DECODED_QUEUE_DEPTH"
 #define LAMBDA_OperatingModeString          "LAMBDA_OPERATING_MODE"
+#define LAMBDA_DualModeString               "LAMBDA_DUAL_MODE"
+#define LAMBDA_ChargeSummingString          "LAMBDA_CHARGE_SUMMING"
 #define LAMBDA_DetectorStateString          "LAMBDA_DETECTOR_STATE"
 #define LAMBDA_BadFrameCounterString        "LAMBDA_BAD_FRAME_COUNTER"
 #define LAMBDA_MedipixIDsString             "LAMBDA_MEDIPIX_IDS"
 #define LAMBDA_BadImageString               "LAMBDA_BAD_IMAGE"
 #define LAMBDA_ReadoutThreadsString         "LAMBDA_NUM_READOUT_THREADS"
-#define LAMBDA_TemperatureString            "LAMBDA_TEMPERATURE"
 #define LAMBDA_StitchWidthString            "LAMBDA_STITCHED_WIDTH"
 #define LAMBDA_StitchHeightString           "LAMBDA_STITCHED_HEIGHT"
 

@@ -1,20 +1,15 @@
 include "ADBase.template"
 
-record(waveform, "$(P)$(R)ConfigFilePath")
-{
-    field(PINI, "YES")
-    field(DTYP, "asynOctetRead")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_CONFIG_FILE_PATH")
-    field(FTVL, "CHAR")
-    field(NELM, "256")
-    field(SCAN, "I/O Intr")
-}
-
 record(mbbo, "$(P)$(R)ImageMode")
 {
    field(TWST, "")
    field(TWVL, "")
    field(VAL,  "1")
+}
+
+record(mbbo, "$(P)$(R)DataType")
+{
+	info(asyn:READBACK, "1")
 }
 
 # Override values from ADBase
@@ -31,13 +26,11 @@ record(mbbo, "$(P)$(R)TriggerMode")
    field(TWVL, "2")
    field(THST, "Gating_Mode")
    field(THVL, "3")
-   field(VAL,  "0")
    info(autosaveFields, "VAL")
 }
 
 record(mbbi, "$(P)$(R)TriggerMode_RBV")
 {
-   field(PINI, "YES")
    field(DTYP, "asynInt32")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))TRIGGER_MODE")
    field(ZRST, "Internal")
@@ -48,32 +41,24 @@ record(mbbi, "$(P)$(R)TriggerMode_RBV")
    field(TWVL, "2")
    field(THST, "Gating_Mode")
    field(THVL, "3")
-   field(VAL,  "0")
    info(autosaveFields, "VAL")
 }
 
 record(mbbo, "$(P)$(R)OperatingMode")
 {
+   field(PINI, "YES")
    field(DTYP, "asynInt32")
    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
    field(ZRST, "1-Bit")
-   field(ZRVL, "0")
+   field(ZRVL, "1")
    field(ONST, "6-Bit")
-   field(ONVL, "1")
+   field(ONVL, "6")
    field(TWST, "12-Bit")
-   field(TWVL, "2")
+   field(TWVL, "12")
    field(THST, "24-Bit")
-   field(THVL, "3")
-   field(FRST, "1-Bit Dual-Threshold")
-   field(FRVL, "4")
-   field(FVST, "6-Bit Dual-Threshold")
-   field(FVVL, "5")
-   field(SXST, "12-Bit Dual-Threshold")
-   field(SXVL, "6")
-   field(SVST, "24-Bit Dual-Threshold")
-   field(SVVL, "7")
-   field(VAL,  "0")
+   field(THVL, "24")
    info(autosaveFields, "VAL")
+   info(asyn:READBACK, "1")
 }
 
 record(mbbi, "$(P)$(R)OperatingMode_RBV")
@@ -82,22 +67,62 @@ record(mbbi, "$(P)$(R)OperatingMode_RBV")
    field(DTYP, "asynInt32")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_OPERATING_MODE")
    field(ZRST, "1-Bit")
-   field(ZRVL, "0")
+   field(ZRVL, "1")
    field(ONST, "6-Bit")
-   field(ONVL, "1")
+   field(ONVL, "6")
    field(TWST, "12-Bit")
-   field(TWVL, "2")
+   field(TWVL, "12")
    field(THST, "24-Bit")
-   field(THVL, "3")
-   field(FRST, "1-Bit Dual-Threshold")
-   field(FRVL, "4")
-   field(FVST, "6-Bit Dual-Threshold")
-   field(FVVL, "5")
-   field(SXST, "12-Bit Dual-Threshold")
-   field(SXVL, "6")
-   field(SVST, "24-Bit Dual-Threshold")
-   field(SVVL, "7")
+   field(THVL, "24")
    field(SCAN, "I/O Intr")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbo, "$(P)$(R)DualMode")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DUAL_MODE")
+   field(ZRST, "Single")
+   field(ZRVL, "0")
+   field(ONST, "Dual")
+   field(ONVL, "1")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)DualMode_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DUAL_MODE")
+   field(ZRST, "Single")
+   field(ZRVL, "0")
+   field(ONST, "Dual")
+   field(ONVL, "1")
+   field(SCAN,  "I/O Intr")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbo, "$(P)$(R)ChargeSumming")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_CHARGE_SUMMING")
+   field(ZRST, "Off")
+   field(ZRVL, "0")
+   field(ONST, "On")
+   field(ONVL, "1")
+   info(autosaveFields, "VAL")
+}
+
+record(mbbi, "$(P)$(R)ChargeSumming_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_CHARGE_SUMMING")
+   field(ZRST, "Off")
+   field(ZRVL, "0")
+   field(ONST, "On")
+   field(ONVL, "1")
+   field(SCAN,  "I/O Intr")
    info(autosaveFields, "VAL")
 }
 
@@ -188,7 +213,6 @@ record(ao, "$(P)$(R)BadFrameCounter")
 {
 	field(DTYP, "asynInt32")
 	field(PINI, "YES")
-	field(VAL, "0")
 	field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
 }
 

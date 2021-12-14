@@ -32,9 +32,18 @@ static void receiver_acquire_callback(void *drvPvt)
 	delete data;
 }
 
-static void errlog_callback(xsp::LogLevel lv, const std::string msg)
+void ADLambda::spawnAcquireThread(int receiver)
 {
-	printf("%s\n", msg.c_str());
+	acquire_data* data = new acquire_data;
+
+	data->driver = this;
+	data->receiver = receiver;
+
+	epicsThreadCreate("ADLambda::acquireThread()",
+              epicsThreadPriorityMedium,
+              epicsThreadGetStackSize(epicsThreadStackMedium),
+              (EPICSTHREADFUNC)::receiver_acquire_callback,
+              data);
 }
 
 extern "C" 
@@ -77,31 +86,29 @@ configFileName(configPath)
 	this->startAcquireEvent = new epicsEvent();
 	this->dequeLock = new epicsMutex();
 
-	this->threadFinishEvents = calloc(numModules, sizeof(epicsEvent*));
-	this->saved_frames = calloc(numModules, sizeof(NDArray*));
+	this->threadFinishEvents = (epicsEvent**) calloc(numModules, sizeof(epicsEvent*));
 	
 	for (int index = 0; index < numModules; index += 1)
 	{
-		this->saved_frames[index] = NULL;
 		this->threadFinishEvents[index] = new epicsEvent();
 	}
 
-	createParam(LAMBDA_ConfigFilePathString, asynParamOctet, &LAMBDA_ConfigFilePath);
-	createParam(LAMBDA_EnergyThresholdString, asynParamFloat64, &LAMBDA_EnergyThreshold);
-	createParam(LAMBDA_DualThresholdString, asynParamFloat64, &LAMBDA_DualThreshold);
-	createParam(LAMBDA_DecodedQueueDepthString, asynParamInt32, &LAMBDA_DecodedQueueDepth);
-	createParam(LAMBDA_OperatingModeString, asynParamInt32, &LAMBDA_OperatingMode);
-	createParam(LAMBDA_DetectorStateString, asynParamInt32, &LAMBDA_DetectorState);
-	createParam(LAMBDA_BadFrameCounterString, asynParamInt32, &LAMBDA_BadFrameCounter);
-	createParam(LAMBDA_BadImageString, asynParamInt32, &LAMBDA_BadImage);
-	createParam(LAMBDA_ReadoutThreadsString, asynParamInt32, &LAMBDA_ReadoutThreads);
-	createParam(LAMBDA_StitchWidthString, asynParamInt32, &LAMBDA_StitchedWidth);
-	createParam(LAMBDA_StitchHeightString, asynParamInt32, &LAMBDA_StitchedHeight);
+	createParam( LAMBDA_ConfigFilePathString,    asynParamOctet,   &LAMBDA_ConfigFilePath);
+	createParam( LAMBDA_EnergyThresholdString,   asynParamFloat64, &LAMBDA_EnergyThreshold);
+	createParam( LAMBDA_DualThresholdString,     asynParamFloat64, &LAMBDA_DualThreshold);
+	createParam( LAMBDA_DecodedQueueDepthString, asynParamInt32,   &LAMBDA_DecodedQueueDepth);
+	createParam( LAMBDA_OperatingModeString,     asynParamInt32,   &LAMBDA_OperatingMode);
+	createParam( LAMBDA_DualModeString,          asynParamInt32,   &LAMBDA_DualMode);
+	createParam( LAMBDA_ChargeSummingString,     asynParamInt32,   &LAMBDA_ChargeSumming);
+	createParam( LAMBDA_DetectorStateString,     asynParamInt32,   &LAMBDA_DetectorState);
+	createParam( LAMBDA_BadFrameCounterString,   asynParamInt32,   &LAMBDA_BadFrameCounter);
+	createParam( LAMBDA_BadImageString,          asynParamInt32,   &LAMBDA_BadImage);
+	createParam( LAMBDA_ReadoutThreadsString,    asynParamInt32,   &LAMBDA_ReadoutThreads);
+	createParam( LAMBDA_StitchWidthString,       asynParamInt32,   &LAMBDA_StitchedWidth);
+	createParam( LAMBDA_StitchHeightString,      asynParamInt32,   &LAMBDA_StitchedHeight);
 	
 	setIntegerParam(LAMBDA_ReadoutThreads, 0);
 	setIntegerParam(LAMBDA_BadFrameCounter, 0);
-	
-	//xsp::setLogHandler(errlog_callback);
 	
 	this->connect();
 }
@@ -138,10 +145,9 @@ asynStatus ADLambda::connect()
 			{
 				int stat;
 				this->getIntegerParam(ADStatus, &stat);
-				if (stat == ADStatusAcquire)
-				{
-					this->setIntegerParam(ADStatus, ADStatusReadout);
-				}
+				
+				if (stat == ADStatusAcquire)    { this->setIntegerParam(ADStatus, ADStatusReadout); }
+				
 				break;
 			}
 		}
@@ -155,7 +161,7 @@ asynStatus ADLambda::connect()
 	// Calculate the size of the full stitched image
 	int full_width = 0, full_height = 0;
 	
-	for (int index = 0; index < IDS.size(); index += 1)
+	for (size_t index = 0; index < IDS.size(); index += 1)
 	{
 		std::shared_ptr<xsp::Receiver> rec = sys->receiver(IDS[index]);
 		
@@ -164,28 +170,7 @@ asynStatus ADLambda::connect()
 		if (rec->frameWidth() + pos.x > full_width)    { full_width = rec->frameWidth() + pos.x; }
 		if (rec->frameHeight() + pos.y > full_height)  { full_height = rec->frameHeight() + pos.y; }
 		
-		int depth = rec->frameDepth();
-		
-		if (depth == ONE_BIT)
-		{
-			setIntegerParam(NDDataType, NDUInt8);
-			setIntegerParam(LAMBDA_OperatingMode, ONE_BIT_MODE);
-		}
-		else if (depth == SIX_BIT)
-		{
-			setIntegerParam(NDDataType, NDUInt8);
-			setIntegerParam(LAMBDA_OperatingMode, SIX_BIT_MODE);
-		}
-		else if (depth == TWELVE_BIT) 
-		{
-			setIntegerParam(NDDataType, NDUInt16);
-			setIntegerParam(LAMBDA_OperatingMode, TWELVE_BIT_MODE);
-		}
-		else if (depth == TWENTY_FOUR_BIT) 
-		{
-			setIntegerParam(NDDataType, NDUInt32);
-			setIntegerParam(LAMBDA_OperatingMode, TWENTY_FOUR_BIT_MODE);
-		}
+		this->writeDepth(rec->frameDepth());
 		
 		recs.push_back(rec);
 	}
@@ -206,7 +191,9 @@ asynStatus ADLambda::connect()
 	std::string version = xsp::libraryVersion();
 	setStringParam(ADSDKVersion, version);
 		
-	this->getThresholds();
+	std::vector<double> thresholds = det->thresholds();
+	if (thresholds.size() > 0)    { setDoubleParam(LAMBDA_EnergyThreshold, thresholds[0]); }
+	if (thresholds.size() > 1)    { setDoubleParam(LAMBDA_DualThreshold,   thresholds[1]); }
 		
 	callParamCallbacks();
 	
@@ -237,21 +224,15 @@ asynStatus ADLambda::disconnect()
 	return asynSuccess;
 }
 
-bool ADLambda::dualMode()
-{
-	int operating_mode;
-	getIntegerParam(LAMBDA_OperatingMode, &operating_mode);
-	
-	return (operating_mode > TWENTY_FOUR_BIT);
-}
-
 void ADLambda::setSizes()
 {
-	int full_width, full_height;
+	int full_width, full_height, dual;
+	
 	getIntegerParam(LAMBDA_StitchedWidth, &full_width);
 	getIntegerParam(LAMBDA_StitchedHeight, &full_height);
+	getIntegerParam(LAMBDA_DualMode, &dual);
 	
-	if (dualMode())    { full_height *= 2; }
+	if (dual)    { full_height *= 2; }
 
 	setIntegerParam(ADMinX, 0);
 	setIntegerParam(ADMinY, 0);
@@ -273,37 +254,67 @@ void ADLambda::incrementValue(int param)
 	setIntegerParam(param, val);
 }
 
-void ADLambda::syncParameters()
+void ADLambda::decrementValue(int param)
 {
-	double shuttertime;
-	int triggermode;
-	int operatingmode;
-	
-	getIntegerParam(ADTriggerMode, &triggermode);
-	getIntegerParam(LAMBDA_OperatingMode, &operatingmode);
-	getDoubleParam(ADAcquireTime, &shuttertime);
-	
-	this->setTriggerMode(triggermode);
-	this->setOperatingMode(operatingmode);
-	
-	det->setShutterTime(shuttertime * 1000);
-	
-	this->callParamCallbacks();
+	int val;
+	getIntegerParam(param, &val);
+	val -= 1;
+	setIntegerParam(param, val);
 }
 
-
-void ADLambda::spawnAcquireThread(int receiver)
+void ADLambda::sendParameters()
 {
-	acquire_data* data = new acquire_data;
-
-	data->driver = this;
-	data->receiver = receiver;
-
-	epicsThreadCreate("ADLambda::acquireThread()",
-              epicsThreadPriorityMedium,
-              epicsThreadGetStackSize(epicsThreadStackMedium),
-              (EPICSTHREADFUNC)::receiver_acquire_callback,
-              data);
+	double shuttertime, low_energy, high_energy;
+	int trigger, operation, dual, charge, frames;
+	
+	getDoubleParam(ADAcquireTime, &shuttertime);
+	getDoubleParam(LAMBDA_EnergyThreshold, &low_energy);
+	getDoubleParam(LAMBDA_DualThreshold, &high_energy);
+	
+	getIntegerParam(ADTriggerMode, &trigger);
+	getIntegerParam(LAMBDA_OperatingMode, &operation);
+	getIntegerParam(LAMBDA_DualMode, &dual);
+	getIntegerParam(LAMBDA_ChargeSumming, &charge);
+	getIntegerParam(ADNumImages, &frames);
+	
+	
+	// Set Default Values
+	xsp::lambda::Gating         gate =  xsp::lambda::Gating::OFF;
+	xsp::lambda::TrigMode       tm =    xsp::lambda::TrigMode::SOFTWARE;
+	xsp::lambda::CounterMode    cm =    xsp::lambda::CounterMode::SINGLE;
+	xsp::lambda::BitDepth       depth = xsp::lambda::BitDepth::DEPTH_1;
+	xsp::lambda::ChargeSumming  sum =   xsp::lambda::ChargeSumming::OFF;
+	
+	if (dual)    { cm = xsp::lambda::CounterMode::DUAL; }
+	if (charge)  { sum = xsp::lambda::ChargeSumming::ON; }
+	
+	// Trigger Mode
+	if      (trigger == 1)    { tm = xsp::lambda::TrigMode::EXT_SEQUENCE; }
+	else if (trigger == 2)    { tm = xsp::lambda::TrigMode::EXT_FRAMES; }
+	else if (trigger == 3)    { gate = xsp::lambda::Gating::ON; }
+	
+	// Operating Mode
+	if      (operation == ONE_BIT)         { depth = xsp::lambda::BitDepth::DEPTH_1; }
+	else if (operation == SIX_BIT)         { depth = xsp::lambda::BitDepth::DEPTH_6; }
+	else if (operation == TWELVE_BIT)      { depth = xsp::lambda::BitDepth::DEPTH_12; }
+	else if (operation == TWENTY_FOUR_BIT) { depth = xsp::lambda::BitDepth::DEPTH_24; }
+	
+	// Set Values
+	det->setGatingMode(gate);
+	det->setTriggerMode(tm);
+	det->setOperationMode(xsp::lambda::OperationMode(depth, sum, cm));
+	det->setShutterTime(shuttertime * 1000);
+	
+	// Set Thresholds
+	std::vector<double> thresholds = det->thresholds();
+		
+	thresholds[0] = low_energy;
+	if (dual)    { thresholds[1] = high_energy; }
+		
+	det->setThresholds(thresholds);
+	det->setFrameCount(frames);
+	
+	this->callParamCallbacks();
 }
 
 /**
@@ -323,17 +334,17 @@ void ADLambda::waitAcquireThread()
 		
 		if (!signal)    { continue; }
 		
-		int datatype;
-		this->getIntegerParam(NDDataType, &datatype);
-	
-		this->imageDataType = datatype;
-		this->setIntegerParam(LAMBDA_BadImage, 0);
 		
-		this->syncParameters();
-		
+		// Sync epics parameters to detector
 		try
 		{
+			this->sendParameters();
+			this->setSizes();
+			this->setIntegerParam(LAMBDA_BadImage, 0);
+			this->callParamCallbacks();
 			det->startAcquisition();
+			
+			this->unlock();
 		}
 		catch(const xsp::RuntimeError& e)
 		{
@@ -342,28 +353,25 @@ void ADLambda::waitAcquireThread()
 			this->callParamCallbacks();
 			continue;
 		}
-
-		this->unlock();
 		
-		for (int rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
+		// Spawn acquisition threads
+		for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
 		{
 			this->setIntegerParam(rec_index, ADNumImagesCounter, 0);
 			this->setIntegerParam(rec_index, LAMBDA_BadFrameCounter, 0);
+			this->incrementValue(LAMBDA_ReadoutThreads);
 			this->callParamCallbacks(rec_index);
+			this->callParamCallbacks();
+			
 			this->spawnAcquireThread(rec_index);
 		}
 		
-		setIntegerParam(LAMBDA_ReadoutThreads, this->recs.size());
-		
-		int threads_running = this->recs.size();
-		
-		for (int index = 0; index < this->recs.size(); index += 1)
+		// Wait for all threads to finish acquiring
+		for (size_t index = 0; index < this->recs.size(); index += 1)
 		{
 			this->threadFinishEvents[index]->wait();
 			
-			threads_running -= 1;
-
-			setIntegerParam(LAMBDA_ReadoutThreads, threads_running);
+			decrementValue(LAMBDA_ReadoutThreads);
 			callParamCallbacks();
 		}
 		
@@ -390,7 +398,7 @@ void ADLambda::exportThread()
 	while(this->connected)
 	{
 		dequeLock->lock();
-		bool sleep = export_queue.empty();
+			bool sleep = export_queue.empty();
 		dequeLock->unlock();
 	
 		if (sleep)
@@ -415,10 +423,7 @@ void ADLambda::exportThread()
 		int arrayCallbacks;
 		getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
 		
-		if (arrayCallbacks)
-		{
-			doCallbacksGenericPointer(this->pImage, NDArrayData, 0);
-		}
+		if (arrayCallbacks)    { doCallbacksGenericPointer(this->pImage, NDArrayData, 0); }
 	}
 }
 		
@@ -426,20 +431,25 @@ void ADLambda::acquireThread(int receiver)
 {
 	std::shared_ptr<xsp::Receiver> rec = this->recs[receiver];
 
-	int width, height, toRead;
+	int width, height, toRead, datatype, dual_mode, depth;
 	double exposure;
 	
 	this->getIntegerParam(ADMaxSizeX, &width);
 	this->getIntegerParam(ADMaxSizeY, &height);
 	this->getIntegerParam(ADNumImages, &toRead);
+	this->getIntegerParam(NDDataType, &datatype);
+	this->getIntegerParam(LAMBDA_OperatingMode, &depth);
+	this->getIntegerParam(LAMBDA_DualMode, &dual_mode);
 	this->getDoubleParam(ADAcquireTime, &exposure);
 
-	size_t imagedims[2] = {width, height};
+	int bytes_per_pixel = 1;
+	
+	if      (depth == TWELVE_BIT)       { bytes_per_pixel = 2; }
+	else if (depth == TWENTY_FOUR_BIT)  { bytes_per_pixel = 4; }
+	
+	size_t imagedims[2] = { (size_t) width, (size_t) height};
 
 	xsp::Frame* acquired[2] = { NULL, NULL };
-	
-	int dual_mode = this->dualMode() ? 1 : 0;
-	if (dual_mode)    { imagedims[1] = height * 2; }
 	
 	int numAcquired = 0;
 	int dual = 0;
@@ -455,7 +465,7 @@ void ADLambda::acquireThread(int receiver)
 	
 	while (numAcquired < toRead)
 	{
-		xsp::Frame* temp = rec->frame(1500);
+		xsp::Frame* temp = (xsp::Frame*) rec->frame(1500);
 		
 		if (temp == nullptr || temp->data() == NULL)
 		{
@@ -476,18 +486,16 @@ void ADLambda::acquireThread(int receiver)
 		this->lock();
 			if (this->frames.find(frame_no) == this->frames.end())
 			{
-				NDArray* new_frame = pNDArrayPool->alloc(2, imagedims, this->imageDataType, 0, NULL);
-				new_frame->uniqueId = 0;
-			
-				NDArrayInfo main_info;
-				new_frame->getInfo(&main_info);
-			
-				memset((char*) new_frame->pData, 0, imagedims[0] * imagedims[1] * main_info.bytesPerElement);
-			
 				epicsTimeStamp currentTime = epicsTime::getCurrent();
+				
+				NDArray* new_frame = pNDArrayPool->alloc(2, imagedims, (NDDataType_t) datatype, 0, NULL);
+				new_frame->uniqueId = 0;
+				new_frame->getInfo(&info);
 				new_frame->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
 				updateTimeStamp(&(new_frame->epicsTS));
 			
+				memset((char*) new_frame->pData, 0, imagedims[0] * imagedims[1] * info.bytesPerElement);
+
 				this->frames[frame_no] = new_frame;
 				
 				incrementValue(ADNumImagesCounter);
@@ -507,11 +515,13 @@ void ADLambda::acquireThread(int receiver)
 		
 				for (int row = 0; row < frame_height; row += 1)
 				{
-					int in_offset = row * frame_width * info.bytesPerElement;
-
-					int out_offset = ((y_shift + row + (height * which)) * width + x_shift) * info.bytesPerElement;
-				
-					std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
+					for (int col = 0; col < frame_width; col += 1)
+					{
+						int in_offset = (row * frame_width + col) * bytes_per_pixel;
+						int out_offset = ((y_shift + row + (height * which)) * width + col + x_shift) * info.bytesPerElement;
+						
+						std::memcpy(&out_data[out_offset], &in_data[in_offset], bytes_per_pixel);
+					}
 				}
 			}
 		}
@@ -586,142 +596,14 @@ asynStatus  ADLambda::readInt32 (asynUser *pasynUser, epicsInt32 *value)
 	return (asynStatus) status;
 }
 
-/**
- * Override from super class to handle detector specific parameters.
- * If the parameter is from one of the super classes and is not handled
- * here, then pass along to ADDriver (direct super class)
- */
-asynStatus ADLambda::writeFloat64(asynUser *pasynUser, epicsFloat64 value) 
+void ADLambda::writeDepth(int depth)
 {
-	int status = asynSuccess;
-	int function = pasynUser->reason;
+	setIntegerParam(LAMBDA_OperatingMode, depth);
 
-	//Record for later use
-	int adStatus;
-	int adacquiring;
-	getIntegerParam(ADStatus, &adStatus);
-	getIntegerParam(ADAcquire, &adacquiring);
-
-	if ((adStatus != ADStatusIdle) || adacquiring)    
-	{ 
-		setStringParam(ADStatusMessage, "Failed to set value, currently not Idle");
-		this->callParamCallbacks();
-		return asynError; 
-	}
-	else
-	{
-		setStringParam(ADStatusMessage, "");
-	}
-
-	setDoubleParam(function, value);
-	
-	if (function == ADAcquireTime) 
-	{
-		double shutterTime = value * 1000.0;
-		det->setShutterTime(shutterTime);
-	}
-	else if (function == ADAcquirePeriod)
-	{
-		double acquirePeriod = value;
-		setDoubleParam(function, acquirePeriod);
-	}
-	else if (function == LAMBDA_EnergyThreshold)
-	{
-		std::vector<double> thresholds = det->thresholds();
-		
-		thresholds[0] = value;
-		
-		det->setThresholds(thresholds);
-		this->getThresholds();
-	}
-	else if (function == LAMBDA_DualThreshold)
-	{
-		std::vector<double> thresholds = det->thresholds();
-		
-		thresholds[1] = value;
-		
-		det->setThresholds(thresholds);
-		this->getThresholds();
-	}
-	else 
-	{
-		if (function < LAMBDA_FIRST_PARAM) 
-		{
-			status = ADDriver::writeFloat64(pasynUser, value);
-		}
-	}
-	
-	callParamCallbacks();
-	return (asynStatus) status;
-}
-
-void ADLambda::getThresholds()
-{
-	std::vector<double> thresholds = det->thresholds();
-	
-	setDoubleParam(LAMBDA_EnergyThreshold, thresholds[0]);
-	setDoubleParam(LAMBDA_DualThreshold, thresholds[1]);
-}
-
-void ADLambda::setTriggerMode(int mode)
-{
-	if      (mode == 0)    { det->setTriggerMode(xsp::lambda::TrigMode::SOFTWARE); }
-	else if (mode == 1)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_SEQUENCE); }
-	else if (mode == 2)    { det->setTriggerMode(xsp::lambda::TrigMode::EXT_FRAMES); }
-}
-
-void ADLambda::setOperatingMode(int mode)
-{
-	if (mode == 0)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1));
-		setIntegerParam(NDDataType, NDUInt8);
-	}
-	else if (mode == 1)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6));
-		setIntegerParam(NDDataType, NDUInt8);
-	}
-	else if (mode == 2)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12));
-		setIntegerParam(NDDataType, NDUInt16);
-	}
-	else if(mode == 3) 
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24));
-		setIntegerParam(NDDataType, NDUInt32);
-	}
-	else if (mode == 4)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_1,
-		                                                 xsp::lambda::ChargeSumming::OFF,
-		                                                 xsp::lambda::CounterMode::DUAL));
-		setIntegerParam(NDDataType, NDUInt8);
-	}
-	else if (mode == 5)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_6,
-		                                                 xsp::lambda::ChargeSumming::OFF,
-		                                                 xsp::lambda::CounterMode::DUAL));
-		setIntegerParam(NDDataType, NDUInt8);
-	}
-	else if (mode == 6)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_12, 
-		                                                 xsp::lambda::ChargeSumming::OFF,
-		                                                 xsp::lambda::CounterMode::DUAL));
-		setIntegerParam(NDDataType, NDUInt16);
-
-	}
-	else if (mode == 7)
-	{
-		det->setOperationMode(xsp::lambda::OperationMode(xsp::lambda::BitDepth::DEPTH_24, 
-		                                                 xsp::lambda::ChargeSumming::OFF,
-		                                                 xsp::lambda::CounterMode::DUAL));
-		setIntegerParam(NDDataType, NDUInt32);
-		
-	}
+	if      (depth == ONE_BIT)            { setIntegerParam(NDDataType, NDUInt8); }
+	else if (depth == SIX_BIT)            { setIntegerParam(NDDataType, NDUInt8); }
+	else if (depth == TWELVE_BIT)         { setIntegerParam(NDDataType, NDUInt16); }
+	else if (depth == TWENTY_FOUR_BIT)    { setIntegerParam(NDDataType, NDUInt32); }
 }
 
 
@@ -747,6 +629,8 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	getIntegerParam(ADStatus, &adStatus);
 	getIntegerParam(ADAcquire, &adacquiring);
 
+	/** Make sure that we write the value to the param */
+	setIntegerParam(addr, function, value);
 
 	if (function == ADAcquire)
 	{
@@ -756,45 +640,10 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 			det->stopAcquisition();
 			this->setIntegerParam(ADStatus, ADStatusAborting);
 		}
-		
-		/** Make sure that we write the value to the param */
-		setIntegerParam(addr, function, value);
-		
-		this->callParamCallbacks(addr);
-		return asynSuccess;
 	}
-
-	if ((adStatus != ADStatusIdle) || adacquiring)    
-	{ 
-		setStringParam(ADStatusMessage, "Failed to set value, currently not Idle");
-		this->callParamCallbacks();
-		return asynError; 
-	}
-	else
+	else if (function == LAMBDA_OperatingMode)
 	{
-		setStringParam(ADStatusMessage, "");
-	}
-	
-	/** Make sure that we write the value to the param */
-	setIntegerParam(addr, function, value);
-	
-	if (function == ADNumImages)
-	{
-		det->setFrameCount(value); 
-	}
-	else if (function == ADTriggerMode)
-	{
-		this->setTriggerMode(value);
-	}
-	else if ((function == ADSizeX) || (function == ADSizeY) ||
-	         (function == ADMinX)  || (function == ADMinY) )
-	{
-		this->setSizes();
-	}
-	else if (function == LAMBDA_OperatingMode) 
-	{
-		this->setOperatingMode(value);		
-		this->setSizes();
+		this->writeDepth(value);
 	}
 	else if (function < LAMBDA_FIRST_PARAM) 
 	{
@@ -802,47 +651,6 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	}
 
 	callParamCallbacks(addr);
-	return (asynStatus) status;
-}
-
-/**
- * Override from super class to handle detector specific parameters.
- * If the parameter is from one of the super classes and is not handled
- * here, then pass along to ADDriver (direct super class)
- */
-asynStatus ADLambda::writeOctet(asynUser* pasynUser, const char *value,
-                                size_t nChars, size_t *nActual)
-{
-	int status = asynSuccess;
-	int function = pasynUser->reason;
-
-	if (function < LAMBDA_FIRST_PARAM) 
-	{
-		status = ADDriver::writeOctet(pasynUser, value, nChars, nActual);
-	}
-	
-	callParamCallbacks();
-	return (asynStatus) status;
-}
-
-
-/**
- * Override from superclass to handle cases for detector specific Parameters.
- * If the parameter is from one of the super classes and is not handled
- * here, then pass along to ADDriver (direct super class)
- */
-asynStatus 	ADLambda::readOctet (asynUser *pasynUser, char *value, 
-                                 size_t maxChars, size_t *nActual, int *eomReason)
-{
-	int status = asynSuccess;
-	int function = pasynUser->reason;
-
-	if (function < LAMBDA_FIRST_PARAM) 
-	{
-		status = ADDriver::readOctet(pasynUser, value, maxChars, nActual, eomReason);
-	}
-	
-	callParamCallbacks();
 	return (asynStatus) status;
 }
 
