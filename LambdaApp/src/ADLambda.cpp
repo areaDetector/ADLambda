@@ -289,6 +289,9 @@ void ADLambda::decrementValue(int param)
 
 void ADLambda::sendParameters()
 {
+	setStringParam(ADStatusMessage, "Sending settings to Detector");
+	callParamCallbacks();
+
 	double shuttertime, low_energy, high_energy;
 	int trigger, operation, dual, charge, frames;
 	
@@ -339,6 +342,7 @@ void ADLambda::sendParameters()
 	det->setThresholds(thresholds);
 	det->setFrameCount(frames);
 	
+	setStringParam(ADStatusMessage, "");
 	this->callParamCallbacks();
 }
 
