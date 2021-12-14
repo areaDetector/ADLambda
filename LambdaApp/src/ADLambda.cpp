@@ -520,7 +520,67 @@ void ADLambda::acquireThread(int receiver)
 						int in_offset = (row * frame_width + col) * bytes_per_pixel;
 						int out_offset = ((y_shift + row + (height * which)) * width + col + x_shift) * info.bytesPerElement;
 						
-						std::memcpy(&out_data[out_offset], &in_data[in_offset], bytes_per_pixel);
+						epicsUInt32 temp_in;
+						std::memcpy(&temp_in, &in_data[in_offset], bytes_per_pixel);
+						
+						switch ((NDDataType_t) datatype)
+						{
+							case NDInt8:
+							{
+								epicsInt8 temp_out = (epicsInt8) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 1);
+								break;
+							}
+							
+							case NDUInt8:
+							{
+								epicsUInt8 temp_out = (epicsUInt8) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 1);
+								break;
+							}
+							
+							case NDInt16:
+							{
+								epicsInt16 temp_out = (epicsInt16) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 2);
+								break;
+							} 
+							
+							case NDUInt16:
+							{
+								epicsUInt16 temp_out = (epicsUInt16) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 2);
+								break;
+							}
+							
+							case NDInt32:
+							{
+								epicsInt32 temp_out = (epicsInt32) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 4);
+								break;
+							} 
+							
+							case NDUInt32:
+							{
+								epicsUInt32 temp_out = (epicsUInt32) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 4);
+								break;
+							}
+							
+							case NDFloat32:
+							{
+								epicsFloat32 temp_out = (epicsFloat32) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 4);
+								break;
+							}
+							
+							case NDFloat64:
+							{
+								epicsFloat64 temp_out = (epicsFloat32) temp_in;
+								std::memcpy(&out_data[out_offset], &temp_out, 8);
+								break;
+							}
+						}
 					}
 				}
 			}
