@@ -92,8 +92,10 @@ private:
  	epicsEvent** threadFinishEvents;
  	epicsMutex* dequeLock;
 
-	std::string configFileName;
+    std::string configFileName;
     NDArray *pImage = NULL;
+    NDArray** saved_frames;
+    NDDataType_t imageDataType;
 };
 
 typedef struct
