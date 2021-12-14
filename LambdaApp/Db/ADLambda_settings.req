@@ -1,5 +1,8 @@
 file "ADBase_settings.req" P=$(P),R=$(R)
 
+$(P)$(R)OperatingMode
+$(P)$(R)DualMode
+$(P)$(R)ChargeSumming
 $(P)$(R)EnergyThreshold
 $(P)$(R)DualThreshold
 $(P)$(R)BadFrameCounter
