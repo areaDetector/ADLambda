@@ -407,8 +407,8 @@ void ADLambda::sendParameters()
 	// Set Thresholds
 	std::vector<double> thresholds = det->thresholds();
 	
-	if (std::abs(thresholds[0] - low_energy) <= 0.00001 || 
-	   (dual && (std::abs(thresholds[1] - high_energy) <= 0.00001)))
+	if (std::abs(thresholds[0] - low_energy) >= 0.00001 || 
+	   (dual && (std::abs(thresholds[1] - high_energy) >= 0.00001)))
 	{	
 		thresholds[0] = low_energy;
 		if (dual)    { thresholds[1] = high_energy; }
