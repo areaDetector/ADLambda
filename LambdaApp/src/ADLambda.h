@@ -29,6 +29,8 @@ static const int TWENTY_FOUR_BIT = 24;
 
 static const double ONE_BILLION = 1.E9;
 
+static const double SHORT_TIME = 0.000025;
+
 /**
  * Class to wrap Lambda detector library provided by X-Spectrum
  */
@@ -44,12 +46,11 @@ public:
 	virtual asynStatus connect();
 	
 	void waitAcquireThread();
+	void tryConnect();
 	void acquireThread(int receiver);
 	void exportThread();
 
 	void report(FILE *fp, int details);
-
-	virtual asynStatus  readInt32 (asynUser *pasynUser, epicsInt32 *value);
 
 	virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
 
@@ -62,7 +63,7 @@ protected:
     int LAMBDA_OperatingMode;
     int LAMBDA_DualMode;
     int LAMBDA_ChargeSumming;
-    int LAMBDA_DetectorState;
+    int LAMBDA_GatingEnable;
     int LAMBDA_BadFrameCounter;
     int LAMBDA_BadImage;
     int LAMBDA_ReadoutThreads;
@@ -70,11 +71,12 @@ protected:
     int LAMBDA_StitchedHeight;
 
 private:
-	bool connected;
+	bool connected = false;
    
    	void setSizes();
    	void incrementValue(int param);
    	void decrementValue(int param);
+   	void readParameters();
    	void sendParameters();
    	void writeDepth(int depth);
    
@@ -112,9 +114,8 @@ typedef struct
 #define LAMBDA_OperatingModeString          "LAMBDA_OPERATING_MODE"
 #define LAMBDA_DualModeString               "LAMBDA_DUAL_MODE"
 #define LAMBDA_ChargeSummingString          "LAMBDA_CHARGE_SUMMING"
-#define LAMBDA_DetectorStateString          "LAMBDA_DETECTOR_STATE"
+#define LAMBDA_GatingEnableString           "LAMBDA_GATING_ENABLE"
 #define LAMBDA_BadFrameCounterString        "LAMBDA_BAD_FRAME_COUNTER"
-#define LAMBDA_MedipixIDsString             "LAMBDA_MEDIPIX_IDS"
 #define LAMBDA_BadImageString               "LAMBDA_BAD_IMAGE"
 #define LAMBDA_ReadoutThreadsString         "LAMBDA_NUM_READOUT_THREADS"
 #define LAMBDA_StitchWidthString            "LAMBDA_STITCHED_WIDTH"
