@@ -617,7 +617,7 @@ void ADLambda::acquireThread(int receiver)
 				{
 					int in_offset = row * frame_width * info.bytesPerElement;
 
-					int out_offset = ((y_shift + row + (height * which)) * width + x_shift) * info.bytesPerElement;
+					int out_offset = ((y_shift + row + (frame_height * which)) * width + x_shift) * info.bytesPerElement;
 				
 					std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
 				}
