@@ -583,7 +583,7 @@ void ADLambda::acquireThread(int receiver)
 	
 		const int frame_no = acquired[0]->nr();
 		
-		this->lock();
+		this->lock();		
 			if (this->frames.find(frame_no) == this->frames.end())
 			{
 				epicsTimeStamp currentTime = epicsTime::getCurrent();
@@ -600,9 +600,10 @@ void ADLambda::acquireThread(int receiver)
 				
 				incrementValue(ADNumImagesCounter);
 			}
+			
+			NDArray* output = this->frames[frame_no];
 		this->unlock();
 		
-		NDArray* output = this->frames[frame_no];
 		output->getInfo(&info);
 		numAcquired += 1;
 		
