@@ -523,12 +523,12 @@ void ADLambda::exportThread()
 		this->lock();
 			incrementValue(NDArrayCounter);
 			this->setIntegerParam(NDArraySize, info.totalBytes);
+		
+			int arrayCallbacks;
+			getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
+		
+			if (arrayCallbacks)    { doCallbacksGenericPointer(this->pImage, NDArrayData, 0); }
 		this->unlock();
-		
-		int arrayCallbacks;
-		getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
-		
-		if (arrayCallbacks)    { doCallbacksGenericPointer(this->pImage, NDArrayData, 0); }
 	}
 }
 		
