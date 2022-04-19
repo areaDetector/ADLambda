@@ -459,8 +459,6 @@ void ADLambda::waitAcquireThread()
 			this->callParamCallbacks();
 			
 			det->startAcquisition();
-
-			this->unlock();
 		}
 		catch(const xsp::RuntimeError& e)
 		{
@@ -484,13 +482,13 @@ void ADLambda::waitAcquireThread()
 		// Wait for all threads to finish acquiring
 		for (size_t index = 0; index < this->recs.size(); index += 1)
 		{
-			this->threadFinishEvents[index]->wait();
+			this->unlock();
+				this->threadFinishEvents[index]->wait();
+			this->lock();
 			
 			decrementValue(LAMBDA_ReadoutThreads);
 			callParamCallbacks();
 		}
-		
-		this->lock();
 		
 		this->frames.clear();
 
@@ -521,9 +519,11 @@ void ADLambda::exportThread()
 		
 		NDArrayInfo info;
 		this->pImage->getInfo(&info);
-		incrementValue(NDArrayCounter);
-			
-		this->setIntegerParam(NDArraySize, info.totalBytes);
+		
+		this->lock();
+			incrementValue(NDArrayCounter);
+			this->setIntegerParam(NDArraySize, info.totalBytes);
+		this->unlock();
 		
 		int arrayCallbacks;
 		getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
@@ -651,11 +651,13 @@ void ADLambda::acquireThread(int receiver)
 				
 				this->frames.erase(frame_no);
 			}
-		this->unlock();
 		
-		int numBuffered = rec->framesQueued();
-		this->setIntegerParam(receiver, LAMBDA_DecodedQueueDepth, numBuffered);
-		callParamCallbacks(receiver);
+		
+			int numBuffered = rec->framesQueued();
+			this->setIntegerParam(receiver, LAMBDA_DecodedQueueDepth, numBuffered);
+			callParamCallbacks(receiver);
+		
+		this->unlock();
 	}
 	
 	this->threadFinishEvents[receiver]->trigger();
