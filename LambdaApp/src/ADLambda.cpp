@@ -539,13 +539,15 @@ void ADLambda::acquireThread(int receiver)
 	int width, height, toRead, datatype, dual_mode, depth;
 	double exposure;
 	
-	this->getIntegerParam(ADMaxSizeX, &width);
-	this->getIntegerParam(ADMaxSizeY, &height);
-	this->getIntegerParam(ADNumImages, &toRead);
-	this->getIntegerParam(NDDataType, &datatype);
-	this->getIntegerParam(LAMBDA_OperatingMode, &depth);
-	this->getIntegerParam(LAMBDA_DualMode, &dual_mode);
-	this->getDoubleParam(ADAcquireTime, &exposure);
+	this->lock()
+		this->getIntegerParam(ADMaxSizeX, &width);
+		this->getIntegerParam(ADMaxSizeY, &height);
+		this->getIntegerParam(ADNumImages, &toRead);
+		this->getIntegerParam(NDDataType, &datatype);
+		this->getIntegerParam(LAMBDA_OperatingMode, &depth);
+		this->getIntegerParam(LAMBDA_DualMode, &dual_mode);
+		this->getDoubleParam(ADAcquireTime, &exposure);
+	this->unlock();
 	
 	int numAcquired = 0;
 	int dual = 0;
