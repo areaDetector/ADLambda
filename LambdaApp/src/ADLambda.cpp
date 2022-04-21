@@ -539,7 +539,7 @@ void ADLambda::acquireThread(int receiver)
 	int width, height, toRead, datatype, dual_mode, depth;
 	double exposure;
 	
-	this->lock()
+	this->lock();
 		this->getIntegerParam(ADMaxSizeX, &width);
 		this->getIntegerParam(ADMaxSizeY, &height);
 		this->getIntegerParam(ADNumImages, &toRead);
