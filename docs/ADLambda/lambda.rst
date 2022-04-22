@@ -44,13 +44,13 @@ There are three trigger modes available:
 
 * **Internal**: one internal trigger pulse generates one image
 * **External_SequencePer**: rising edge on trigger input starts acquisition of all frames
-* **External_ImagePer**: for 24 bit depth, a rising edge on trigger input starts acquisition 
-    of one or more frames with the programmed shutter time, trigger input is ignored until 
-	counter has been read out; 
+* **External_ImagePer**: 
+    for 24 bit depth, a rising edge on trigger input starts acquisition of one or more frames 
+    with the programmed shutter time, trigger input is ignored until counter has been read out; 
 	
-	for all other bit depths, a rising edge on trigger input stops acquisition of current frame 
-	and immediately starts acquisition of next frame, the programmed shutter time is ignored in 
-	this case
+    for all other bit depths, a rising edge on trigger input stops acquisition of current frame 
+    and immediately starts acquisition of next frame, the programmed shutter time is ignored in 
+    this case
 
 
 Implementation of standard driver parameters
@@ -84,8 +84,8 @@ ADBase.template and NDFile.template
     - Not Used
   * - $(P)$(R)DataType_RBV
     - DataType is set based on the Lambda's operating mode parameter. When operating
-	  with a 1- or 6- bit bit-depth, the DataType will be set to UInt8. For 12-bit,
-	  the DataType is UInt16, and 24-bit is UInt32.
+      with a 1- or 6- bit bit-depth, the DataType will be set to UInt8. For 12-bit,
+      the DataType is UInt16, and 24-bit is UInt32.
   * - $(P)$(R)TemperatureActual
     - Not Used
   * - $(P)$(R)MaxSizeX_RBV
