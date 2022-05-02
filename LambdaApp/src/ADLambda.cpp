@@ -437,32 +437,37 @@ void ADLambda::waitAcquireThread()
 		
 		if (!signal)    { continue; }
 		
+		bool trying = true;
 		
 		// Sync epics parameters to detector
-		try
+		while (trying)
 		{
-			this->sendParameters();
-			this->setIntegerParam(LAMBDA_BadImage, 0);
-			this->setStringParam(ADStatusMessage, "Waiting for modules to be ready");
-			this->callParamCallbacks();
-			
-			for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
+			try
 			{
-				while(! det->isModuleReady(rec_index + 1)) { epicsThreadSleep(SHORT_TIME); }
+				this->sendParameters();
+				this->setIntegerParam(LAMBDA_BadImage, 0);
+				this->setStringParam(ADStatusMessage, "Waiting for modules to be ready");
+				this->callParamCallbacks();
+				
+				for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
+				{
+					while(! det->isModuleReady(rec_index + 1)) { epicsThreadSleep(SHORT_TIME); }
+				}
+				
+				this->setStringParam(ADStatusMessage, "");
+				this->callParamCallbacks();
+				
+				det->startAcquisition();
+				trying = false;
 			}
-			
-			this->setStringParam(ADStatusMessage, "");
-			this->callParamCallbacks();
-			
-			det->startAcquisition();
-		}
-		catch(const xsp::RuntimeError& e)
-		{
-			std::string message(e.what());
-			
-			this->setStringParam(ADStatusMessage, message.c_str());
-			this->callParamCallbacks();
-			continue;
+			catch(const xsp::RuntimeError& e)
+			{
+				std::string message(e.what());
+				
+				this->setStringParam(ADStatusMessage, message.c_str());
+				this->callParamCallbacks();
+				continue;
+			}
 		}
 		
 		// Spawn acquisition threads
