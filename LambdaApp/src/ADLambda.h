@@ -79,6 +79,8 @@ private:
    	void readParameters();
    	void sendParameters();
    	void writeDepth(int depth);
+	
+	bool tryStartAcquire();
    
 	void spawnAcquireThread(int receiver);
 
@@ -91,6 +93,7 @@ private:
 	std::deque<NDArray*> export_queue;
 	
 	epicsEvent* startAcquireEvent;
+	epicsEvent* stopAcquireEvent;
  	epicsEvent** threadFinishEvents;
  	epicsMutex* dequeLock;
 

@@ -87,6 +87,7 @@ ADLambda::ADLambda(const char *portName, const char *configPath, int numModules)
 configFileName(configPath)
 {
 	this->startAcquireEvent = new epicsEvent();
+	this->stopAcquireEvent = new epicsEvent();
 	this->dequeLock = new epicsMutex();
 
 	this->threadFinishEvents = (epicsEvent**) calloc(numModules, sizeof(epicsEvent*));
@@ -190,16 +191,10 @@ void ADLambda::tryConnect()
 						break;
 						
 					case xsp::EventType::START:
-						this->setIntegerParam(ADStatus, ADStatusAcquire);
 						break;
 						
 					case xsp::EventType::STOP:
 					{
-						int stat;
-						this->getIntegerParam(ADStatus, &stat);
-						
-						if (stat == ADStatusAcquire)    { this->setIntegerParam(ADStatus, ADStatusReadout); }
-						
 						break;
 					}
 				}
@@ -420,6 +415,30 @@ void ADLambda::sendParameters()
 	this->callParamCallbacks();
 }
 
+bool ADLambda::tryStartAcquire()
+{
+	try
+	{ 
+		for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
+		{
+			while(! det->isModuleReady(rec_index + 1))    { bool signal epicsThreadSleep(SHORT_TIME); }
+		}
+	
+		this->det->startAcquisition();
+		return true;
+	}
+	catch (const xsp::RuntimeError& e)
+	{
+		std::string message(e.what());
+		
+		this->setStringParam(ADStatusMessage, message.c_str());
+		this->callParamCallbacks();
+		
+		return false;
+	}
+}
+
+
 /**
  * Background thread to wait until an acquire signal is recieved.
  * Afterwards, start the acquisition and create an acquire thread
@@ -437,38 +456,34 @@ void ADLambda::waitAcquireThread()
 		
 		if (!signal)    { continue; }
 		
-		bool trying = true;
-		
 		// Sync epics parameters to detector
-		while (trying)
+		this->sendParameters();
+		this->setIntegerParam(LAMBDA_BadImage, 0);
+		this->setStringParam(ADStatusMessage, "Waiting for modules to be ready");
+		this->setIntegerParam(ADStatus, ADStatusWaiting);
+		this->callParamCallbacks();
+		
+		bool aborted = false;
+		
+		// Attempt to start aquisition, allow user to abort acquisition
+		while (! aborted && ! this->tryStartAcquire())
 		{
-			try
-			{
-				this->sendParameters();
-				this->setIntegerParam(LAMBDA_BadImage, 0);
-				this->setStringParam(ADStatusMessage, "Waiting for modules to be ready");
-				this->callParamCallbacks();
-				
-				for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
-				{
-					while(! det->isModuleReady(rec_index + 1)) { epicsThreadSleep(SHORT_TIME); }
-				}
-				
-				this->setStringParam(ADStatusMessage, "");
-				this->callParamCallbacks();
-				
-				det->startAcquisition();
-				trying = false;
-			}
-			catch(const xsp::RuntimeError& e)
-			{
-				std::string message(e.what());
-				
-				this->setStringParam(ADStatusMessage, message.c_str());
-				this->callParamCallbacks();
-				continue;
-			}
+			this->unlock();
+				aborted = this->stopAcquireEvent->wait(SHORT_TIME);
+			this->lock();
 		}
+		
+		// If stop is pressed, reset to idle
+		if (aborted)
+		{ 
+			this->setIntegerParam(ADAcquire, 0);
+			this->setIntegerParam(ADStatus, ADStatusIdle);
+			this->callParamCallbacks();
+			continue; 
+		}
+		
+		this->setIntegerParam(ADStatus, ADStatusAcquire);
+		this->callParamCallbacks();
 		
 		// Spawn acquisition threads
 		for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
@@ -734,11 +749,19 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
 	if (function == ADAcquire)
 	{
-		if (value && (adStatus == ADStatusIdle) && (adacquiring == 0))    { this->startAcquireEvent->trigger(); }
-		else if (!value && adacquiring)
+		if (value && (adStatus == ADStatusIdle))    
 		{ 
-			det->stopAcquisition();
+			this->setIntegerParam(ADStatus, ADStatusAcquire);
+			this->callParamCallbacks();
+			this->startAcquireEvent->trigger(); 
+		}
+		else if (!value && (adStatus != ADStatusIdle))
+		{  
 			this->setIntegerParam(ADStatus, ADStatusAborting);
+			this->callParamCallbacks();
+			
+			det->stopAcquisition();
+			if (adStatus == ADStatusWaiting)    { this->stopAcquireEvent->trigger(); }
 		}
 	}
 	else if (function == LAMBDA_OperatingMode)
