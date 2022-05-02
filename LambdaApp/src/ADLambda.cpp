@@ -473,6 +473,8 @@ void ADLambda::waitAcquireThread()
 			this->lock();
 		}
 		
+		this->setStringParam(ADStatusMessage, "");
+		
 		// If stop is pressed, reset to idle
 		if (aborted)
 		{ 
@@ -509,6 +511,7 @@ void ADLambda::waitAcquireThread()
 		this->frames.clear();
 
 		this->setIntegerParam(ADAcquire, 0);
+		this->setIntegerParam(ADStatus, ADStatusReadout);
 		this->callParamCallbacks();
 		
 		while (! export_queue.empty())    { epicsThreadSleep(SHORT_TIME); }
