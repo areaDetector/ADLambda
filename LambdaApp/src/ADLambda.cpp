@@ -421,7 +421,7 @@ bool ADLambda::tryStartAcquire()
 	{ 
 		for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
 		{
-			while(! det->isModuleReady(rec_index + 1))    { bool signal epicsThreadSleep(SHORT_TIME); }
+			while(! det->isModuleReady(rec_index + 1))    { epicsThreadSleep(SHORT_TIME); }
 		}
 	
 		this->det->startAcquisition();
