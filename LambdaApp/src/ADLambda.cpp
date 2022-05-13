@@ -452,14 +452,20 @@ void ADLambda::waitAcquireThread()
 		
 		if (!signal)    { continue; }
 		
+		bool aborted = false;
+		
+		this->unlock();
+			this->setStringParam(ADStatusMessage, "Waiting for modules to be ready");
+			while(! det->isReady())    { aborted = this->stopAcquireEvent->wait(SHORT_TIME); }
+		this->lock();
+		
+		if (aborted)    { continue; }
+		
 		// Sync epics parameters to detector
 		this->sendParameters();
 		this->setIntegerParam(LAMBDA_BadImage, 0);
-		this->setStringParam(ADStatusMessage, "Waiting for modules to be ready");
 		this->setIntegerParam(ADStatus, ADStatusWaiting);
 		this->callParamCallbacks();
-		
-		bool aborted = false;
 		
 		// Attempt to start aquisition, allow user to abort acquisition
 		while (! aborted && ! this->tryStartAcquire())
