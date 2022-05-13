@@ -393,7 +393,10 @@ void ADLambda::sendParameters()
 		det->setOperationMode(om_set); 
 	}
 	
-	det->setShutterTime(shuttertime * 1000);
+	if (std::abs(det->shutterTime() - (shuttertime * 1000.0)) >= 0.00001)
+	{
+		det->setShutterTime(shuttertime * 1000);
+	}
 	
 	// Set Thresholds
 	std::vector<double> thresholds = det->thresholds();
