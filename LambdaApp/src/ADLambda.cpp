@@ -202,6 +202,24 @@ void ADLambda::tryConnect()
 				this->callParamCallbacks();
 			});
 			
+			this->det->setLogHandler([](LogLevel l, const std::string& m) {
+				switch (l) {
+					case LogLevel::ERROR:
+						printf("Lambda Driver Error: %s\n", m);
+						break;
+					
+					case LogLevel::WARN:
+						printf("Lambda Driver Warning: %s\n", m);
+						break;
+						
+					default:
+						printf("Lambda Driver Notification: %s\n", m);
+						break;
+					break;
+				}
+			});
+
+			
 			this->connected = true;
 			
 		}
