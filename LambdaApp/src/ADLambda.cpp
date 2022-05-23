@@ -202,7 +202,7 @@ void ADLambda::tryConnect()
 				this->callParamCallbacks();
 			});
 			
-			setLogHandler([](xsp::LogLevel l, const std::string& m) {
+			xsp::setLogHandler([](xsp::LogLevel l, const std::string& m) {
 				switch (l) {
 					case xsp::LogLevel::ERROR:
 						printf("Lambda Driver Error: %s\n", m);
