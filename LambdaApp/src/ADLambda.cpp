@@ -205,17 +205,21 @@ void ADLambda::tryConnect()
 			xsp::setLogHandler([](xsp::LogLevel l, const std::string& m) {
 				switch (l) {
 					case xsp::LogLevel::ERROR:
-						printf("Lambda Driver Error: %s\n", m);
+						printf("Lambda Driver Error: %s\n", m.c_str());
 						break;
 					
 					case xsp::LogLevel::WARN:
-						printf("Lambda Driver Warning: %s\n", m);
+						printf("Lambda Driver Warning: %s\n", m.c_str());
 						break;
-						
+					case xsp::LogLevel::INFO:
+						printf("Lambda Driver Info: %s\n", m.c_str());
+						break;
+					case xsp::LogLevel::DEBUG:
+						//printf("Lambda Driver Debug: %s\n", m.c_str());
+						break;
 					default:
-						printf("Lambda Driver Notification: %s\n", m);
+						printf("Lambda Driver Unknown: %s\n", m.c_str());
 						break;
-					break;
 				}
 			});
 
