@@ -537,7 +537,12 @@ void ADLambda::waitAcquireThread()
 		this->setIntegerParam(ADStatus, ADStatusReadout);
 		this->callParamCallbacks();
 		
-		while (! export_queue.empty())    { epicsThreadSleep(SHORT_TIME); }
+		while (! export_queue.empty())    
+		{
+			this->unlock();
+			epicsThreadSleep(SHORT_TIME); 
+			this->lock();
+		}
 		
 		this->setIntegerParam(ADStatus, ADStatusIdle);
 		this->callParamCallbacks();
