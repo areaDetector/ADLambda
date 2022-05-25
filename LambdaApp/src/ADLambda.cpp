@@ -108,6 +108,8 @@ configFileName(configPath)
 	setStringParam(ADManufacturer, "X-Spectrum GmbH");
 	setStringParam(LAMBDA_ConfigFilePath, configPath);
 	
+	// Write version to appropriate parameter
+	setStringParam(NDDriverVersion, GIT_VERSION);
 	
 	/* *************
 	 * DOUBLE PARAMS
