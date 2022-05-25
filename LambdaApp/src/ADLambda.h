@@ -72,16 +72,17 @@ protected:
 
 private:
 	bool connected = false;
-   
+
    	void setSizes();
    	void incrementValue(int param);
    	void decrementValue(int param);
    	void readParameters();
    	void sendParameters();
    	void writeDepth(int depth);
-	
+
 	bool tryStartAcquire();
-   
+	bool tryStopAcquire();
+
 	void spawnAcquireThread(int receiver);
 
 	std::unique_ptr<xsp::System> sys;

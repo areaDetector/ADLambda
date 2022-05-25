@@ -459,6 +459,24 @@ bool ADLambda::tryStartAcquire()
 	}
 }
 
+bool ADLambda::tryStopAcquire()
+{
+	try
+	{
+		this->det->stopAcquisition();
+		return true;
+	}
+	catch (const xsp::RuntimeError& e)
+	{
+		std::string message(e.what());
+
+		this->setStringParam(ADStatusMessage, message.c_str());
+		this->callParamCallbacks();
+
+		return false;
+	}
+}
+
 
 /**
  * Background thread to wait until an acquire signal is recieved.
@@ -487,7 +505,19 @@ void ADLambda::waitAcquireThread()
 		if (aborted)    { continue; }
 		
 		// Sync epics parameters to detector
-		this->sendParameters();
+		try
+		{
+			this->sendParameters();
+		}
+		catch  (const xsp::RuntimeError& e)
+		{
+			std::string error_msg(e.what());
+
+			this->setStringParam(ADStatusMessage, error_msg.c_str());
+			this->callParamCallbacks();
+			continue;
+		}
+
 		this->setIntegerParam(LAMBDA_BadImage, 0);
 		this->setIntegerParam(ADStatus, ADStatusWaiting);
 		this->callParamCallbacks();
@@ -636,7 +666,7 @@ void ADLambda::acquireThread(int receiver)
 		if (acquired[dual] == nullptr || acquired[dual]->data() == NULL)
 		{
 			if (det->isBusy())    { continue; }
-			else                  { det->stopAcquisition(); break; }
+			else                  { this->tryStopAcquire(); break; }
 		}
 		
 		/*
@@ -795,7 +825,7 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 			this->setIntegerParam(ADStatus, ADStatusAborting);
 			this->callParamCallbacks();
 			
-			det->stopAcquisition();
+			this->tryStopAcquire();
 			if (adStatus == ADStatusWaiting)    { this->stopAcquireEvent->trigger(); }
 		}
 	}
