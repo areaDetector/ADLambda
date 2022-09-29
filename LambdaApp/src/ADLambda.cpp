@@ -310,7 +310,7 @@ void ADLambda::readParameters()
 	
 	for (size_t index = 0; index < IDS.size(); index += 1)
 	{
-		std::shared_ptr<xsp::Receiver> rec = sys->receiver(IDS[index]);
+		std::shared_ptr<xsp::lambda::Receiver> rec = std::dynamic_pointer_cast<xsp::lambda::Receiver>(sys->receiver(IDS[index]));
 		
 		xsp::Position pos = rec->position();
 		
@@ -624,7 +624,7 @@ void ADLambda::exportThread()
  */
 void ADLambda::acquireThread(int receiver)
 {
-	std::shared_ptr<xsp::Receiver> rec = this->recs[receiver];
+	std::shared_ptr<xsp::lambda::Receiver> rec = this->recs[receiver];
 
 	int width, height, toRead, datatype, dual_mode, depth;
 	double exposure;
