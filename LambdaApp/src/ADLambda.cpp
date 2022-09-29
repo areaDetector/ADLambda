@@ -423,6 +423,8 @@ void ADLambda::sendParameters()
 	// Set Thresholds
 	std::vector<double> thresholds = det->thresholds();
 	
+	thresholds.reserve(2);
+	
 	if (std::abs(thresholds[0] - low_energy) >= 0.00001 || 
 	   (dual && (std::abs(thresholds[1] - high_energy) >= 0.00001)))
 	{	
@@ -724,8 +726,8 @@ void ADLambda::acquireThread(int receiver)
 			}
 		}
 		
-		rec->release(acquired[0]->nr());
-		if (dual_mode)    { rec->release(acquired[1]->nr()); }
+		rec->release(acquired[0]);
+		if (dual_mode)    { rec->release(acquired[1]); }
 
 		
 		this->lock();
