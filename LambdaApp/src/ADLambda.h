@@ -88,7 +88,7 @@ private:
 	std::unique_ptr<xsp::System> sys;
 	std::shared_ptr<xsp::lambda::Detector> det;
 	
-	std::vector<std::shared_ptr<xsp::Receiver> > recs;
+	std::vector<std::shared_ptr<xsp::lambda::Receiver> > recs;
 	
 	std::map<int, NDArray*> frames;
 	std::deque<NDArray*> export_queue;
