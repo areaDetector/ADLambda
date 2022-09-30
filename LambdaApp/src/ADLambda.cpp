@@ -225,7 +225,11 @@ void ADLambda::tryConnect()
 				}
 			});
 
-			
+            for (int index = 1; index <= det->numberOfModules(); index += 1) {
+                printf("Waiting for HV to settle on module %d...\n", index);
+                while (!det->voltageSettled(index)) epicsThreadSleep(SHORT_TIME);
+            }
+
 			this->connected = true;
 			
 		}
@@ -313,7 +317,10 @@ void ADLambda::readParameters()
 	for (size_t index = 0; index < IDS.size(); index += 1)
 	{
 		std::shared_ptr<xsp::lambda::Receiver> rec = std::dynamic_pointer_cast<xsp::lambda::Receiver>(sys->receiver(IDS[index]));
-		
+
+        printf("Waiting for RAM allocation for receiver %ld\n", index);
+        while (!rec->ramAllocated()) epicsThreadSleep(SHORT_TIME);
+
 		xsp::Position pos = rec->position();
 		
 		full_width  = std::max(full_width,  (int)(rec->frameWidth() + pos.x));
@@ -428,13 +435,16 @@ void ADLambda::sendParameters()
 	thresholds.reserve(2);
 	
 	if (std::abs(thresholds[0] - low_energy) >= 0.00001 || 
-	   (dual && (std::abs(thresholds[1] - high_energy) >= 0.00001)))
-	{	
-		thresholds[0] = low_energy;
-		if (dual)    { thresholds[1] = high_energy; }
-		
-		det->setThresholds(thresholds);
-	}
+        ((dual || charge) && (std::abs(thresholds[1] - high_energy) >= 0.00001)))
+    {
+        if (dual || charge) {
+            printf("Setting thresholds: %f keV, %f keV\n", low_energy, high_energy);
+            det->setThresholds(std::vector<double>{low_energy, high_energy});
+        } else {
+                printf("Setting threshold: %f keV\n", low_energy);
+                det->setThresholds(std::vector<double>{low_energy});
+        }
+    }
 		
 	if (det->frameCount() != frames)    { det->setFrameCount(frames); }
 	
