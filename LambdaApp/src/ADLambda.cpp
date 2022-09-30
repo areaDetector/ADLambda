@@ -312,7 +312,7 @@ void ADLambda::readParameters()
 	
 	for (size_t index = 0; index < IDS.size(); index += 1)
 	{
-		std::shared_ptr<xsp::Receiver> rec = sys->receiver(IDS[index]);
+		std::shared_ptr<xsp::lambda::Receiver> rec = std::dynamic_pointer_cast<xsp::lambda::Receiver>(sys->receiver(IDS[index]));
 		
 		xsp::Position pos = rec->position();
 		
@@ -424,6 +424,8 @@ void ADLambda::sendParameters()
 	
 	// Set Thresholds
 	std::vector<double> thresholds = det->thresholds();
+	
+	thresholds.reserve(2);
 	
 	if (std::abs(thresholds[0] - low_energy) >= 0.00001 || 
 	   (dual && (std::abs(thresholds[1] - high_energy) >= 0.00001)))
@@ -626,7 +628,7 @@ void ADLambda::exportThread()
  */
 void ADLambda::acquireThread(int receiver)
 {
-	std::shared_ptr<xsp::Receiver> rec = this->recs[receiver];
+	std::shared_ptr<xsp::lambda::Receiver> rec = this->recs[receiver];
 
 	int width, height, toRead, datatype, dual_mode, depth;
 	double exposure;
@@ -726,8 +728,8 @@ void ADLambda::acquireThread(int receiver)
 			}
 		}
 		
-		rec->release(acquired[0]->nr());
-		if (dual_mode)    { rec->release(acquired[1]->nr()); }
+		rec->release(acquired[0]);
+		if (dual_mode)    { rec->release(acquired[1]); }
 
 		
 		this->lock();
