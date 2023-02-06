@@ -128,6 +128,7 @@ configFileName(configPath)
 	 * **************
 	 */
 	
+	createParam( LAMBDA_DecoderDetectedString,   asynParamInt32,   &LAMBDA_DecoderDetected);
 	createParam( LAMBDA_DecodedQueueDepthString, asynParamInt32,   &LAMBDA_DecodedQueueDepth);
 	createParam( LAMBDA_OperatingModeString,     asynParamInt32,   &LAMBDA_OperatingMode);
 	createParam( LAMBDA_DualModeString,          asynParamInt32,   &LAMBDA_DualMode);
@@ -139,7 +140,7 @@ configFileName(configPath)
 	createParam( LAMBDA_StitchWidthString,       asynParamInt32,   &LAMBDA_StitchedWidth);
 	createParam( LAMBDA_StitchHeightString,      asynParamInt32,   &LAMBDA_StitchedHeight);
 	
-	
+	setIntegerParam(LAMBDA_DecoderDetected, 0);
 	setIntegerParam(LAMBDA_DecodedQueueDepth, 0);
 	setIntegerParam(LAMBDA_OperatingMode, 0);
 	setIntegerParam(LAMBDA_DualMode, 0);
@@ -181,11 +182,14 @@ void ADLambda::tryConnect()
 			if (this->sys == nullptr) { throw xsp::RuntimeError("Couldn't open config file", xsp::StatusCode::BAD_RESOURCE_UNAVAILABLE); }
 
 			this->sys->connect();
-			
 			this->sys->initialize();
-				
+			
+			/**
+			 * Set up Detector
+			 */
+			
 			this->det = std::dynamic_pointer_cast<xsp::lambda::Detector>(sys->detector("lambda"));
-	
+
 			this->det->setEventHandler([&](auto t, const void* d) {
 				switch (t) 
 				{
@@ -196,9 +200,7 @@ void ADLambda::tryConnect()
 						break;
 						
 					case xsp::EventType::STOP:
-					{
 						break;
-					}
 				}
 				
 				this->callParamCallbacks();
@@ -225,7 +227,35 @@ void ADLambda::tryConnect()
 				}
 			});
 
-            for (int index = 1; index <= det->numberOfModules(); index += 1) {
+
+			/*
+			 * Set up reception of images
+			 *
+			 * Check to see if there is a stitching decoder enabled, 
+			 * otherwise connect to modules individually
+			 */
+
+			if (sys->postDecoderIds().size() >= 1)
+			{
+				this->setIntegerParam(LAMBDA_DecoderDetected, 1);
+				this->hasDecoder = true;
+				this->inputs.push_back(sys->postDecoder("lambda"));
+			}
+			else
+			{
+				for (auto ID : sys->receiverIds())
+				{
+					auto rec = std::dynamic_pointer_cast<xsp::lambda::Receiver>(sys->receiver(ID));
+
+					printf("Waiting for RAM allocation for receiver %s\n", ID.c_str());
+					while (!rec->ramAllocated()) { epicsThreadSleep(SHORT_TIME); }
+				
+					inputs.push_back(rec);
+				}
+			}
+
+            for (int index = 1; index <= det->numberOfModules(); index += 1) 
+            {
                 printf("Waiting for HV to settle on module %d...\n", index);
                 while (!det->voltageSettled(index)) epicsThreadSleep(SHORT_TIME);
             }
@@ -309,28 +339,26 @@ void ADLambda::decrementValue(int param)
 
 void ADLambda::readParameters()
 {
-	std::vector<std::string> IDS = sys->receiverIds();
-	
-	// Calculate the size of the full stitched image
 	int full_width = 0, full_height = 0;
-	
-	for (size_t index = 0; index < IDS.size(); index += 1)
-	{
-		std::shared_ptr<xsp::lambda::Receiver> rec = std::dynamic_pointer_cast<xsp::lambda::Receiver>(sys->receiver(IDS[index]));
 
-        printf("Waiting for RAM allocation for receiver %ld\n", index);
-        while (!rec->ramAllocated()) epicsThreadSleep(SHORT_TIME);
-
-		xsp::Position pos = rec->position();
-		
-		full_width  = std::max(full_width,  (int)(rec->frameWidth() + pos.x));
-		full_height = std::max(full_height, (int)(rec->frameHeight() + pos.y));
-		
-		recs.push_back(rec);
+	for (auto inp : this->inputs)
+	{	
+		if (this->hasDecoder)
+		{
+			full_height = std::get<1>(inp)->frameHeight();
+			full_width  = std::get<1>(inp)->frameWidth();
+		}
+		else
+		{
+			auto temp = std::get<0>(inp);
+			full_width  = std::max(full_width,  (int)(temp->frameWidth() + temp->position().x));
+			full_height = std::max(full_height, (int)(temp->frameHeight() + temp->position().y));
+		}
 	}
 	
 	setIntegerParam(LAMBDA_StitchedHeight, full_height);
 	setIntegerParam(LAMBDA_StitchedWidth, full_width);
+	
 	this->setSizes();
 	
 	xsp::lambda::OperationMode mode = this->det->operationMode();
@@ -559,17 +587,17 @@ void ADLambda::waitAcquireThread()
 		this->callParamCallbacks();
 		
 		// Spawn acquisition threads
-		for (size_t rec_index = 0; rec_index < this->recs.size(); rec_index += 1)
+		for (size_t inp_index = 0; inp_index < this->inputs.size(); inp_index += 1)
 		{
-			this->setIntegerParam(rec_index, ADNumImagesCounter, 0);
-			this->setIntegerParam(rec_index, LAMBDA_BadFrameCounter, 0);
-			this->callParamCallbacks(rec_index);
+			this->setIntegerParam(inp_index, ADNumImagesCounter, 0);
+			this->setIntegerParam(inp_index, LAMBDA_BadFrameCounter, 0);
+			this->callParamCallbacks(inp_index);
 			
-			this->spawnAcquireThread(rec_index);
+			this->spawnAcquireThread(inp_index);
 		}
 		
 		// Wait for all threads to finish acquiring
-		for (size_t index = 0; index < this->recs.size(); index += 1)
+		for (size_t index = 0; index < this->inputs.size(); index += 1)
 		{
 			this->unlock();
 				this->threadFinishEvents[index]->wait();
@@ -630,15 +658,15 @@ void ADLambda::exportThread()
 		this->unlock();
 	}
 }
-		
+
 
 /**
  * Thread spawned per detector module, acquires frames from indexed receiver and
  * copies the data to the correct spot in the stitched image.
  */
-void ADLambda::acquireThread(int receiver)
+void ADLambda::acquireThread(int index)
 {
-	std::shared_ptr<xsp::lambda::Receiver> rec = this->recs[receiver];
+	lambda_input input = this->inputs[index];
 
 	int width, height, toRead, datatype, dual_mode, depth;
 	double exposure;
@@ -658,12 +686,17 @@ void ADLambda::acquireThread(int receiver)
 	this->unlock();
 	
 	size_t imagedims_output[2] = { (size_t) width, (size_t) height};
-	const int frame_width = rec->frameWidth();
-	const int frame_height = rec->frameHeight();
+	const int frame_width = std::visit([](auto&& arg) -> const int { return arg->frameWidth(); }, input);
+	const int frame_height = std::visit([](auto&& arg) -> const int { return arg->frameHeight(); }, input);
+	int x_shift = 0;
+	int y_shift = 0;
 	
-	xsp::Position modulepos = rec->position();
-	const int x_shift = (int) modulepos.x;
-	const int y_shift = (int) modulepos.y;
+	if (! this->hasDecoder)
+	{
+		xsp::Position modulepos = std::get<0>(input)->position();
+		x_shift = (int) modulepos.x;
+		y_shift = (int) modulepos.y;
+	}
 	
 	xsp::Frame* acquired[2] = { NULL, NULL };
 	
@@ -674,7 +707,7 @@ void ADLambda::acquireThread(int receiver)
 	
 	while (numAcquired < toRead)
 	{
-		acquired[dual] = (xsp::Frame*) rec->frame(1500);
+		acquired[dual] = std::visit([](auto&& arg) -> xsp::Frame* { return (xsp::Frame*) arg->frame(1500); }, input);
 		
 		// Empty frame plus the detector saying it's not busy means something's gone wrong.
 		if (acquired[dual] == nullptr || acquired[dual]->data() == NULL)
@@ -738,8 +771,8 @@ void ADLambda::acquireThread(int receiver)
 			}
 		}
 		
-		rec->release(acquired[0]);
-		if (dual_mode)    { rec->release(acquired[1]); }
+		std::visit([&acquired](auto&& arg){ arg->release(acquired[0]); }, input);
+		if (dual_mode)    { std::visit([&acquired](auto&& arg){ arg->release(acquired[1]); }, input); }
 
 		
 		this->lock();
@@ -753,7 +786,7 @@ void ADLambda::acquireThread(int receiver)
 			else if (bad_frame > 0)    { id = -1 * std::abs(id) - 1; }
 			else                       { id += 1; }
 		
-			if   (std::abs(id) < this->recs.size())    { output->uniqueId = id; }
+			if   (std::abs(id) < this->inputs.size())    { output->uniqueId = id; }
 			else 
 			{
 				output->uniqueId = frame_no;
@@ -770,14 +803,14 @@ void ADLambda::acquireThread(int receiver)
 			}
 		
 		
-			int numBuffered = rec->framesQueued();
-			this->setIntegerParam(receiver, LAMBDA_DecodedQueueDepth, numBuffered);
-			callParamCallbacks(receiver);
+			int numBuffered = std::visit([](auto&& arg) -> int { return arg->framesQueued(); }, input);
+			this->setIntegerParam(index, LAMBDA_DecodedQueueDepth, numBuffered);
+			callParamCallbacks(index);
 		
 		this->unlock();
 	}
 	
-	this->threadFinishEvents[receiver]->trigger();
+	this->threadFinishEvents[index]->trigger();
 }
 
 /**

@@ -223,3 +223,14 @@ record(ai, "$(P)$(R)BadFrameCounter_RBV")
 	field(SCAN, "I/O Intr")
 	field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_BAD_FRAME_COUNTER")
 }
+
+record(mbbi, "$(P)$(R)DecoderDetected")
+{
+	field(DTYP, "asynInt32")
+	field(SCAN, "I/O Intr")
+	field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DECODER_DETECTED")
+	field(ZRST, "No Decoder")
+    field(ZRVL, "0")
+    field(ONST, "Using Decoder")
+    field(ONVL, "1")
+}
