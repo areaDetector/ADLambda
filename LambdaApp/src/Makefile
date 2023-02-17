@@ -3,6 +3,8 @@ include $(TOP)/configure/CONFIG
 #----------------------------------------
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 
+USR_CXXFLAGS += -std=c++17
+
 GIT_EXISTS := $(shell git rev-parse --is-inside-work-tree 2>/dev/null)
 ifeq ($(GIT_EXISTS), true)
 USR_CPPFLAGS += -DGIT_VERSION="\"$(shell git describe --always --tags)\""

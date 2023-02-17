@@ -14,6 +14,7 @@
 #include <string>
 #include <map>
 #include <deque>
+#include <variant>
 
 
 #include <epicsString.h>
@@ -31,6 +32,8 @@ static const double ONE_BILLION = 1.E9;
 
 static const double SHORT_TIME = 0.000025;
 
+typedef std::variant<std::shared_ptr<xsp::lambda::Receiver>, std::shared_ptr<xsp::PostDecoder> > lambda_input;
+
 /**
  * Class to wrap Lambda detector library provided by X-Spectrum
  */
@@ -39,7 +42,7 @@ class epicsShareClass ADLambda: public ADDriver
 public:
 	static const char *driverName;
 
-	ADLambda(const char *portName, const char *configPath, int numModules);
+	ADLambda(const char *portName, const char *configPath, int numModules, int fake);
 	~ADLambda();
 
 	virtual asynStatus disconnect();
@@ -48,6 +51,7 @@ public:
 	void waitAcquireThread();
 	void tryConnect();
 	void acquireThread(int receiver);
+	void acquireDecoderThread();
 	void exportThread();
 
 	void report(FILE *fp, int details);
@@ -57,6 +61,7 @@ public:
 protected:
     int LAMBDA_ConfigFilePath;
     #define LAMBDA_FIRST_PARAM LAMBDA_ConfigFilePath
+    int LAMBDA_DecoderDetected;
     int LAMBDA_EnergyThreshold;
     int LAMBDA_DualThreshold;
     int LAMBDA_DecodedQueueDepth;
@@ -72,6 +77,7 @@ protected:
 
 private:
 	bool connected = false;
+	bool hasDecoder = false;
 
    	void setSizes();
    	void incrementValue(int param);
@@ -82,13 +88,16 @@ private:
 
 	bool tryStartAcquire();
 	bool tryStopAcquire();
+	
+	int fake;
 
 	void spawnAcquireThread(int receiver);
+	void spawnAcquireDecoderThread();
 
 	std::unique_ptr<xsp::System> sys;
 	std::shared_ptr<xsp::lambda::Detector> det;
 	
-	std::vector<std::shared_ptr<xsp::lambda::Receiver> > recs;
+	std::vector< lambda_input > inputs;
 	
 	std::map<int, NDArray*> frames;
 	std::deque<NDArray*> export_queue;
@@ -112,6 +121,7 @@ typedef struct
 
 
 #define LAMBDA_ConfigFilePathString         "LAMBDA_CONFIG_FILE_PATH"
+#define LAMBDA_DecoderDetectedString        "LAMBDA_DECODER_DETECTED"
 #define LAMBDA_EnergyThresholdString        "LAMBDA_ENERGY_THRESHOLD"
 #define LAMBDA_DualThresholdString          "LAMBDA_DUAL_THRESHOLD"
 #define LAMBDA_DecodedQueueDepthString      "LAMBDA_DECODED_QUEUE_DEPTH"

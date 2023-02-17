@@ -56,9 +56,9 @@ extern "C"
 	 * \param[in] configPath path to the config files.
 	 * \param[in] numModules Number of image module in the camera
 	 */
-	void LambdaConfig(const char *portName, const char* configPath, int numModules) 
+	void LambdaConfig(const char *portName, const char* configPath, int numModules, int fake) 
 	{
-		new ADLambda(portName, configPath, numModules);
+		new ADLambda(portName, configPath, numModules, fake);
 	}
 
 }
@@ -72,7 +72,7 @@ const char *ADLambda::driverName = "Lambda";
  * \param[in] numModules The number of individual camera modules the system contains
  *
  */
-ADLambda::ADLambda(const char *portName, const char *configPath, int numModules) :
+ADLambda::ADLambda(const char *portName, const char *configPath, int numModules, int fake) :
 	ADDriver(portName, 
 	         numModules,
 			 0,
@@ -89,6 +89,7 @@ configFileName(configPath)
 	this->startAcquireEvent = new epicsEvent();
 	this->stopAcquireEvent = new epicsEvent();
 	this->dequeLock = new epicsMutex();
+	this->fake = fake;
 
 	this->threadFinishEvents = (epicsEvent**) calloc(numModules, sizeof(epicsEvent*));
 	
@@ -647,6 +648,7 @@ void ADLambda::exportThread()
 		NDArrayInfo info;
 		this->pImage->getInfo(&info);
 		
+		
 		this->lock();
 			incrementValue(NDArrayCounter);
 			this->setIntegerParam(NDArraySize, info.totalBytes);
@@ -654,6 +656,7 @@ void ADLambda::exportThread()
 			int arrayCallbacks;
 			getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
 		
+			this->callParamCallbacks();
 			if (arrayCallbacks)    { doCallbacksGenericPointer(this->pImage, NDArrayData, 0); }
 		this->unlock();
 	}
@@ -686,7 +689,7 @@ void ADLambda::acquireThread(int index)
 	this->unlock();
 	
 	size_t imagedims_output[2] = { (size_t) width, (size_t) height};
-	const int frame_width = std::visit([](auto&& arg) -> const int { return arg->frameWidth(); }, input);
+	const int frame_width  = std::visit([](auto&& arg) -> const int { return arg->frameWidth();  }, input);
 	const int frame_height = std::visit([](auto&& arg) -> const int { return arg->frameHeight(); }, input);
 	int x_shift = 0;
 	int y_shift = 0;
@@ -725,12 +728,27 @@ void ADLambda::acquireThread(int index)
 	
 		const int frame_no = acquired[0]->nr();
 		
+		NDArray* output;
+		
 		this->lock();
+			epicsTimeStamp currentTime = epicsTime::getCurrent();
+		
 			// If there's not an NDArray stored for this frame_no, create one
-			if (this->frames.find(frame_no) == this->frames.end())
+			if (this->hasDecoder)
 			{
-				epicsTimeStamp currentTime = epicsTime::getCurrent();
+				output = pNDArrayPool->alloc(2, imagedims_output, (NDDataType_t) datatype, 0, NULL);
+				output->uniqueId = frame_no;
+				output->getInfo(&info);
 				
+				output->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
+				updateTimeStamp(&(output->epicsTS));
+			
+				memset((char*) output->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
+				
+				incrementValue(ADNumImagesCounter);
+			}
+			else if (this->frames.find(frame_no) == this->frames.end())
+			{
 				NDArray* new_frame = pNDArrayPool->alloc(2, imagedims_output, (NDDataType_t) datatype, 0, NULL);
 				new_frame->uniqueId = 0;
 				new_frame->getInfo(&info);
@@ -740,11 +758,13 @@ void ADLambda::acquireThread(int index)
 				memset((char*) new_frame->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
 
 				this->frames[frame_no] = new_frame;
-				
+				output = new_frame;
 				incrementValue(ADNumImagesCounter);
 			}
-			
-			NDArray* output = this->frames[frame_no];
+			else
+			{
+				output = this->frames[frame_no];
+			}
 		this->unlock();
 		
 		output->getInfo(&info);
@@ -756,17 +776,30 @@ void ADLambda::acquireThread(int index)
 		// Stitch frame into its correct spot in the NDArray
 		if (bad_frame == (int) xsp::FrameStatusCode::FRAME_OK)
 		{
-			for (int which = 0; which <= dual_mode; which += 1)
+			if (! this->fake)
 			{
-				char* in_data = (char*) acquired[which]->data();
-				char* out_data = (char*) output->pData;
-
-				for (int row = 0; row < frame_height; row += 1)
+				for (int which = 0; which <= dual_mode; which += 1)
 				{
-					int in_offset = row * frame_width * info.bytesPerElement;
-					int out_offset = ((y_shift + row + (frame_height * which)) * width + x_shift) * info.bytesPerElement;
-				
-					std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
+					char* in_data = (char*) acquired[which]->data();
+					char* out_data = (char*) output->pData;
+
+					if (this->hasDecoder)
+					{
+						int in_offset = 0;
+						int out_offset = frame_height * which * width * info.bytesPerElement;
+					
+						std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_height * frame_width * info.bytesPerElement);
+					}
+					else
+					{
+						for (int row = 0; row < frame_height; row += 1)
+						{
+							int in_offset = row * frame_width * info.bytesPerElement;
+							int out_offset = ((y_shift + row + (frame_height * which)) * width + x_shift) * info.bytesPerElement;
+						
+							std::memcpy(&out_data[out_offset], &in_data[in_offset], frame_width * info.bytesPerElement);
+						}
+					}
 				}
 			}
 		}
@@ -776,36 +809,55 @@ void ADLambda::acquireThread(int index)
 
 		
 		this->lock();
-			int id = output->uniqueId;
-			
-			/*
-			 * Negative value means that one of the threads reported a bad frame,
-			 * magnitude is the number of threads that have reported frames.
-			 */
-			if (id < 0)                { id -= 1; }
-			else if (bad_frame > 0)    { id = -1 * std::abs(id) - 1; }
-			else                       { id += 1; }
-		
-			if   (std::abs(id) < this->inputs.size())    { output->uniqueId = id; }
-			else 
+			if (! this->hasDecoder)
 			{
-				output->uniqueId = frame_no;
-				
-				if (id < 0)    { incrementValue(LAMBDA_BadFrameCounter); }	
-				else
+				if (bad_frame)
 				{ 
+					incrementValue(LAMBDA_BadFrameCounter); 
+					output->release();
+				}
+				else
+				{
 					dequeLock->lock();
 						this->export_queue.push_back(output); 
 					dequeLock->unlock();
 				}
-				
-				this->frames.erase(frame_no);
 			}
-		
+			else
+			{
+				int id = output->uniqueId;
+					
+				/*
+				 * Negative value means that one of the threads reported a bad frame,
+				 * magnitude is the number of threads that have reported frames.
+				 */
+				if (id < 0)                { id -= 1; }
+				else if (bad_frame > 0)    { id = -1 * std::abs(id) - 1; }
+				else                       { id += 1; }
+			
+				if   (std::abs(id) < this->inputs.size())    { output->uniqueId = id; }
+				else 
+				{
+					output->uniqueId = frame_no;
+					
+					if (id < 0)    
+					{ 
+						incrementValue(LAMBDA_BadFrameCounter); 
+						output->release();
+					}	
+					else
+					{ 
+						dequeLock->lock();
+							this->export_queue.push_back(output); 
+						dequeLock->unlock();
+					}
+					
+					this->frames.erase(frame_no);
+				}
+			}
 		
 			int numBuffered = std::visit([](auto&& arg) -> int { return arg->framesQueued(); }, input);
 			this->setIntegerParam(index, LAMBDA_DecodedQueueDepth, numBuffered);
-			callParamCallbacks(index);
 		
 		this->unlock();
 	}
@@ -896,12 +948,13 @@ asynStatus ADLambda::writeInt32(asynUser *pasynUser, epicsInt32 value)
 static const iocshArg LambdaConfigArg0 = { "Port name", iocshArgString };
 static const iocshArg LambdaConfigArg1 = { "Config file path", iocshArgString };
 static const iocshArg LambdaConfigArg2 = { "numModules", iocshArgInt };
-static const iocshArg * const LambdaConfigArgs[] = { &LambdaConfigArg0, &LambdaConfigArg1, &LambdaConfigArg2};
+static const iocshArg LambdaConfigArg3 = { "fake", iocshArgInt };
+static const iocshArg * const LambdaConfigArgs[] = { &LambdaConfigArg0, &LambdaConfigArg1, &LambdaConfigArg2, &LambdaConfigArg3};
 
 static void configLambdaCallFunc(const iocshArgBuf *args) {
-	LambdaConfig(args[0].sval, args[1].sval, args[2].ival);
+	LambdaConfig(args[0].sval, args[1].sval, args[2].ival, args[3].ival);
 }
-static const iocshFuncDef configLambda = { "LambdaConfig", 3, LambdaConfigArgs };
+static const iocshFuncDef configLambda = { "LambdaConfig", 4, LambdaConfigArgs };
 
 static void LambdaRegister(void) 
 {
