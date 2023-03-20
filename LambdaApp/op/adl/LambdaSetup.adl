@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8/support/areaDetector-R3-1/ADLambda/LambdaApp/op/adl/LambdaSetup.adl"
+	name="/home/beams1/KLANG/Documents/Projects/Repository/git/ADLambda/LambdaApp/op/adl/LambdaSetup.adl"
 	version=030111
 }
 display {
 	object {
-		x=389
-		y=255
+		x=1277
+		y=208
 		width=350
-		height=365
+		height=372
 	}
 	clr=14
 	bclr=4
@@ -126,7 +126,7 @@ text {
 text {
 	object {
 		x=68
-		y=340
+		y=325
 		width=90
 		height=20
 	}
@@ -139,7 +139,7 @@ text {
 "related display" {
 	object {
 		x=167
-		y=340
+		y=325
 		width=70
 		height=20
 	}
@@ -358,7 +358,7 @@ text {
 composite {
 	object {
 		x=58
-		y=311
+		y=296
 		width=273
 		height=20
 	}
@@ -367,7 +367,7 @@ composite {
 		text {
 			object {
 				x=58
-				y=311
+				y=296
 				width=100
 				height=20
 			}
@@ -380,7 +380,7 @@ composite {
 		"message button" {
 			object {
 				x=166
-				y=311
+				y=296
 				width=80
 				height=20
 			}
@@ -395,7 +395,7 @@ composite {
 		"message button" {
 			object {
 				x=251
-				y=311
+				y=296
 				width=80
 				height=20
 			}
@@ -412,7 +412,7 @@ composite {
 composite {
 	object {
 		x=182
-		y=284
+		y=266
 		width=120
 		height=20
 	}
@@ -421,7 +421,7 @@ composite {
 		text {
 			object {
 				x=197
-				y=284
+				y=266
 				width=90
 				height=20
 			}
@@ -439,7 +439,7 @@ composite {
 		text {
 			object {
 				x=182
-				y=284
+				y=266
 				width=120
 				height=20
 			}
@@ -452,46 +452,6 @@ composite {
 			}
 			textix="Disconnected"
 			align="horiz. centered"
-		}
-	}
-}
-composite {
-	object {
-		x=30
-		y=259
-		width=310
-		height=20
-	}
-	"composite name"=""
-	children {
-		text {
-			object {
-				x=30
-				y=259
-				width=140
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="ADCore version"
-			align="horiz. right"
-		}
-		"text update" {
-			object {
-				x=175
-				y=260
-				width=165
-				height=18
-			}
-			monitor {
-				chan="$(P)$(R)ADCoreVersion_RBV"
-				clr=54
-				bclr=4
-			}
-			format="string"
-			limits {
-			}
 		}
 	}
 }
@@ -514,13 +474,53 @@ composite {
 			"basic attribute" {
 				clr=14
 			}
-			textix="Driver version"
+			textix="ADCore version"
 			align="horiz. right"
 		}
 		"text update" {
 			object {
 				x=175
 				y=235
+				width=165
+				height=18
+			}
+			monitor {
+				chan="$(P)$(R)ADCoreVersion_RBV"
+				clr=54
+				bclr=4
+			}
+			format="string"
+			limits {
+			}
+		}
+	}
+}
+composite {
+	object {
+		x=30
+		y=209
+		width=310
+		height=20
+	}
+	"composite name"=""
+	children {
+		text {
+			object {
+				x=30
+				y=209
+				width=140
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Driver version"
+			align="horiz. right"
+		}
+		"text update" {
+			object {
+				x=175
+				y=210
 				width=165
 				height=18
 			}
@@ -534,33 +534,4 @@ composite {
 			}
 		}
 	}
-}
-"text update" {
-	object {
-		x=175
-		y=210
-		width=165
-		height=18
-	}
-	monitor {
-		chan="$(P)$(R)DetCoreVersion"
-		clr=54
-		bclr=4
-	}
-	format="string"
-	limits {
-	}
-}
-text {
-	object {
-		x=60
-		y=210
-		width=110
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="FSDetCore version"
-	align="horiz. right"
 }
