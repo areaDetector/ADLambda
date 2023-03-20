@@ -1,26 +1,14 @@
 
 file {
-<<<<<<< HEAD
-	name="/home/epics/devel/areaDetector-3-1/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
-	version=030109
+	name="/home/beams1/KLANG/Documents/Projects/Repository/git/ADLambda/LambdaApp/op/adl/LambdaBase.adl"
+	version=030111
 }
 display {
 	object {
-		x=67
-		y=67
+		x=1043
+		y=130
 		width=715
-		height=720
-=======
-	name="../../../../LambdaApp/op/adl/LambdaBase.adl"
-	version=030112
-}
-display {
-	object {
-		x=102
-		y=106
-		width=717
-		height=729
->>>>>>> 6190c26 (Change sizes/locations to accommodate changes to some of the pieces.)
+		height=765
 	}
 	clr=14
 	bclr=4
@@ -125,132 +113,332 @@ text {
 }
 composite {
 	object {
-		x=5
+		x=0
 		y=41
 		width=350
-		height=340
+		height=365
 	}
 	"composite name"=""
-	"composite file"="ADSetup.adl"
+	"composite file"="LambdaSetup.adl"
 }
 composite {
 	object {
 		x=360
-		y=126
+		y=41
 		width=350
-		height=430
+		height=405
 	}
 	"composite name"=""
 	"composite file"="LambdaCollect.adl"
 }
 composite {
 	object {
-<<<<<<< HEAD
-		x=5
-		y=386
-=======
 		x=1
-		y=387
->>>>>>> 6190c26 (Change sizes/locations to accommodate changes to some of the pieces.)
+		y=415
 		width=350
-		height=250
+		height=255
 	}
 	"composite name"=""
 	"composite file"="LambdaReadout.adl"
 }
 composite {
 	object {
-		x=360
-		y=41
-		width=350
+		x=1
+		y=678
+		width=710
 		height=80
 	}
 	"composite name"=""
 	"composite file"="LambdaPlugins.adl"
 }
-text {
-	object {
-		x=6
-		y=645
-		width=110
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Config File Path:"
-}
-"text update" {
-	object {
-		x=184
-		y=647
-		width=519
-		height=10
-	}
-	monitor {
-		chan="$(P)$(R)ConfigFilePath"
-		clr=27
-		bclr=4
-	}
-	format="string"
-	limits {
-	}
-}
-text {
-	object {
-		x=6
-		y=675
-		width=150
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Operating Mode:"
-}
-menu {
-	object {
-<<<<<<< HEAD
-		x=168
-		y=675
-		width=276
-		height=25
-	}
-	control {
-		chan="$(P)$(R)OperatingMode"
-		clr=14
-		bclr=4
-	}
-}
 rectangle {
 	object {
-		x=5
-		y=641
-		width=705
-=======
-		x=0
-		y=645
-		width=710
->>>>>>> 6190c26 (Change sizes/locations to accommodate changes to some of the pieces.)
-		height=73
+		x=360
+		y=455
+		width=350
+		height=215
 	}
 	"basic attribute" {
 		clr=14
 		fill="outline"
 	}
-	"dynamic attribute" {
+}
+rectangle {
+	object {
+		x=475
+		y=457
+		width=117
+		height=21
+	}
+	"basic attribute" {
+		clr=2
+	}
+}
+text {
+	object {
+		x=360
+		y=457
+		width=350
+		height=20
+	}
+	"basic attribute" {
+		clr=54
+	}
+	textix="Config"
+	align="horiz. centered"
+}
+text {
+	object {
+		x=370
+		y=490
+		width=145
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Operating Mode"
+	align="horiz. right"
+}
+text {
+	object {
+		x=370
+		y=520
+		width=145
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Threshold Mode"
+	align="horiz. right"
+}
+text {
+	object {
+		x=370
+		y=550
+		width=145
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Gating Mode"
+	align="horiz. right"
+}
+text {
+	object {
+		x=370
+		y=580
+		width=145
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Charge Summing"
+	align="horiz. right"
+}
+text {
+	object {
+		x=370
+		y=610
+		width=145
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Threshold"
+	align="horiz. right"
+}
+text {
+	object {
+		x=370
+		y=640
+		width=145
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="High Threshold"
+	align="horiz. right"
+}
+menu {
+	object {
+		x=520
+		y=490
+		width=90
+		height=20
+	}
+	control {
 		chan="$(P)$(R)OperatingMode"
+		clr=14
+		bclr=51
 	}
 }
 "text update" {
 	object {
-		x=472
-		y=675
-		width=200
+		x=615
+		y=491
+		width=90
 		height=18
 	}
 	monitor {
 		chan="$(P)$(R)OperatingMode_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
+}
+"choice button" {
+	object {
+		x=520
+		y=520
+		width=90
+		height=20
+	}
+	control {
+		chan="$(P)$(R)DualMode"
+		clr=14
+		bclr=51
+	}
+	stacking="column"
+}
+"choice button" {
+	object {
+		x=520
+		y=550
+		width=90
+		height=20
+	}
+	control {
+		chan="$(P)$(R)GatingMode"
+		clr=14
+		bclr=51
+	}
+	stacking="column"
+}
+"choice button" {
+	object {
+		x=520
+		y=580
+		width=90
+		height=20
+	}
+	control {
+		chan="$(P)$(R)ChargeSumming"
+		clr=14
+		bclr=51
+	}
+	stacking="column"
+}
+"text entry" {
+	object {
+		x=520
+		y=610
+		width=90
+		height=20
+	}
+	control {
+		chan="$(P)$(R)EnergyThreshold"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text entry" {
+	object {
+		x=520
+		y=640
+		width=90
+		height=20
+	}
+	control {
+		chan="$(P)$(R)DualThreshold"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=615
+		y=521
+		width=90
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)DualMode_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=615
+		y=551
+		width=90
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)GatingMode_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=615
+		y=581
+		width=90
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)ChargeSumming_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=615
+		y=611
+		width=90
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)EnergyThreshold_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=615
+		y=641
+		width=90
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)DualThreshold_RBV"
 		clr=54
 		bclr=4
 	}

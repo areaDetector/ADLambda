@@ -109,7 +109,6 @@ private:
 
 	std::string configFileName;
 	NDArray *pImage = NULL;
-
 };
 
 typedef struct
