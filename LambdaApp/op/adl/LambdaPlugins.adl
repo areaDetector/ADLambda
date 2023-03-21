@@ -1,13 +1,13 @@
 
 file {
-	name="/local/epics/synApps_5_8_b3.15.5/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaPlugins.adl"
-	version=030107
+	name="/home/beams1/KLANG/Documents/Projects/Repository/git/ADLambda/LambdaApp/op/adl/LambdaPlugins.adl"
+	version=030111
 }
 display {
 	object {
-		x=141
-		y=292
-		width=350
+		x=1083
+		y=597
+		width=713
 		height=80
 	}
 	clr=14
@@ -102,7 +102,7 @@ rectangle {
 	object {
 		x=0
 		y=0
-		width=350
+		width=710
 		height=80
 	}
 	"basic attribute" {
@@ -112,8 +112,8 @@ rectangle {
 }
 rectangle {
 	object {
-		x=122
-		y=2
+		x=297
+		y=3
 		width=107
 		height=21
 	}
@@ -123,9 +123,9 @@ rectangle {
 }
 text {
 	object {
-		x=94
+		x=3
 		y=3
-		width=163
+		width=700
 		height=20
 	}
 	"basic attribute" {
@@ -134,58 +134,10 @@ text {
 	textix="Plugins"
 	align="horiz. centered"
 }
-text {
-	object {
-		x=90
-		y=29
-		width=40
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="File"
-}
-text {
-	object {
-		x=230
-		y=29
-		width=30
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="ROI"
-}
-text {
-	object {
-		x=80
-		y=55
-		width=50
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Stats"
-}
-text {
-	object {
-		x=210
-		y=55
-		width=50
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Other"
-}
 "related display" {
 	object {
-		x=135
-		y=29
+		x=165
+		y=40
 		width=64
 		height=20
 	}
@@ -230,17 +182,79 @@ text {
 		args="P=$(P), R=PW1:"
 	}
 	display[8] {
-		label="IMM Plugin"
+		label="IMM Plugin 0"
+		name="NDFileIMM.adl"
+		args="P=$(P), R=IMM0:"
+	}
+	display[9] {
+		label="IMM Plugin 1"
 		name="NDFileIMM.adl"
 		args="P=$(P), R=IMM1:"
 	}
+	display[10] {
+		label="IMM Plugin 2"
+		name="NDFileIMM.adl"
+		args="P=$(P), R=IMM2:"
+	}
+	display[11] {
+		label="IMM Plugin 3"
+		name="NDFileIMM.adl"
+		args="P=$(P), R=IMM3:"
+	}
+	display[12] {
+		label="IMM Plugin out"
+		name="NDFileIMM.adl"
+		args="P=$(P), R=IMMout:"
+	}
+	display[13] {
+		label="IMMJoin"
+		name="IMMJoin.adl"
+		args="P=$(P), R=IMMJoin:"
+	}
 	clr=14
 	bclr=51
+	label="-  File"
 }
 "related display" {
 	object {
-		x=135
-		y=55
+		x=265
+		y=40
+		width=64
+		height=20
+	}
+	display[0] {
+		label="ROI #1"
+		name="NDROI.adl"
+		args="P=$(P), R=ROI1:"
+	}
+	display[1] {
+		label="ROI #2"
+		name="NDROI.adl"
+		args="P=$(P), R=ROI2:"
+	}
+	display[2] {
+		label="ROI #3"
+		name="NDROI.adl"
+		args="P=$(P), R=ROI3:"
+	}
+	display[3] {
+		label="ROI #4"
+		name="NDROI.adl"
+		args="P=$(P), R=ROI4:"
+	}
+	display[4] {
+		label="ROI 1-4 combined"
+		name="NDROI4.adl"
+		args="P=$(P), R1=ROI1:,R2=ROI2:, R3=ROI3:,R4=ROI4:"
+	}
+	clr=14
+	bclr=51
+	label="-   ROI"
+}
+"related display" {
+	object {
+		x=365
+		y=40
 		width=64
 		height=20
 	}
@@ -276,47 +290,13 @@ text {
 	}
 	clr=14
 	bclr=51
+	label="-  Stats"
 }
 "related display" {
 	object {
-		x=265
-		y=29
-		width=64
-		height=20
-	}
-	display[0] {
-		label="ROI #1"
-		name="NDROI.adl"
-		args="P=$(P), R=ROI1:"
-	}
-	display[1] {
-		label="ROI #2"
-		name="NDROI.adl"
-		args="P=$(P), R=ROI2:"
-	}
-	display[2] {
-		label="ROI #3"
-		name="NDROI.adl"
-		args="P=$(P), R=ROI3:"
-	}
-	display[3] {
-		label="ROI #4"
-		name="NDROI.adl"
-		args="P=$(P), R=ROI4:"
-	}
-	display[4] {
-		label="ROI 1-4 combined"
-		name="NDROI4.adl"
-		args="P=$(P), R1=ROI1:,R2=ROI2:, R3=ROI3:,R4=ROI4:"
-	}
-	clr=14
-	bclr=51
-}
-"related display" {
-	object {
-		x=265
-		y=55
-		width=64
+		x=465
+		y=40
+		width=80
 		height=20
 	}
 	display[0] {
@@ -380,14 +360,14 @@ text {
 		args="P=$(P), R=FFT1:"
 	}
 	display[12] {
-		label="Scan #1"
-		name="scan_more.adl"
-		args="P=$(P), S=scan1, N=1"
+		label="Scatter #1"
+		name="NDScatter.adl"
+		args="P=$(P), R=Scatter1:"
 	}
 	display[13] {
-		label="Acquire Sequence"
-		name="yySseq.adl"
-		args="P=$(P), S=AcquireSequence"
+		label="Gather #1"
+		name="NDGather8.adl"
+		args="P=$(P), R=Gather1:"
 	}
 	display[14] {
 		label="devIocStats"
@@ -401,11 +381,38 @@ text {
 	}
 	clr=14
 	bclr=51
+	label="- Other #1"
 }
 "related display" {
 	object {
-		x=10
-		y=29
+		x=565
+		y=40
+		width=80
+		height=20
+	}
+	display[0] {
+		label="Scan #1"
+		name="scan_more.adl"
+		args="P=$(P), S=scan1, N=1"
+	}
+	display[1] {
+		label="Acquire Sequence"
+		name="yySeq.adl"
+		args="P=$(P), S=Acquire Sequence"
+	}
+	display[2] {
+		label="devIocStats"
+		name="ioc_stats_soft.adl"
+		args="ioc=$(P)"
+	}
+	clr=14
+	bclr=51
+	label="- Other #2"
+}
+"related display" {
+	object {
+		x=65
+		y=40
 		width=64
 		height=20
 	}

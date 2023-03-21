@@ -1,14 +1,14 @@
 
 file {
-	name="/local/epics/synApps_5_8/support/areaDetector-R2-5/ADLambda/LambdaApp/op/adl/LambdaReadout.adl"
-	version=030107
+	name="/home/beams1/KLANG/Documents/Projects/Repository/git/ADLambda/LambdaApp/op/adl/LambdaReadout.adl"
+	version=030111
 }
 display {
 	object {
-		x=391
-		y=253
+		x=1241
+		y=495
 		width=356
-		height=253
+		height=258
 	}
 	clr=14
 	bclr=4
@@ -103,7 +103,7 @@ rectangle {
 		x=0
 		y=0
 		width=350
-		height=250
+		height=255
 	}
 	"basic attribute" {
 		clr=14
@@ -125,48 +125,48 @@ text {
 }
 text {
 	object {
-		x=168
+		x=145
 		y=30
-		width=10
+		width=60
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
 	textix="X"
-	align="horiz. right"
+	align="horiz. centered"
 }
 text {
 	object {
-		x=261
+		x=240
 		y=30
-		width=10
+		width=60
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
 	textix="Y"
-	align="horiz. right"
+	align="horiz. centered"
 }
 text {
 	object {
-		x=22
+		x=10
 		y=55
-		width=110
+		width=120
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
-	textix="Sensor size"
+	textix="Sensor Size:"
 	align="horiz. right"
 }
 "text update" {
 	object {
-		x=143
+		x=145
 		y=56
-		width=61
+		width=60
 		height=18
 	}
 	monitor {
@@ -180,9 +180,9 @@ text {
 }
 "text update" {
 	object {
-		x=236
+		x=240
 		y=56
-		width=61
+		width=60
 		height=18
 	}
 	monitor {
@@ -196,22 +196,22 @@ text {
 }
 text {
 	object {
-		x=29
+		x=10
 		y=105
-		width=180
+		width=200
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
-	textix="Image size (bytes)"
+	textix="Image Size (bytes):"
 	align="horiz. right"
 }
 "text update" {
 	object {
-		x=236
+		x=240
 		y=106
-		width=61
+		width=60
 		height=18
 	}
 	monitor {
@@ -225,22 +225,22 @@ text {
 }
 text {
 	object {
-		x=32
+		x=10
 		y=80
-		width=100
+		width=120
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
-	textix="Image size"
+	textix="Image Size:"
 	align="horiz. right"
 }
 "text update" {
 	object {
-		x=143
+		x=145
 		y=81
-		width=61
+		width=60
 		height=18
 	}
 	monitor {
@@ -254,9 +254,9 @@ text {
 }
 "text update" {
 	object {
-		x=236
+		x=240
 		y=81
-		width=61
+		width=60
 		height=18
 	}
 	monitor {
@@ -270,113 +270,123 @@ text {
 }
 text {
 	object {
-		x=29
+		x=10
 		y=130
-		width=180
+		width=120
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
-	textix="Decoded Queue Depth"
+	textix="Data Type:"
 	align="horiz. right"
 }
 "text update" {
 	object {
-		x=236
+		x=145
 		y=131
-		width=61
+		width=155
 		height=18
 	}
 	monitor {
-		chan="$(P)$(R)DecodedQueueDepth"
+		chan="$(P)$(R)DataType_RBV"
 		clr=54
 		bclr=4
 	}
 	align="horiz. centered"
+	format="string"
 	limits {
 	}
 }
 text {
 	object {
-		x=29
+		x=14
 		y=155
-		width=180
+		width=200
 		height=20
 	}
 	"basic attribute" {
 		clr=14
 	}
-	textix="Bad Frame Counter"
+	textix="Num Readout Threads:"
 	align="horiz. right"
 }
 "text update" {
 	object {
-		x=236
+		x=240
 		y=156
-		width=61
+		width=60
 		height=18
 	}
 	monitor {
-		chan="$(P)$(R)BadFrameCounter"
+		chan="$(P)$(R)ReadoutThreads"
 		clr=54
 		bclr=4
 	}
 	align="horiz. centered"
+	format="string"
 	limits {
 	}
 }
-composite {
+text {
 	object {
-		x=40
-		y=182
-		width=273
+		x=10
+		y=181
+		width=120
 		height=20
 	}
-	"composite name"=""
-	children {
-		text {
-			object {
-				x=40
-				y=182
-				width=90
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="Data type"
-			align="horiz. right"
-		}
-		menu {
-			object {
-				x=136
-				y=182
-				width=80
-				height=20
-			}
-			control {
-				chan="$(P)$(R)DataType"
-				clr=14
-				bclr=51
-			}
-		}
-		"text update" {
-			object {
-				x=234
-				y=183
-				width=79
-				height=18
-			}
-			monitor {
-				chan="$(P)$(R)DataType_RBV"
-				clr=54
-				bclr=4
-			}
-			align="horiz. centered"
-			format="string"
-			limits {
-			}
-		}
+	"basic attribute" {
+		clr=14
 	}
+	textix="Bad Frames:"
+	align="horiz. right"
+}
+"text entry" {
+	object {
+		x=145
+		y=180
+		width=60
+		height=20
+	}
+	control {
+		chan="$(P)$(R)BadFrameCounter"
+		clr=14
+		bclr=51
+	}
+	format="string"
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=240
+		y=181
+		width=60
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)BadFrameCounter_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	format="string"
+	limits {
+	}
+}
+"related display" {
+	object {
+		x=70
+		y=220
+		width=200
+		height=22
+	}
+	display[0] {
+		label="1"
+		name="LambdaModule.adl"
+		args="P=$(P),R=$(R)"
+	}
+	clr=0
+	bclr=63
+	label="-Module Readout Info"
 }
