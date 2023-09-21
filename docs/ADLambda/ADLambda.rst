@@ -1,5 +1,5 @@
 ADLambda
-==========================
+========
 
 :author:  John Hammonds (Argonne National Laboratory)
 
@@ -72,7 +72,7 @@ the standard driver parameters.
       removed from the options.
 
 Lambda specific parameters
---------------------------------------------------------------------------------
+--------------------------
 
 Parameter Definition in ADLambda.cpp and record definitions in ADLambda.template
 
