@@ -1,0 +1,6 @@
+record(longin, "$(P)$(R)DecodedQueueDepth$(ADDR)")
+{
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))LAMBDA_DECODED_QUEUE_DEPTH")
+   field(SCAN, "I/O Intr")
+}

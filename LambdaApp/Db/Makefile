@@ -11,6 +11,7 @@ include $(TOP)/configure/CONFIG
 # Create and install (or just install) 
 # databases, templates, subtitutions
 DB += ADLambda.template
+DB += LambdaModule.template
 
 #-------------------------------------------
 # If <anyname>.db template is not named <anyname>*.template add
