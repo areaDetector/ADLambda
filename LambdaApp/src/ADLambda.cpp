@@ -731,7 +731,6 @@ void ADLambda::acquireThread(int index)
 		NDArray* output;
 		
 		this->lock();
-			epicsTimeStamp currentTime = epicsTime::getCurrent();
 		
 			// If there's not an NDArray stored for this frame_no, create one
 			if (this->hasDecoder)
@@ -740,8 +739,8 @@ void ADLambda::acquireThread(int index)
 				output->uniqueId = frame_no;
 				output->getInfo(&info);
 				
-				output->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
 				updateTimeStamp(&(output->epicsTS));
+				output->timeStamp = output->epicsTS.secPastEpoch + output->epicsTS.nsec / ONE_BILLION;
 			
 				memset((char*) output->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
 				
@@ -752,8 +751,8 @@ void ADLambda::acquireThread(int index)
 				NDArray* new_frame = pNDArrayPool->alloc(2, imagedims_output, (NDDataType_t) datatype, 0, NULL);
 				new_frame->uniqueId = 0;
 				new_frame->getInfo(&info);
-				new_frame->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
 				updateTimeStamp(&(new_frame->epicsTS));
+				new_frame->timeStamp = new_frame->epicsTS.secPastEpoch + new_frame->epicsTS.nsec / ONE_BILLION;
 			
 				memset((char*) new_frame->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
 
