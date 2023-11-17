@@ -739,8 +739,7 @@ void ADLambda::acquireThread(int index)
 				output->uniqueId = frame_no;
 				output->getInfo(&info);
 				
-				updateTimeStamp(&(output->epicsTS));
-				output->timeStamp = output->epicsTS.secPastEpoch + output->epicsTS.nsec / ONE_BILLION;
+				updateTimeStamps(output);
 			
 				memset((char*) output->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
 				
