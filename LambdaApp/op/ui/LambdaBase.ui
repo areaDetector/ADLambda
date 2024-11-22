@@ -136,48 +136,6 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
      <string>LambdaReadout.adl</string>
     </property>
    </widget>
-   <widget class="caRelatedDisplay" name="carelateddisplay_2">
-    <property name="geometry">
-     <rect>
-      <x>605</x>
-      <y>10</y>
-      <width>100</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="label">
-     <string notr="true">- IOC</string>
-    </property>
-    <property name="foreground">
-     <color>
-      <red>223</red>
-      <green>223</green>
-      <blue>223</blue>
-     </color>
-    </property>
-    <property name="background">
-     <color>
-      <red>53</red>
-      <green>132</green>
-      <blue>0</blue>
-     </color>
-    </property>
-    <property name="labels">
-     <string>1</string>
-    </property>
-    <property name="files">
-     <string>8idLambda.ui</string>
-    </property>
-    <property name="args">
-     <string/>
-    </property>
-    <property name="stackingMode" stdset="0">
-     <enum>caRowColMenu::Menu</enum>
-    </property>
-    <property name="removeParent" stdset="0">
-     <string>false</string>
-    </property>
-   </widget>
    <widget class="caGraphics" name="cagraphics">
     <property name="geometry">
      <rect>
@@ -650,13 +608,13 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
      </color>
     </property>
     <property name="labels">
-     <string>netCDF file #1;TIFF file #1;JPEG file #1;NeXus file #1;Magick file #1;HDF5 file #1;Null file #1;PipeWriterPlugin;Sparse Plugin 0;Sparse Plugin 1;Sparse Plugin 2;Sparse Plugin 3;IMM File</string>
+     <string>netCDF file #1;TIFF file #1;JPEG file #1;NeXus file #1;Magick file #1;HDF5 file #1;Null file #1</string>
     </property>
     <property name="files">
-     <string>NDFileNetCDF.adl;NDFileTIFF.adl;NDFileJPEG.adl;NDFileNexus.adl;NDFileMagick.adl;NDFileHDF5.adl;NDFileNull.adl;NDPluginPipeWriter.adl;NDSparse.adl;NDSparse.adl;NDSparse.adl;NDSparse.adl;NDFileIMM.adl</string>
+     <string>NDFileNetCDF.adl;NDFileTIFF.adl;NDFileJPEG.adl;NDFileNexus.adl;NDFileMagick.adl;NDFileHDF5.adl;NDFileNull.adl</string>
     </property>
     <property name="args">
-     <string>P=$(P), R=netCDF1:, EXT=nc;P=$(P), R=TIFF1:, EXT=tif;P=$(P), R=JPEG1:, EXT=jpg;P=$(P), R=Nexus1:, EXT=h5;P=$(P), R=Magick1:, EXT=tif;P=$(P), R=HDF1:, EXT=h5;P=$(P), R=Null1:, EXT=null;P=$(P), R=PW1:;P=$(P), R=Sparse0:;P=$(P), R=Sparse1:;P=$(P), R=Sparse2:;P=$(P), R=Sparse3:;P=$(P), R=IMM1:, EXT=imm</string>
+     <string>P=$(P), R=netCDF1:, EXT=nc;P=$(P), R=TIFF1:, EXT=tif;P=$(P), R=JPEG1:, EXT=jpg;P=$(P), R=Nexus1:, EXT=h5;P=$(P), R=Magick1:, EXT=tif;P=$(P), R=HDF1:, EXT=h5;P=$(P), R=Null1:, EXT=null</string>
     </property>
     <property name="stackingMode" stdset="0">
      <enum>caRowColMenu::Menu</enum>
@@ -1257,7 +1215,6 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
    <zorder>caInclude_0</zorder>
    <zorder>caInclude_1</zorder>
    <zorder>caInclude_2</zorder>
-   <zorder>carelateddisplay_2</zorder>
    <zorder>cagraphics</zorder>
    <zorder>caLabel_6</zorder>
    <zorder>calabel</zorder>
