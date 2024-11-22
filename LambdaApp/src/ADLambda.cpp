@@ -120,8 +120,8 @@ configFileName(configPath)
 	createParam( LAMBDA_EnergyThresholdString,   asynParamFloat64, &LAMBDA_EnergyThreshold);
 	createParam( LAMBDA_DualThresholdString,     asynParamFloat64, &LAMBDA_DualThreshold);
 	
-	setDoubleParam(LAMBDA_EnergyThreshold, 0.0);
-	setDoubleParam(LAMBDA_DualThreshold, 0.0);
+	setDoubleParam(LAMBDA_EnergyThreshold, 40.0);
+	setDoubleParam(LAMBDA_DualThreshold, 40.0);
 	
 	
 	/* **************
