@@ -6,9 +6,9 @@ dbLoadDatabase("$(TOP)/dbd/LambdaApp.dbd")
 LambdaApp_registerRecordDeviceDriver(pdbbase) 
 
 
-iocshLoad("ADLambda.iocsh", "PREFIX=LAMBDA1:, PORT=LAMBDA1")
+iocshLoad("ADLambda.iocsh", "PREFIX=LAMBDA1:, PORT=LAMBDA1, NUM_MODULES=3")
 
-set_requestfile_path("$(ADLAMBDA)/LambdaApp/Db")
+set_requestfile_path("$(ADLAMBDA)/db")
 
 ##########
 iocInit()

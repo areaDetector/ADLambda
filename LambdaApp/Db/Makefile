@@ -13,6 +13,8 @@ include $(TOP)/configure/CONFIG
 DB += ADLambda.template
 DB += LambdaModule.template
 
+DB += ADLambda_settings.req
+
 #-------------------------------------------
 # If <anyname>.db template is not named <anyname>*.template add
 # <anyname>_TEMPLATE = <templatename>

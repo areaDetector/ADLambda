@@ -120,8 +120,8 @@ configFileName(configPath)
 	createParam( LAMBDA_EnergyThresholdString,   asynParamFloat64, &LAMBDA_EnergyThreshold);
 	createParam( LAMBDA_DualThresholdString,     asynParamFloat64, &LAMBDA_DualThreshold);
 	
-	setDoubleParam(LAMBDA_EnergyThreshold, 0.0);
-	setDoubleParam(LAMBDA_DualThreshold, 0.0);
+	setDoubleParam(LAMBDA_EnergyThreshold, 40.0);
+	setDoubleParam(LAMBDA_DualThreshold, 40.0);
 	
 	
 	/* **************
@@ -730,9 +730,7 @@ void ADLambda::acquireThread(int index)
 		
 		NDArray* output;
 		
-		this->lock();
-			epicsTimeStamp currentTime = epicsTime::getCurrent();
-		
+		this->lock();		
 			// If there's not an NDArray stored for this frame_no, create one
 			if (this->hasDecoder)
 			{
@@ -740,8 +738,7 @@ void ADLambda::acquireThread(int index)
 				output->uniqueId = frame_no;
 				output->getInfo(&info);
 				
-				output->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
-				updateTimeStamp(&(output->epicsTS));
+				updateTimeStamps(output);
 			
 				memset((char*) output->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
 				
@@ -752,8 +749,8 @@ void ADLambda::acquireThread(int index)
 				NDArray* new_frame = pNDArrayPool->alloc(2, imagedims_output, (NDDataType_t) datatype, 0, NULL);
 				new_frame->uniqueId = 0;
 				new_frame->getInfo(&info);
-				new_frame->timeStamp = currentTime.secPastEpoch + currentTime.nsec / ONE_BILLION;
-				updateTimeStamp(&(new_frame->epicsTS));
+				
+				updateTimeStamps(new_frame);
 			
 				memset((char*) new_frame->pData, 0, imagedims_output[0] * imagedims_output[1] * info.bytesPerElement);
 

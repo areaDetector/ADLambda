@@ -338,7 +338,7 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
    <widget class="caLabel" name="caLabel_4">
     <property name="geometry">
      <rect>
-      <x>29</x>
+      <x>30</x>
       <y>105</y>
       <width>180</width>
       <height>20</height>
@@ -572,7 +572,7 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
     <widget class="caLabel" name="caLabel_8">
      <property name="geometry">
       <rect>
-       <x>10</x>
+       <x>105</x>
        <y>-1</y>
        <width>90</width>
        <height>20</height>
@@ -656,32 +656,8 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
       <enum>caLineEdit::string</enum>
      </property>
     </widget>
-    <widget class="caMenu" name="camenu">
-     <property name="geometry">
-      <rect>
-       <x>120</x>
-       <y>0</y>
-       <width>80</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="channel" stdset="0">
-      <string notr="true">$(P)$(R)DataType</string>
-     </property>
-     <property name="colorMode">
-      <enum>caMenu::Static</enum>
-     </property>
-     <property name="background">
-      <color>
-       <red>115</red>
-       <green>223</green>
-       <blue>255</blue>
-      </color>
-     </property>
-    </widget>
     <zorder>caLineEdit_7</zorder>
     <zorder>caLabel_8</zorder>
-    <zorder>camenu</zorder>
    </widget>
    <widget class="caLineEdit" name="caLineEdit_8">
     <property name="geometry">
@@ -970,11 +946,6 @@ QPushButton::menu-indicator {image: url(none.png); width: 0}
   </widget>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>caMenu</class>
-   <extends>QComboBox</extends>
-   <header>caMenu</header>
-  </customwidget>
   <customwidget>
    <class>caRelatedDisplay</class>
    <extends>QWidget</extends>
