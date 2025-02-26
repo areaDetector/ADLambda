@@ -610,7 +610,6 @@ void ADLambda::waitAcquireThread()
 		
 		this->frames.clear();
 
-		this->setIntegerParam(ADAcquire, 0);
 		this->setIntegerParam(ADStatus, ADStatusReadout);
 		this->callParamCallbacks();
 		
@@ -620,7 +619,8 @@ void ADLambda::waitAcquireThread()
 			epicsThreadSleep(SHORT_TIME); 
 			this->lock();
 		}
-		
+
+		this->setIntegerParam(ADAcquire, 0);
 		this->setIntegerParam(ADStatus, ADStatusIdle);
 		this->callParamCallbacks();
 	}
