@@ -806,7 +806,7 @@ void ADLambda::acquireThread(int index)
 
 		
 		this->lock();
-			if (! this->hasDecoder)
+			if (this->hasDecoder)
 			{
 				if (bad_frame)
 				{ 
