@@ -7,6 +7,12 @@ record(mbbo, "$(P)$(R)ImageMode")
    field(VAL,  "1")
 }
 
+record(mbbi, "$(P)$(R)ImageMode_RBV")
+{
+   field(TWST, "")
+   field(TWVL, "")
+}
+
 record(mbbo, "$(P)$(R)DataType")
 {
 	info(asyn:READBACK, "1")
