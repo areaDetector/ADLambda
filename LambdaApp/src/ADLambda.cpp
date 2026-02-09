@@ -463,8 +463,10 @@ void ADLambda::sendParameters()
 	
 	thresholds.reserve(2);
 	
-	if (std::abs(thresholds[0] - low_energy) >= 0.00001 || 
-        ((dual || charge) && (std::abs(thresholds[1] - high_energy) >= 0.00001)))
+	if (std::abs(thresholds[0] - low_energy) >= 0.00001 ||
+		thresholds[0] < 0.00001 ||
+		((dual || charge) && (std::abs(thresholds[1] - high_energy) >= 0.00001 ||
+		thresholds[1] < 0.00001)))
     {
         if (dual || charge) {
             printf("Setting thresholds: %f keV, %f keV\n", low_energy, high_energy);
